@@ -388,13 +388,13 @@ def get_priors():
 
 def save_figs(out_folder, sim_name):
     # check if folder exists, make one if it doesn't
-    name = os.path.join(out_folder)
+    name = out_folder
     print('folder name for fig saving = ', name)
     w = plt.get_fignums()
     print('w = ', w)
     for i in plt.get_fignums():
         print('i = ', i)
-        plt.figure(i).savefig(os.path.join(name, 'fig{}.png'.format(i)))
+        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'))
 
 
 def get_storage_folder(sim_name='test'):
@@ -482,7 +482,7 @@ def main():
 
         # seq. mcmc sampler parameters
         tune = 500
-        draws = 200
+        draws = 5000
         chains = 4
         cores = 4
         print(f'num draws = {draws}; num chains = {chains}')
