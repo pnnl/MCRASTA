@@ -19,7 +19,8 @@ az.style.use("arviz-darkgrid")
 
 def get_obs_data():
     homefolder = os.path.expanduser('~')
-    path = r'PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare\p5756'
+    path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', 'p5756')
+    # path = r'PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare\p5756'
     name = 'p5756_proc.hdf5'
     fullpath = os.path.join(homefolder, path, name)
     print(f'getting data from: {fullpath}')
@@ -399,7 +400,8 @@ def save_figs(out_folder, sim_name):
 def get_storage_folder(sim_name='test'):
     print('checking if storage directory exists')
     homefolder = os.path.expanduser('~')
-    outfolder = r'PycharmProjects\mcmcrsf_xfiles\mcmc_out'
+    outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
+    # outfolder = r'PycharmProjects\mcmcrsf_xfiles\mcmc_out'
     # root = f'C:\\Users\\fich146\\PycharmProjects\\mcmc_rsf\\mcmc_out\\{sim_name}'
     name = sim_name
     fullpath = os.path.join(homefolder, outfolder, name)
