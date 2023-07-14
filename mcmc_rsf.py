@@ -18,13 +18,15 @@ np.random.seed(1234)
 az.style.use("arviz-darkgrid")
 
 def get_obs_data():
-    folder = r'C:\Users\fich146\PycharmProjects\mcmc_rsf\data\FORGE_DataShare\p5756'
+    homefolder = os.path.expanduser('~')
+    path = r'PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare\p5756'
     name = 'p5756_proc.hdf5'
-    f = h5py.File(os.path.join(folder, name), 'r')
+    print(f'getting data from: {os.path.join(homefolder, path, name)}')
+    f = h5py.File(os.path.join(homefolder, path, name), 'r')
     #
     print(list(f.keys()))
 
-    df, names = read_hdf(folder, name)
+    df, names = read_hdf(homefolder, name)
 
     print(names)
 
@@ -395,16 +397,20 @@ def save_figs(out_folder, sim_name):
 
 def get_storage_folder(sim_name='test'):
     print('checking if storage directory exists')
-    root = f'C:\\Users\\fich146\\PycharmProjects\\mcmc_rsf\\mcmc_out\\{sim_name}'
-    isExisting = os.path.exists(root)
+    homefolder = os.path.expanduser('~')
+    outfolder = r'PycharmProjects\mcmcrsf_xfiles\mcmc_out'
+    # root = f'C:\\Users\\fich146\\PycharmProjects\\mcmc_rsf\\mcmc_out\\{sim_name}'
+    name = sim_name
+    fullpath = os.path.join(homefolder, outfolder, name)
+    isExisting = os.path.exists(fullpath)
     if isExisting is False:
-        print('directory does not exist, creating new directory --> ', root)
-        os.makedirs(root)
-        return root
+        print('directory does not exist, creating new directory --> ', fullpath)
+        os.makedirs(fullpath)
+        return fullpath
     elif isExisting is True:
         print('directory exists, all outputs will be saved to existing directory and any existing files will be '
-              'overwritten --> ', root)
-        return root
+              'overwritten --> ', fullpath)
+        return fullpath
 
 
 # def write_model_info(sim_name, smc_info, runtime, params_priors, constants, results_summary):
