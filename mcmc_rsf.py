@@ -21,12 +21,13 @@ def get_obs_data():
     homefolder = os.path.expanduser('~')
     path = r'PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare\p5756'
     name = 'p5756_proc.hdf5'
-    print(f'getting data from: {os.path.join(homefolder, path, name)}')
+    fullpath = os.path.join(homefolder, path, name)
+    print(f'getting data from: {fullpath}')
     f = h5py.File(os.path.join(homefolder, path, name), 'r')
     #
     print(list(f.keys()))
 
-    df, names = read_hdf(homefolder, name)
+    df, names = read_hdf(fullpath)
 
     print(names)
 
@@ -73,8 +74,8 @@ def get_obs_data():
     return mutrue, times, vlps
 
 
-def read_hdf(folder, name):
-    filename = os.path.join(folder, name)
+def read_hdf(fullpath):
+    filename = fullpath
     print(filename)
 
     names = []
