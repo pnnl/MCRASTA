@@ -482,7 +482,7 @@ def main():
 
         # seq. mcmc sampler parameters
         tune = 500
-        draws = 5000
+        draws = 100000
         chains = 4
         cores = 4
         print(f'num draws = {draws}; num chains = {chains}')
