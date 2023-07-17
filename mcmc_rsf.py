@@ -32,7 +32,7 @@ def get_obs_data():
 
     print(names)
 
-    preplot(df, names)
+    # preplot(df, names)
     # 'hdcdt_um': horizontal displacement in microns
     # 'hstress_mpa': the horizontal (normal) stress in MPa
     # 'laythick_um': the layer thickness for a single fault in microns
@@ -125,7 +125,7 @@ def preplot(df, colnames):
 
     plt.show()
 
-    sys.exit()
+
 
     # for i, col in enumerate(colnames):
     #     plt.figure(i)
