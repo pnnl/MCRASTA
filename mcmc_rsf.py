@@ -32,7 +32,7 @@ def get_obs_data():
 
     print(names)
 
-    # preplot(df, names)
+    preplot(df, names)
     # 'hdcdt_um': horizontal displacement in microns
     # 'hstress_mpa': the horizontal (normal) stress in MPa
     # 'laythick_um': the layer thickness for a single fault in microns
@@ -118,9 +118,14 @@ def preplot(df, colnames):
     plt.plot(t, df['mu'])
     plt.title('mu')
     plt.xlabel('time (s)')
-    print(df['mu'])
+
+    plt.figure(2)
+    plt.plot(t, df['vdcdt_um'])
+    plt.title('displacement')
 
     plt.show()
+
+    sys.exit()
 
     # for i, col in enumerate(colnames):
     #     plt.figure(i)
@@ -339,12 +344,12 @@ def post_processing(idata, n_reals, mutrue, times, vlps):
     print('num realizations = ', n_reals)
 
     # remove "burn-in" realizations = around 20% of total number of realz for now
-    n_burnin = np.floor(0.2 * n_reals).astype(int)
-    mu_pp = idata.sel(draw=slice(n_burnin, None), groups='posterior_predictive')
+    # n_burnin = np.floor(0.2 * n_reals).astype(int)
+    mu_pp = idata.sel(groups='posterior_predictive')
 
     # remove "burn-in" realizations from parameter estimates
     # (this can be combined with above statement eventually by not specifying groups I think)
-    modelsim_params = idata.sel(draw=slice(n_burnin, None), groups='posterior')
+    # modelsim_params = idata.sel(draw=slice(n_burnin, None), groups='posterior')
 
     # number of realizations to plot after removing first n_burnin, then plotting
     n_plotreals = np.floor(0.5 * n_reals).astype(int)
@@ -482,9 +487,9 @@ def main():
 
         # seq. mcmc sampler parameters
         tune = 500
-        draws = 100000
+        draws = 50000
         chains = 4
-        cores = 4
+        cores = 20
         print(f'num draws = {draws}; num chains = {chains}')
         idata = pm.sample_smc(draws=draws, chains=chains, cores=cores)
         sim_name = f'out_{draws}d{chains}ch'
@@ -496,24 +501,25 @@ def main():
         plt.figure(400)
         az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], combined=False)
 
+        # remove "burn-in" realizations = around 20% of total number of realz for now
+        n_reals = draws
+        n_burnin = np.floor(0.2 * n_reals).astype(int)
+        idata_noburnin = idata.sel(draw=slice(n_burnin, None))
+
         # print and save model parameter stats
-        summary = az.summary(idata, kind='stats')
+        summary = az.summary(idata_noburnin, kind='stats')
         print('summary: ', summary)
-        summary.to_csv(os.path.join(root, 'idata.csv'))
+        summary.to_csv(os.path.join(root, 'idata_noburnin.csv'))
 
         # posterior predictive check
-        idata2 = pm.sample_posterior_predictive(idata, extend_inferencedata=True)
-
-        print('inference data + posterior = ', idata2)
-        summary2 = az.summary(idata2, kind='stats')
-        print('summary: ', summary2)
-        out_filename = f'{sim_name}.csv'
+        thinned_idata = idata.sel(draw=slice(None, None, 100))
+        idata_pp = pm.sample_posterior_predictive(thinned_idata, extend_inferencedata=True)
+        #
+        print('inference data + posterior = ', idata_pp)
+        summary_pp = az.summary(idata_pp, kind='stats')
+        print('summary: ', summary_pp)
+        out_filename = f'{sim_name}_pp.csv'
         summary.to_csv(os.path.join(root, out_filename))
-
-        # plot posterior predictive check
-        plt.figure(401)
-        mu_obs = pm.Data('mu_obs', mutrue)
-        az.plot_ppc(idata, num_pp_samples=draws)
 
         # save trace for easier debugging if needed
         # out_name = 'idata2'
@@ -521,7 +527,7 @@ def main():
         # idata2.to_netcdf(os.path.join(root, out_name))
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata, draws, mutrue, times, vlps)
+        post_processing(thinned_idata, draws, mutrue, times, vlps)
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
