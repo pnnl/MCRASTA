@@ -9,6 +9,7 @@ import pytensor
 import sys
 import h5py
 import scipy as sp
+from scipy.signal import savgol_filter
 
 um_to_mm = 0.001
 
@@ -17,19 +18,44 @@ rng = np.random.normal()
 np.random.seed(1234)
 az.style.use("arviz-darkgrid")
 
+
+def calc_derivative(y, x, window_len=100):
+    # returns dydx
+    if window_len is not None:
+        # smooth
+        # x_smooth = smooth(x,window_len=params['window_len'],window='flat')
+        # y_smooth = smooth(y,window_len=params['window_len'],window='flat')
+        # dydx = np.gradient(y_smooth,x_smooth)
+        dxdN = savgol_filter(x,
+                             window_length=window_len,
+                             polyorder=3,
+                             deriv=1)
+        dydN = savgol_filter(y,
+                             window_length=window_len,
+                             polyorder=3,
+                             deriv=1)
+        dydx = dydN / dxdN
+
+        dydx_smooth = savgol_filter(dydx,
+                                    window_length=window_len,
+                                    polyorder=1)
+        return dydx_smooth
+    else:
+        dydx = np.gradient(y, x)
+        return dydx
+
+
 def get_obs_data():
     homefolder = os.path.expanduser('~')
-    path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', 'p5756')
+    path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', 'p5894')
     # path = r'PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare\p5756'
-    name = 'p5756_proc.hdf5'
+    name = 'p5894_proc.hdf5'
     fullpath = os.path.join(homefolder, path, name)
     print(f'getting data from: {fullpath}')
     f = h5py.File(os.path.join(homefolder, path, name), 'r')
-    #
     print(list(f.keys()))
 
     df, names = read_hdf(fullpath)
-
     print(names)
 
     # preplot(df, names)
@@ -47,15 +73,15 @@ def get_obs_data():
 
     t = df['time_s'].to_numpy()
     mu = df['mu'].to_numpy()
+    x = df['vdcdt_um'].to_numpy()
 
-    # vdcdt_um is the vertical (shear) displacement in microns
-    # vlps = df['vdcdt_um']*(1/df['time_s']).to_numpy()
-    # calc loadpoint displacement
-    # df['lpdisp'] = df['vdcdt_um']
-    # lpdisp = df['lpdisp'].to_numpy()
+    vlps = calc_derivative(x, t)
 
-    f_ds = downsample_dataset(mu, t)
+    f_ds = downsample_dataset(mu, t, vlps, x)
+
     sectioned_data = section_data(f_ds)
+
+    print('sectioned data shape = ', sectioned_data.shape)
 
     t = sectioned_data[:, 1]
 
@@ -66,11 +92,19 @@ def get_obs_data():
 
     mutrue = cleaned_data[:, 0]
     times = cleaned_data[:, 1]
-    vlps = np.ones_like(mutrue)
-    vlps = np.where((times >= 2650) & (times <= 2760), 10,  # when... then
-                    np.where((times >= 2975) & (times <= 3075), 30,  # when... then
-                             np.where((times >= 3075), 100,  # when... then
-                                      3)))
+    vlps = cleaned_data[:, 2]
+    x = cleaned_data[:, 3]
+
+    plt.figure(1)
+    plt.plot(times, mutrue)
+    plt.plot(times, vlps)
+    plt.xlabel('time (s)')
+
+    plt.figure(2)
+    plt.plot(x*um_to_mm, mutrue)
+    plt.xlabel('displacement (mm)')
+    plt.ylabel('mu')
+    plt.show()
 
     return mutrue, times, vlps
 
@@ -139,13 +173,13 @@ def preplot(df, colnames):
     # plt.show()
 
 
-def downsample_dataset(mu, t):
+def downsample_dataset(mu, t, vlps, x):
     # low pass filter - come back and see what 1000 is and if mode should change
-    mu_f = sp.signal.savgol_filter(mu, 1000, 2, mode='mirror')
+    mu_f = savgol_filter(mu, 100, 2, mode='mirror')
     print('mu_f.shape = ', mu_f.shape)
 
     # stack time and mu arrays to sample together
-    f_data = np.column_stack((mu_f, t))
+    f_data = np.column_stack((mu_f, t, vlps, x))
     print('t_muf.shape = ', f_data.shape)
 
     # downsamples to every qth sample after applying low-pass filter along columns
@@ -170,25 +204,13 @@ def downsample_dataset(mu, t):
 def section_data(data):
     df0 = pd.DataFrame(data)
     print('dataframe col names = ', list(df0))
-    df = df0.set_axis(['mu', 't'], axis=1)
-    print('dataframe col names = ', list(df))
+    df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
+    print('new dataframe col names = ', list(df))
 
-    start_time = 2650
-    end_time = 3200
+    start_idx = np.argmax(df['t'] > 19300)
+    end_idx = np.argmax(df['t'] > 19700)
 
-    # may be able to combine these
-    r1 = df[df['t'] >= start_time].index.values
-    idx1 = r1[0]
-
-    r2 = df[df['t'] <= end_time].index.values
-    idx2 = r2[-1]
-    print(idx1, idx2)
-
-    df_section = df.iloc[idx1:idx2, :]
-    # lpdisp_test = lpdisp[idx1:idx2]
-    # t_test = t[idx1:idx2]
-    # mu_test = mu[idx1:idx2]
-    # vlps_test = vlps[idx1:idx2]
+    df_section = df.iloc[start_idx:end_idx]
 
     print('original shape = ', df.shape)
     print('section shape = ', df_section.shape)
@@ -321,39 +343,26 @@ def get_time(name):
     return codetime
 
 
-def post_processing(idata, n_reals, mutrue, times, vlps):
-    # idata = az.from_netcdf(r'C:\Users\fich146\PycharmProjects\mcmc_rsf\pymc_summarystats\test\idata')
-    # idata2 = az.from_netcdf(r'C:\Users\fich146\PycharmProjects\mcmc_rsf\pymc_summarystats\test\idata2')
-    print(idata.posterior_predictive)
-
+def post_processing(idata_pp, n_reals, mutrue, times, vlps, n_burnin):
     # to extract model parameters being estimated
-    modelsim_params = az.extract(idata.posterior)
+    modelsim_params = az.extract(idata_pp.posterior)
 
     print('model params = ', modelsim_params)
     mu0_realz = modelsim_params.mu0.values
     print('mu0 realz shape = ', mu0_realz.shape)
 
     # to extract simulated mu values for realizations
-    stacked = az.extract(idata.posterior_predictive)
+    stacked = az.extract(idata_pp.posterior_predictive)
     print('stacked = ', stacked)
     mu_vals = stacked.simulator.values
 
     print('simulated mu values = ', mu_vals)
     print('shape of posterior predictive dataset = ', mu_vals.shape)
 
-    print('num realizations = ', n_reals)
-
-    # remove "burn-in" realizations = around 20% of total number of realz for now
-    # n_burnin = np.floor(0.2 * n_reals).astype(int)
-    mu_pp = idata.sel(groups='posterior_predictive')
-
-    # remove "burn-in" realizations from parameter estimates
-    # (this can be combined with above statement eventually by not specifying groups I think)
-    # modelsim_params = idata.sel(draw=slice(n_burnin, None), groups='posterior')
+    print('num realizations after removing burn in samples and thinning = ', n_reals)
 
     # number of realizations to plot after removing first n_burnin, then plotting
-    n_plotreals = np.floor(0.5 * n_reals).astype(int)
-    az.plot_ppc(mu_pp, num_pp_samples=n_plotreals)
+    az.plot_ppc(idata_pp, num_pp_samples=n_reals)
 
     df = pd.DataFrame(mu_vals)
     mumeans = df.mean(axis=1)
@@ -487,9 +496,9 @@ def main():
 
         # seq. mcmc sampler parameters
         tune = 500
-        draws = 5000
+        draws = 10
         chains = 4
-        cores = 20
+        cores = 4
         print(f'num draws = {draws}; num chains = {chains}')
         idata = pm.sample_smc(draws=draws, chains=chains, cores=cores)
         sim_name = f'out_{draws}d{chains}ch'
@@ -501,7 +510,7 @@ def main():
         plt.figure(400)
         az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], combined=False)
 
-        # remove "burn-in" realizations = around 20% of total number of realz for now
+        # remove "burn-in" realizations = around 20% of total number of reals for now
         n_reals = draws
         n_burnin = np.floor(0.2 * n_reals).astype(int)
         idata_noburnin = idata.sel(draw=slice(n_burnin, None))
@@ -512,8 +521,14 @@ def main():
         summary.to_csv(os.path.join(root, 'idata_noburnin.csv'))
 
         # posterior predictive check
-        thinned_idata = idata.sel(draw=slice(None, None, 100))
+        thinned_idata = idata_noburnin.sel(draw=slice(None, None, 2))
         idata_pp = pm.sample_posterior_predictive(thinned_idata, extend_inferencedata=True)
+
+        # print('idata_pp.sel(group = post pred) = ', idata_pp.sel(groups='posterior_predictive'))
+        # az.plot_ppc(idata_pp, num_pp_samples=n_reals)
+        # plt.show()
+        #
+        # sys.exit()
         #
         print('inference data + posterior = ', idata_pp)
         summary_pp = az.summary(idata_pp, kind='stats')
@@ -527,7 +542,7 @@ def main():
         # idata2.to_netcdf(os.path.join(root, out_name))
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(thinned_idata, draws, mutrue, times, vlps)
+        post_processing(idata_pp, len(thinned_idata), mutrue, times, vlps, n_burnin)
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
