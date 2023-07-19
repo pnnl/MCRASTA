@@ -518,11 +518,11 @@ def main():
 
         # seq. mcmc sampler parameters
         # tune = 5
-        draws = 20
+        draws = 2000
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the spurred markov chains??
-        cores = 40
+        cores = 39
         print(f'num draws = {draws}; num chains = {chains_for_convergence}')
         # MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
         kernel_kwargs = dict(correlation_threshold=0.9)
