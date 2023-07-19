@@ -490,11 +490,11 @@ def main():
 
         # seq. mcmc sampler parameters
         tune = 2
-        draws = 10
+        draws = 100000
         chains = 4
         cores = 4
         print(f'num draws = {draws}; num chains = {chains}')
-        idata = pm.sample(tune=tune, draws=draws, chains=chains, cores=cores)
+        idata = pm.sample_smc(draws=draws, chains=chains, cores=cores)
         sim_name = f'out_{draws}d{chains}ch'
         root = get_storage_folder(sim_name)
 
