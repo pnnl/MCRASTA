@@ -567,7 +567,7 @@ def main():
 
     plt.show()
 
-    print('simulation complete')
+    print('simulation complet')
 
 
 if __name__ == '__main__':
