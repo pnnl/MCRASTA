@@ -96,7 +96,6 @@ def get_obs_data():
     x = cleaned_data[:, 3]
 
     plt.figure(1)
-    plt.plot(times, mutrue)
     plt.plot(times, vlps)
     plt.xlabel('time (s)')
 
@@ -104,7 +103,6 @@ def get_obs_data():
     plt.plot(x*um_to_mm, mutrue)
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
-    plt.show()
 
     return mutrue, times, vlps
 
@@ -157,7 +155,7 @@ def preplot(df, colnames):
     plt.plot(t, df['vdcdt_um'])
     plt.title('displacement')
 
-    plt.show()
+
 
 
 
@@ -294,8 +292,6 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, times, vlps, size=None):
     size = len(t)
 
     # Simulate outcome variable
-    # use rsf.model for synthetic data run
-
     model = rsf.Model()
 
     # Set model initial conditions
@@ -311,10 +307,8 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, times, vlps, size=None):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    # We want to solve for 40 seconds at 100Hz
     model.time = t
 
-    # We want to slide at 1 um/s for 10 s, then at 10 um/s for 31
     lp_velocity = vlps
 
     # Set the model load point velocity, must be same shape as model.model_time
@@ -390,10 +384,11 @@ def get_constants(vlps):
 
 
 def get_priors():
-    a = pm.Uniform('a', lower=0.11, upper=0.15)
-    b = pm.Uniform('b', lower=0.11, upper=0.15)
+    a = pm.Uniform('a', lower=0.001, upper=0.1)
+    b = pm.Uniform('b', lower=0.001, upper=0.2)
     Dc = pm.Uniform('Dc', lower=20, upper=150)
     mu0 = pm.Uniform('mu0', lower=0.45, upper=0.6)
+
 
     priors = [a, b, Dc, mu0]
 
@@ -483,6 +478,18 @@ def main():
     # times, vlps = get_times_vlps()
     # mutrue, tht, datalen = generate_rsf_data(times, vlps)
 
+    #testing forward model
+    a=0.001
+    b=0.123
+    Dc=73
+    mu0=0.55
+
+    musim = mcmc_rsf_sim(rng, a, b, Dc, mu0, times, vlps)
+
+    plt.figure(3)
+    plt.plot(times, musim, 'r.-')
+    plt.plot(times, mutrue, 'k.')
+
     # define smc model parameters
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters, constants
@@ -495,12 +502,12 @@ def main():
                                  observed=mutrue)
 
         # seq. mcmc sampler parameters
-        tune = 500
-        draws = 1000
+        tune = 2
+        draws = 10
         chains = 4
         cores = 4
         print(f'num draws = {draws}; num chains = {chains}')
-        idata = pm.sample_smc(draws=draws, chains=chains, cores=cores)
+        idata = pm.sample(tune=tune, draws=draws, chains=chains, cores=cores)
         sim_name = f'out_{draws}d{chains}ch'
         root = get_storage_folder(sim_name)
 
@@ -512,16 +519,16 @@ def main():
 
         # remove "burn-in" realizations = around 20% of total number of reals for now
         n_reals = draws
-        n_burnin = np.floor(0.2 * n_reals).astype(int)
-        idata_noburnin = idata.sel(draw=slice(n_burnin, None))
+        # n_burnin = np.floor(0.2 * n_reals).astype(int)
+        # idata_noburnin = idata.sel(draw=slice(n_burnin, None))
 
         # print and save model parameter stats
-        summary = az.summary(idata_noburnin, kind='stats')
-        print('summary: ', summary)
-        summary.to_csv(os.path.join(root, 'idata_noburnin.csv'))
+        # summary = az.summary(idata_noburnin, kind='stats')
+        # print('summary: ', summary)
+        # summary.to_csv(os.path.join(root, 'idata_noburnin.csv'))
 
         # posterior predictive check
-        thinned_idata = idata_noburnin.sel(draw=slice(None, None, 2))
+        thinned_idata = idata.sel(draw=slice(None, None, 2))
         idata_pp = pm.sample_posterior_predictive(thinned_idata, extend_inferencedata=True)
 
         # print('idata_pp.sel(group = post pred) = ', idata_pp.sel(groups='posterior_predictive'))
@@ -530,11 +537,11 @@ def main():
         #
         # sys.exit()
         #
-        print('inference data + posterior = ', idata_pp)
-        summary_pp = az.summary(idata_pp, kind='stats')
-        print('summary: ', summary_pp)
-        out_filename = f'{sim_name}_pp.csv'
-        summary.to_csv(os.path.join(root, out_filename))
+        # print('inference data + posterior = ', idata_pp)
+        # summary_pp = az.summary(idata_pp, kind='stats')
+        # print('summary: ', summary_pp)
+        # out_filename = f'{sim_name}_pp.csv'
+        # summary.to_csv(os.path.join(root, out_filename))
 
         # save trace for easier debugging if needed
         # out_name = 'idata2'
@@ -542,7 +549,7 @@ def main():
         # idata2.to_netcdf(os.path.join(root, out_name))
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata_pp, len(thinned_idata), mutrue, times, vlps, n_burnin)
+        post_processing(idata_pp, len(thinned_idata), mutrue, times, vlps, n_burnin=None)
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
@@ -554,7 +561,7 @@ def main():
     sim_runtime = time_elapsed
     sim_params_priors = priors
     sim_constants = k, vref
-    sim_results_summary = summary
+    # sim_results_summary = summary
 
     # write_model_info(sim_name, sim_smc_info, sim_runtime, sim_params_priors, sim_constants, sim_results_summary)
 
