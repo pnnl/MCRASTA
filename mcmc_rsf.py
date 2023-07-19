@@ -377,18 +377,17 @@ def post_processing(idata_pp, n_reals, mutrue, times, vlps, n_burnin):
 
 
 def get_constants(vlps):
-    k = 0.03
+    k = 0.002
     vref = vlps[0]
 
     return k, vref
 
 
 def get_priors():
-    a = pm.Uniform('a', lower=0.001, upper=0.1)
-    b = pm.Uniform('b', lower=0.001, upper=0.2)
-    Dc = pm.Uniform('Dc', lower=20, upper=150)
-    mu0 = pm.Uniform('mu0', lower=0.45, upper=0.6)
-
+    a = pm.Normal('a', mu=0.006692, sigma=0.0001)
+    b = pm.Normal('b', mu=0.00617, sigma=0.0001)
+    Dc = pm.Normal('Dc', mu=61.8, sigma=2.84)
+    mu0 = pm.Normal('mu0', mu=0.44, sigma=0.01)
 
     priors = [a, b, Dc, mu0]
 
@@ -477,18 +476,6 @@ def main():
     # generate synthetic data
     # times, vlps = get_times_vlps()
     # mutrue, tht, datalen = generate_rsf_data(times, vlps)
-
-    #testing forward model
-    a=0.001
-    b=0.123
-    Dc=73
-    mu0=0.55
-
-    musim = mcmc_rsf_sim(rng, a, b, Dc, mu0, times, vlps)
-
-    plt.figure(3)
-    plt.plot(times, musim, 'r.-')
-    plt.plot(times, mutrue, 'k.')
 
     # define smc model parameters
     with pm.Model() as mcmcmodel:
