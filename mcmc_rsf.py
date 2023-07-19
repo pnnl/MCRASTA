@@ -398,9 +398,9 @@ def get_constants(vlps):
 
 
 def get_priors():
-    a = pm.Normal('a', mu=0.006692, sigma=0.0001)
-    b = pm.Normal('b', mu=0.00617, sigma=0.0001)
-    Dc = pm.Normal('Dc', mu=61.8, sigma=2.84)
+    a = pm.Normal('a', mu=0.006692, sigma=0.01)
+    b = pm.Normal('b', mu=0.00617, sigma=0.01)
+    Dc = pm.Normal('Dc', mu=61.8, sigma=20)
     # mu0 = pm.Normal('mu0', mu=0.44, sigma=0.01)
 
     # priors = [a, b, Dc, mu0]
@@ -548,7 +548,7 @@ def main():
 
         # posterior predictive check
         # idata.sel(draw=slice(None, None, 2))
-        sample_posterior_predcheck(idata)
+        # sample_posterior_predcheck(idata)
         #
         # print('inference data + posterior = ', idata_pp)
         summary_pp = az.summary(idata, kind='stats')
@@ -562,7 +562,7 @@ def main():
         # idata2.to_netcdf(os.path.join(root, out_name))
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata, mutrue, times, vlps)
+        # post_processing(idata, mutrue, times, vlps)
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
