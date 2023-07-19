@@ -245,18 +245,18 @@ class Model(LoadingSystem):
                                         velocity_contribution) / self.a)
 
         # Calculate displacement from velocity and dt
-        self.results.loadpoint_displacement = \
-            self._calculateDiscreteDisplacement(self.loadpoint_velocity)
-
-        # Calculate the slider displacement
-        self.results.slider_displacement = \
-            self._calculateContinuousDisplacement(self.results.slider_velocity)
-
-        # Check slider displacement for accumulated error and warn
-        if not self._check_slider_displacement():
-            warnings.warn("Slider displacement differs from prediction by over "
-                          "1%. Smaller requested time resolution should be used "
-                          "If you intend to use the slider displacment output.")
+        # self.results.loadpoint_displacement = \
+        #     self._calculateDiscreteDisplacement(self.loadpoint_velocity)
+        #
+        # # Calculate the slider displacement
+        # self.results.slider_displacement = \
+        #     self._calculateContinuousDisplacement(self.results.slider_velocity)
+        #
+        # # Check slider displacement for accumulated error and warn
+        # if not self._check_slider_displacement():
+        #     warnings.warn("Slider displacement differs from prediction by over "
+        #                   "1%. Smaller requested time resolution should be used "
+        #                   "If you intend to use the slider displacment output.")
 
         return self.results
 
