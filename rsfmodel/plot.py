@@ -137,7 +137,7 @@ def dispPlot(system):
     ax3.set_ylabel('Slider Velocity')
     ax4.set_ylabel('Loadpoint Velocity')
     ax4.set_xlabel('Displacement')
-    plt.show()
+    # plt.show()
     return fig, ax1, ax2, ax3, ax4
 
 def timePlot(system):
@@ -175,5 +175,5 @@ def timePlot(system):
     ax3.set_ylabel('Slider Velocity')
     ax4.set_ylabel('Loadpoint Velocity')
     ax4.set_xlabel('Time')
-    plt.show()
+    # plt.show()
     return fig, ax1, ax2, ax3, ax4

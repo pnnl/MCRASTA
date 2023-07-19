@@ -68,6 +68,8 @@ class Model(LoadingSystem):
         self.a = None
         self.vref = None
         self.state_relations = []
+        self.loadpoint_displacement = None
+        self.slider_displacement = None
         self.results = namedtuple("results", ["time", "loadpoint_displacement",
                                               "slider_velocity", "friction",
                                               "states", "slider_displacement"])
@@ -150,6 +152,7 @@ class Model(LoadingSystem):
         Determines if all necessary parameters are set to run the model.
         Will raise appropriate error as necessary.
         """
+        print('forward model: performing ready check')
         if self.a is None:
             raise IncompleteModelError('Parameter a is None')
         elif self.vref is None:
@@ -210,22 +213,29 @@ class Model(LoadingSystem):
         results : named tuple
             Results of the model
         """
+        print('FORWARD MODEL BEGIN MODEL.SOLVE')
         odeint_kwargs = dict(rtol=1e-12, atol=1e-12, mxstep=5000)
         odeint_kwargs.update(kwargs)
+        print('forward model: odeint_kwargs')
 
         # Make sure we have everything set before we try to run
         self.readyCheck()
 
         # Initial conditions at t = 0
+        print('forward model: set initial conditions at t=0')
         w0 = [self.mu0]
         for state_variable in self.state_relations:
+            print('forward model: set state var')
             state_variable.set_steady_state(self)
+            print('forward model: append state var')
             w0.append(state_variable.state)
 
         # Find any critial time points we need to let the integrator know about
+        print('forward model: Find any critial time points we need to let the integrator know about')
         self.critical_times = self._get_critical_times(threshold)
 
         # Solve it
+        print('forward model: integrate.odeint solver')
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
                                                   full_output=True, tcrit=self.critical_times,
                                                   args=(self,), **odeint_kwargs)
@@ -234,30 +244,48 @@ class Model(LoadingSystem):
         self.results.states = wsol[:, 1:]
         self.results.time = self.time
 
+        print(f'self.results.friction = {self.results.friction}; results friction shape = {self.results.friction.shape}')
+        print(f'self.results.states = {self.results.states}; results states shape = {self.results.states.shape}')
+        print(f'self.results.time =  {self.results.time}; results time shape = {self.results.time.shape}')
+
         # Calculate slider velocity after we have solved everything
+        print('forward model: Calculate slider velocity after we have solved everything')
         velocity_contribution = 0
         for i, state_variable in enumerate(self.state_relations):
+            print('forward model: define state_variable.state from soln')
             state_variable.state = wsol[:, i+1]
+            print('forward model: define velocity contribution as += velocity component')
             velocity_contribution += state_variable.velocity_component(self)
 
+        print('forward model: calculate slider velocity from vref, friction results, mu0, velocity contribution, a')
         self.results.slider_velocity = self.vref * np.exp(
                                        (self.results.friction - self.mu0 -
                                         velocity_contribution) / self.a)
 
+        # TEMPORARY - LOOK INTO THIS FURTHER - ADDED BY MAR
+        self.results.slider_velocity = self.loadpoint_velocity
+
         # Calculate displacement from velocity and dt
+        print('forward model: Calculate displacement from velocity and dt')
         # self.results.loadpoint_displacement = \
         #     self._calculateDiscreteDisplacement(self.loadpoint_velocity)
-        #
-        # # Calculate the slider displacement
+
+        self.results.loadpoint_displacement = self.loadpoint_displacement
+
+        # Calculate the slider displacement
+        print('forward model: Calculate the slider displacement')
         # self.results.slider_displacement = \
         #     self._calculateContinuousDisplacement(self.results.slider_velocity)
-        #
-        # # Check slider displacement for accumulated error and warn
-        # if not self._check_slider_displacement():
-        #     warnings.warn("Slider displacement differs from prediction by over "
-        #                   "1%. Smaller requested time resolution should be used "
-        #                   "If you intend to use the slider displacment output.")
 
+        self.results.slider_displacement = self.loadpoint_displacement
+
+        # Check slider displacement for accumulated error and warn
+        if not self._check_slider_displacement():
+            warnings.warn("Slider displacement differs from prediction by over "
+                          "1%. Smaller requested time resolution should be used "
+                          "If you intend to use the slider displacment output.")
+
+        print('forward model: returning results')
         return self.results
 
     def _check_slider_displacement(self, tol=0.01):

@@ -12,6 +12,7 @@ import scipy as sp
 from scipy.signal import savgol_filter
 
 um_to_mm = 0.001
+drawcount = 0
 
 pytensor.config.optimizer = 'fast_compile'
 rng = np.random.normal()
@@ -95,16 +96,16 @@ def get_obs_data():
     vlps = cleaned_data[:, 2]
     x = cleaned_data[:, 3]
 
-    plt.figure(1)
-    plt.plot(times, vlps)
-    plt.xlabel('time (s)')
+    # plt.figure(1)
+    # plt.plot(times, vlps)
+    # plt.xlabel('time (s)')
+    #
+    # plt.figure(2)
+    # plt.plot(x*um_to_mm, mutrue)
+    # plt.xlabel('displacement (mm)')
+    # plt.ylabel('mu')
 
-    plt.figure(2)
-    plt.plot(x*um_to_mm, mutrue)
-    plt.xlabel('displacement (mm)')
-    plt.ylabel('mu')
-
-    return mutrue, times, vlps
+    return mutrue, times, vlps, x
 
 
 def read_hdf(fullpath):
@@ -154,10 +155,6 @@ def preplot(df, colnames):
     plt.figure(2)
     plt.plot(t, df['vdcdt_um'])
     plt.title('displacement')
-
-
-
-
 
     # for i, col in enumerate(colnames):
     #     plt.figure(i)
@@ -214,7 +211,6 @@ def section_data(data):
     print('section shape = ', df_section.shape)
 
     return df_section.to_numpy()
-
 
 def generate_rsf_data(times, vlps):
     # runs rsfmodel.py to generate synthetic friction data
@@ -284,7 +280,7 @@ def generate_rsf_data(times, vlps):
     return mutrue, thetatrue, size
 
 
-def mcmc_rsf_sim(rng, a, b, Dc, mu0, times, vlps, size=None):
+def mcmc_rsf_sim(rng, a, b, Dc, mu0, times, vlps, lpdisp, drawcount, size=None):
     t = times
     k, vref = get_constants(vlps)
 
@@ -313,14 +309,34 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, times, vlps, size=None):
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = lp_velocity
+    model.loadpoint_displacement = lpdisp
 
     # Run the model!
+    drawcount += 1
+    print(f'DRAW NUMBER ===== {drawcount}')
     model.solve()
 
     mu_sim = model.results.friction
+    t_sim = model.results.time
     theta_sim = model.results.states
 
+    # plt.figure(100)
+    # plot.dispPlot(model)
+
+    plot_rsfmodel_plots(mu_sim, t_sim)
+
+    print('returning simulated mu vals')
     return mu_sim
+
+
+def plot_rsfmodel_plots(mu, t):
+    plt.figure(1000)
+    plt.plot(t, mu)
+    plt.xlabel('time')
+    plt.ylabel('mu')
+    plt.title('simulated')
+
+    # plt.show(block=False)
 
 
 def get_time(name):
@@ -337,26 +353,24 @@ def get_time(name):
     return codetime
 
 
-def post_processing(idata_pp, n_reals, mutrue, times, vlps, n_burnin):
+def post_processing(idata, mutrue, times, vlps):
     # to extract model parameters being estimated
-    modelsim_params = az.extract(idata_pp.posterior)
+    modelsim_params = az.extract(idata.posterior)
 
     print('model params = ', modelsim_params)
-    mu0_realz = modelsim_params.mu0.values
-    print('mu0 realz shape = ', mu0_realz.shape)
+    # mu0_realz = modelsim_params.mu0.values
+    # print('mu0 realz shape = ', mu0_realz.shape)
 
     # to extract simulated mu values for realizations
-    stacked = az.extract(idata_pp.posterior_predictive)
+    stacked = az.extract(idata.posterior_predictive)
     print('stacked = ', stacked)
     mu_vals = stacked.simulator.values
 
     print('simulated mu values = ', mu_vals)
     print('shape of posterior predictive dataset = ', mu_vals.shape)
 
-    print('num realizations after removing burn in samples and thinning = ', n_reals)
-
-    # number of realizations to plot after removing first n_burnin, then plotting
-    az.plot_ppc(idata_pp, num_pp_samples=n_reals)
+    # plot post pred
+    az.plot_ppc(idata)
 
     df = pd.DataFrame(mu_vals)
     mumeans = df.mean(axis=1)
@@ -387,9 +401,10 @@ def get_priors():
     a = pm.Normal('a', mu=0.006692, sigma=0.0001)
     b = pm.Normal('b', mu=0.00617, sigma=0.0001)
     Dc = pm.Normal('Dc', mu=61.8, sigma=2.84)
-    mu0 = pm.Normal('mu0', mu=0.44, sigma=0.01)
+    # mu0 = pm.Normal('mu0', mu=0.44, sigma=0.01)
 
-    priors = [a, b, Dc, mu0]
+    # priors = [a, b, Dc, mu0]
+    priors = [a, b, Dc]
 
     return priors
 
@@ -463,12 +478,17 @@ def remove_non_monotonic(times, data, axis=0):
     return data
 
 
+def sample_posterior_predcheck(idata):
+    pm.sample_posterior_predictive(idata, extend_inferencedata=True)
+
+
+
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
 
     # observed data
-    mutrue, times, vlps = get_obs_data()
-    times = times*0.001
+    mutrue, times, vlps, lpdisp = get_obs_data()
+    times = times
 
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
@@ -481,28 +501,40 @@ def main():
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters, constants
         priors = get_priors()
-        a, b, Dc, mu0 = priors
+        a, b, Dc = priors
         k, vref = get_constants(vlps)
+        mu0 = mutrue[0]
+
+        # a = 0.0067
+        # b = 0.0062
+        # Dc = 62
+        # mcmc_rsf_sim(rng, a, b, Dc, mu0, times, vlps, lpdisp, drawcount)
+        #
+        # sys.exit()
 
         # likelihood function
-        simulator = pm.Simulator('simulator', mcmc_rsf_sim, params=(a, b, Dc, mu0, times, vlps), epsilon=1,
+        simulator = pm.Simulator('simulator', mcmc_rsf_sim, params=(a, b, Dc, mu0, times, vlps, lpdisp, drawcount), epsilon=0.01,
                                  observed=mutrue)
 
         # seq. mcmc sampler parameters
-        tune = 2
-        draws = 1000
-        chains = 4
-        cores = 4
-        print(f'num draws = {draws}; num chains = {chains}')
-        idata = pm.sample_smc(draws=draws, chains=chains, cores=cores)
-        sim_name = f'out_{draws}d{chains}ch'
+        # tune = 5
+        draws = 50
+        # THESE ARE NOT MARKOV CHAINS
+        chains_for_convergence = 2
+        cores = 2
+        print(f'num draws = {draws}; num chains = {chains_for_convergence}')
+        # MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
+        kernel_kwargs = dict(correlation_threshold=0.9)
+
+        idata = pm.sample_smc(draws=draws, chains=chains_for_convergence, cores=cores, **kernel_kwargs)
+        sim_name = f'out_{draws}d{chains_for_convergence}ch'
         root = get_storage_folder(sim_name)
 
         print('inference data = ', idata)
 
         # plot model parameter traces
         plt.figure(400)
-        az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], combined=False)
+        az.plot_trace(idata, var_names=['a', 'b', 'Dc'], kind="rank_vlines")
 
         # remove "burn-in" realizations = around 20% of total number of reals for now
         n_reals = draws
@@ -510,23 +542,17 @@ def main():
         # idata_noburnin = idata.sel(draw=slice(n_burnin, None))
 
         # print and save model parameter stats
-        # summary = az.summary(idata_noburnin, kind='stats')
-        # print('summary: ', summary)
-        # summary.to_csv(os.path.join(root, 'idata_noburnin.csv'))
+        summary = az.summary(idata, kind='stats')
+        print('summary: ', summary)
+        summary.to_csv(os.path.join(root, 'idata.csv'))
 
         # posterior predictive check
-        thinned_idata = idata.sel(draw=slice(None, None, 2))
-        # idata_pp = pm.sample_posterior_predictive(thinned_idata, extend_inferencedata=True)
-
-        # print('idata_pp.sel(group = post pred) = ', idata_pp.sel(groups='posterior_predictive'))
-        # az.plot_ppc(idata_pp, num_pp_samples=n_reals)
-        # plt.show()
-        #
-        # sys.exit()
+        # idata.sel(draw=slice(None, None, 2))
+        sample_posterior_predcheck(idata)
         #
         # print('inference data + posterior = ', idata_pp)
-        # summary_pp = az.summary(idata_pp, kind='stats')
-        # print('summary: ', summary_pp)
+        summary_pp = az.summary(idata, kind='stats')
+        print('summary: ', summary_pp)
         # out_filename = f'{sim_name}_pp.csv'
         # summary.to_csv(os.path.join(root, out_filename))
 
@@ -536,7 +562,7 @@ def main():
         # idata2.to_netcdf(os.path.join(root, out_name))
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata, len(thinned_idata), mutrue, times, vlps, n_burnin=n_reals)
+        post_processing(idata, mutrue, times, vlps)
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
@@ -544,7 +570,7 @@ def main():
     print('time elapsed = ', time_elapsed)
 
     # write simulation info to text file
-    sim_smc_info = [draws, chains, cores]
+    sim_smc_info = [draws, chains_for_convergence, cores]
     sim_runtime = time_elapsed
     sim_params_priors = priors
     sim_constants = k, vref
@@ -554,7 +580,7 @@ def main():
 
     plt.show()
 
-    print('simulation complet')
+    print('simulation complete')
 
 
 if __name__ == '__main__':
