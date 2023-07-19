@@ -564,6 +564,7 @@ def main():
 
         # post-processing takes results and makes plots, save figs saves figures
         # post_processing(idata, mutrue, times, vlps)
+        plt.show()
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
