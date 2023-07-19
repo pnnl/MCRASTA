@@ -490,7 +490,7 @@ def main():
 
         # seq. mcmc sampler parameters
         tune = 2
-        draws = 100000
+        draws = 1000
         chains = 4
         cores = 4
         print(f'num draws = {draws}; num chains = {chains}')
@@ -516,7 +516,7 @@ def main():
 
         # posterior predictive check
         thinned_idata = idata.sel(draw=slice(None, None, 2))
-        idata_pp = pm.sample_posterior_predictive(thinned_idata, extend_inferencedata=True)
+        # idata_pp = pm.sample_posterior_predictive(thinned_idata, extend_inferencedata=True)
 
         # print('idata_pp.sel(group = post pred) = ', idata_pp.sel(groups='posterior_predictive'))
         # az.plot_ppc(idata_pp, num_pp_samples=n_reals)
@@ -536,7 +536,7 @@ def main():
         # idata2.to_netcdf(os.path.join(root, out_name))
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata_pp, len(thinned_idata), mutrue, times, vlps, n_burnin=None)
+        post_processing(idata, len(thinned_idata), mutrue, times, vlps, n_burnin=n_reals)
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
