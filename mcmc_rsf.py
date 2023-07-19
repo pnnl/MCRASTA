@@ -488,7 +488,7 @@ def main():
 
     # observed data
     mutrue, times, vlps, lpdisp = get_obs_data()
-    times = times
+    times = times*0.001
 
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
@@ -518,10 +518,11 @@ def main():
 
         # seq. mcmc sampler parameters
         # tune = 5
-        draws = 50
+        draws = 10
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
-        cores = 2
+        # more cores for the spurred markov chains??
+        cores = 20
         print(f'num draws = {draws}; num chains = {chains_for_convergence}')
         # MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
         kernel_kwargs = dict(correlation_threshold=0.9)
