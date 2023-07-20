@@ -83,7 +83,7 @@ def get_obs_data():
 
     sectioned_data = section_data(f_ds)
 
-    print('sectioned data shape = ', sectioned_data.shape)
+    print(f'sectioned data shape = {sectioned_data.shape}')
 
     t = sectioned_data[:, 1]
 
@@ -111,8 +111,7 @@ def get_obs_data():
 
 def read_hdf(fullpath):
     filename = fullpath
-    print(filename)
-
+    print(f'reading file: {filename}')
     names = []
     df = pd.DataFrame()
     with h5py.File(filename, 'r') as f:
@@ -129,9 +128,9 @@ def read_hdf(fullpath):
         # loop on names and H5 objects:
         for name, h5obj in f.items():
             if isinstance(h5obj, h5py.Group):
-                print(name, 'is a Group')
+                print(f'{name} is a Group')
             elif isinstance(h5obj, h5py.Dataset):
-                print(name, 'is a Dataset')
+                print(f'{name} is a Dataset')
                 # return a np.array using dataset object:
                 arr1 = h5obj[:]
                 print(type(arr1))
@@ -172,11 +171,11 @@ def preplot(df, colnames):
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter - come back and see what 1000 is and if mode should change
     mu_f = savgol_filter(mu, 100, 2, mode='mirror')
-    print('mu_f.shape = ', mu_f.shape)
+    print(f'mu_f.shape = {mu_f.shape}')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
-    print('t_muf.shape = ', f_data.shape)
+    print(f't_muf.shape = {f_data.shape}')
 
     # downsamples to every qth sample after applying low-pass filter along columns
     q = 10
@@ -199,17 +198,17 @@ def downsample_dataset(mu, t, vlps, x):
 
 def section_data(data):
     df0 = pd.DataFrame(data)
-    print('dataframe col names = ', list(df0))
+    print(f'dataframe col names = {list(df0)}')
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
-    print('new dataframe col names = ', list(df))
+    print(f'new dataframe col names = {list(df)}')
 
     start_idx = np.argmax(df['t'] > 19300)
     end_idx = np.argmax(df['t'] > 19700)
 
     df_section = df.iloc[start_idx:end_idx]
 
-    print('original shape = ', df.shape)
-    print('section shape = ', df_section.shape)
+    print(f'original shape = {df.shape}')
+    print(f'section shape = {df_section.shape}')
 
     return df_section.to_numpy()
 
@@ -229,7 +228,7 @@ def generate_rsf_data(times, vlps):
 
     # Size of dataset
     size = len(times)
-    print('size of dataset = ', size)
+    print(f'size of dataset = {size}')
 
     model = rsf.Model()
 
@@ -315,12 +314,11 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
 
     # Run the model!
     drawcount += 1
-    print(f'DRAW NUMBER ===== {drawcount}')
+    print(f'DRAW (ish) NUMBER ===== {drawcount}')
     model.solve()
 
     mu_sim = model.results.friction
     t_sim = model.results.time
-    theta_sim = model.results.states
 
     # plt.figure(100)
     # plot.dispPlot(model)
@@ -348,7 +346,7 @@ def get_time(name):
     now = datetime.now()
 
     current_time = now.strftime("%H:%M:%S")
-    print('{} time = '.format(name), current_time)
+    print(f'{name} time = {current_time}')
 
     codetime = time.time()
 
@@ -358,25 +356,23 @@ def get_time(name):
 def post_processing(idata, mutrue, times, vlps):
     # to extract model parameters being estimated
     modelsim_params = az.extract(idata.posterior)
-    avals = modelsim_params.sample.values
-    print('avals = ', avals)
-    # bvals = modelsim_params.sample.b.values
-    # Dcvals = modelsim_params.sample.Dc.values
+    mvals = modelsim_params.sample.values
+    print(f'avals = {mvals}')
 
-    df_param_results = pd.DataFrame(avals)
+    df_param_results = pd.DataFrame(mvals)
     df_param_results.to_csv(r'C:\Users\fich146\PycharmProjects\mcmcrsf_xfiles\mcmc_out\presults.csv')
 
-    print('model params = ', modelsim_params)
+    print(f'model params = {modelsim_params}')
     # mu0_realz = modelsim_params.mu0.values
     # print('mu0 realz shape = ', mu0_realz.shape)
 
     # to extract simulated mu values for realizations
     stacked = az.extract(idata.posterior_predictive)
-    print('stacked = ', stacked)
+    print(f'stacked = {stacked}')
     mu_vals = stacked.simulator.values
 
-    print('simulated mu values = ', mu_vals)
-    print('shape of posterior predictive dataset = ', mu_vals.shape)
+    print(f'simulated mu values = {mu_vals}')
+    print(f'shape of posterior predictive dataset = {mu_vals.shape}')
 
     # plot post pred
     az.plot_ppc(idata)
@@ -386,18 +382,11 @@ def post_processing(idata, mutrue, times, vlps):
     mumeans = df.mean(axis=1)
     t = times
 
-    # plot simulated mu mean with "true" mu (replace mutrue with real data)
+    # plot simulated mus with true mu
     plt.figure(500)
     plt.plot(t, df, 'b-', t, mutrue, 'k')
 
     print('post processing complete')
-
-
-# def get_times_vlps():
-#     times = np.linspace(0, 60, 10000)
-#     vlps = np.where((times >= 10) & (times <= 40), 10, 1)
-#
-#     return times, vlps
 
 
 def get_constants(vlps):
@@ -414,7 +403,6 @@ def get_priors():
     mu0 = pm.Normal('mu0', mu=0.44, sigma=0.1)
 
     priors = [a, b, Dc, mu0]
-    # priors = [a, b, Dc]
 
     return priors
 
@@ -422,7 +410,7 @@ def get_priors():
 def save_figs(out_folder, sim_name):
     # check if folder exists, make one if it doesn't
     name = out_folder
-    print('folder name for fig saving = ', name)
+    print(f'folder name for fig saving = {name}')
     w = plt.get_fignums()
     print('w = ', w)
     for i in plt.get_fignums():
@@ -434,18 +422,16 @@ def get_storage_folder(sim_name='test'):
     print('checking if storage directory exists')
     homefolder = os.path.expanduser('~')
     outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
-    # outfolder = r'PycharmProjects\mcmcrsf_xfiles\mcmc_out'
-    # root = f'C:\\Users\\fich146\\PycharmProjects\\mcmc_rsf\\mcmc_out\\{sim_name}'
     name = sim_name
     fullpath = os.path.join(homefolder, outfolder, name)
     isExisting = os.path.exists(fullpath)
     if isExisting is False:
-        print('directory does not exist, creating new directory --> ', fullpath)
+        print(f'directory does not exist, creating new directory --> {fullpath}')
         os.makedirs(fullpath)
         return fullpath
     elif isExisting is True:
-        print('directory exists, all outputs will be saved to existing directory and any existing files will be '
-              'overwritten --> ', fullpath)
+        print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
+              'overwritten --> {fullpath}')
         return fullpath
 
 
@@ -470,12 +456,12 @@ def isMonotonic(A):
 
 def remove_non_monotonic(times, data, axis=0):
     if not np.all(np.diff(times) >= 0):
-        print('time series can become non-monotonic after downsampling which is an issue for the mcmc sampler')
+        print('time series can become non-monotonic after downsampling which is an issue for the sampler')
         print('now removing non-monotonic t and mu values from dataset')
-        print('input downsampled data shape = ', data.shape)
+        print(f'input downsampled data shape = {data.shape}')
         # Find the indices where the array is not monotonically increasing
         non_monotonic_indices = np.where(np.diff(times) < 0)[0]
-        print('non monotonic time indices = ', non_monotonic_indices)
+        print(f'non monotonic time indices = {non_monotonic_indices}')
 
         # Remove the non-monotonic data points
         cleaned_data = np.delete(data, non_monotonic_indices, axis)
@@ -540,7 +526,7 @@ def main():
         sim_name = f'out_{draws}d{chains_for_convergence}ch'
         root = get_storage_folder(sim_name)
 
-        print('inference data = ', idata)
+        print(f'inference data = {idata}')
 
         # plot model parameter traces
         plt.figure(400)
@@ -548,13 +534,13 @@ def main():
 
         # print and save model parameter stats
         summary = az.summary(idata, kind='stats')
-        print('summary: ', summary)
+        print(f'summary: {summary}')
         summary.to_csv(os.path.join(root, 'idata.csv'))
 
         sample_posterior_predcheck(idata)
 
         summary_pp = az.summary(idata, kind='stats')
-        print('summary: ', summary_pp)
+        print(f'summary: {summary_pp}')
 
         # post-processing takes results and makes plots, save figs saves figures
         post_processing(idata, mutrue, times, vlps)
@@ -563,7 +549,7 @@ def main():
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
-    print('time elapsed = ', time_elapsed)
+    print(f'time elapsed = {time_elapsed}')
 
     # write simulation info to text file
     sim_smc_info = [draws, chains_for_convergence, cores]
