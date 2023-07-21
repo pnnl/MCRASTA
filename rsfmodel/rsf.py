@@ -152,7 +152,7 @@ class Model(LoadingSystem):
         Determines if all necessary parameters are set to run the model.
         Will raise appropriate error as necessary.
         """
-        print('forward model: performing ready check')
+        # print('forward model: performing ready check')
         if self.a is None:
             raise IncompleteModelError('Parameter a is None')
         elif self.vref is None:
@@ -244,9 +244,9 @@ class Model(LoadingSystem):
         self.results.states = wsol[:, 1:]
         self.results.time = self.time
 
-        print(f'self.results.friction = {self.results.friction}; results friction shape = {self.results.friction.shape}')
-        print(f'self.results.states = {self.results.states}; results states shape = {self.results.states.shape}')
-        print(f'self.results.time =  {self.results.time}; results time shape = {self.results.time.shape}')
+        # print(f'self.results.friction = {self.results.friction}; results friction shape = {self.results.friction.shape}')
+        # print(f'self.results.states = {self.results.states}; results states shape = {self.results.states.shape}')
+        # print(f'self.results.time =  {self.results.time}; results time shape = {self.results.time.shape}')
 
         # Calculate slider velocity after we have solved everything
         # print('forward model: Calculate slider velocity after we have solved everything')
