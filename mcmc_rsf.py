@@ -336,9 +336,10 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
     return mu_sim
 
 
-def plot_rsfmodel_plots(mu, t):
+def plot_rsfmodel_plots(musim, t):
     plt.figure(1000)
-    plt.plot(t, mu)
+    plt.plot(t, musim)
+    plt.plot(t, mutrue, 'k.')
     plt.xlabel('time')
     plt.ylabel('mu')
     plt.title('simulated')
@@ -432,7 +433,7 @@ def save_figs(out_folder, sim_name):
     print('w = ', w)
     for i in plt.get_fignums():
         print('i = ', i)
-        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'))
+        plt.figure(i).savefig(os.path.join(name, f'fig{i}.eps'), dpi=300)
 
 
 def check_file_exist(folder, name):
@@ -513,10 +514,10 @@ def sample_posterior_predcheck(idata):
     pm.sample_posterior_predictive(idata, extend_inferencedata=True)
 
     # save trace for easier debugging if needed
-    out_name = f'{sim_name}_idata'
-    folder = get_storage_folder(dirname='idata')
-    name = check_file_exist(folder, out_name)
-    idata.to_netcdf(os.path.join(folder, f'{name}'))
+    # out_name = f'{sim_name}_idata'
+    # folder = get_storage_folder(dirname='idata')
+    # name = check_file_exist(folder, out_name)
+    # idata.to_netcdf(os.path.join(folder, f'{name}'))
 
 
 def main():
@@ -549,7 +550,7 @@ def main():
 
         # seq. mcmc sampler parameters
         # tune = 5
-        draws = 10
+        draws = 2
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns??
