@@ -11,7 +11,7 @@ import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
 
-global times, vlps, lpdisp, drawcount
+global times, vlps, lpdisp, fmcount, sim_name
 
 um_to_mm = 0.001
 
@@ -73,6 +73,10 @@ def get_obs_data():
     # 'vdcdt_um':  the vertical (shear) displacement in microns,
     # 'vstress_mpa': the vertical (shear) stress in MPa
 
+    # first remove any mu < 0 data from end of experiment
+    idx = np.argmax(df['mu'] < 0)
+    df = df.iloc[0:idx]
+
     t = df['time_s'].to_numpy()
     mu = df['mu'].to_numpy()
     x = df['vdcdt_um'].to_numpy()
@@ -105,6 +109,7 @@ def get_obs_data():
     # plt.plot(x*um_to_mm, mutrue)
     # plt.xlabel('displacement (mm)')
     # plt.ylabel('mu')
+    # plt.show()
 
     return mutrue, times, vlps, x
 
@@ -170,7 +175,7 @@ def preplot(df, colnames):
 
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter - come back and see what 1000 is and if mode should change
-    mu_f = savgol_filter(mu, 100, 2, mode='mirror')
+    mu_f = savgol_filter(mu, 50, 2, mode='mirror')
     print(f'mu_f.shape = {mu_f.shape}')
 
     # stack time and mu arrays to sample together
@@ -183,15 +188,16 @@ def downsample_dataset(mu, t, vlps, x):
     print(f'number samples in downsampled series = {f_ds.shape}')
     t_ds = f_ds[:, 1]
     mu_ds = f_ds[:, 0]
+    x_ds = f_ds[:, 3]
 
     # plot series as sanity check
-    # plt.plot(t, mu, '.-', label='original data')
-    # plt.plot(t, mu_f, '.-', label='filtered data')
-    # plt.plot(t_ds, mu_ds, '.-', label='downsampled data')
-    # plt.xlabel('time (s)')
+    # plt.plot(x, mu, '.-', label='original data')
+    # plt.plot(x, mu_f, '.-', label='filtered data')
+    # plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
+    # plt.xlabel('disp (mm)')
     # plt.ylabel('mu')
     # plt.legend()
-    # plt.show()
+    # # plt.show()
 
     return f_ds
 
@@ -202,8 +208,8 @@ def section_data(data):
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
     print(f'new dataframe col names = {list(df)}')
 
-    start_idx = np.argmax(df['t'] > 19300)
-    end_idx = np.argmax(df['t'] > 19700)
+    start_idx = np.argmax(df['x'] > 18 / um_to_mm)
+    end_idx = np.argmax(df['x'] > 20 / um_to_mm)
 
     df_section = df.iloc[start_idx:end_idx]
 
@@ -211,6 +217,7 @@ def section_data(data):
     print(f'section shape = {df_section.shape}')
 
     return df_section.to_numpy()
+
 
 def generate_rsf_data(times, vlps):
     # runs rsfmodel.py to generate synthetic friction data
@@ -281,7 +288,7 @@ def generate_rsf_data(times, vlps):
 
 
 def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
-    global times, vlps, lpdisp, drawcount
+    global times, vlps, lpdisp, fmcount
     t = times
     k, vref = get_constants(vlps)
 
@@ -313,8 +320,8 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
     model.loadpoint_displacement = lpdisp
 
     # Run the model!
-    drawcount += 1
-    print(f'DRAW (ish) NUMBER ===== {drawcount}')
+    fmcount += 1
+    print(f'FWD MODEL RUN COUNT ===== {fmcount}')
     model.solve()
 
     mu_sim = model.results.friction
@@ -369,22 +376,27 @@ def post_processing(idata, mutrue, times, vlps):
     # to extract simulated mu values for realizations
     stacked = az.extract(idata.posterior_predictive)
     print(f'stacked = {stacked}')
-    mu_vals = stacked.simulator.values
+    musims = stacked.simulator.values
 
-    print(f'simulated mu values = {mu_vals}')
-    print(f'shape of posterior predictive dataset = {mu_vals.shape}')
+    print(f'simulated mu values = {musims}')
+    print(f'shape of posterior predictive dataset = {musims.shape}')
 
     # plot post pred
     az.plot_ppc(idata)
 
-    df = pd.DataFrame(mu_vals)
+    # df = pd.DataFrame(mu_vals)
 
-    mumeans = df.mean(axis=1)
+    # mumeans = df.mean(axis=1)
     t = times
 
     # plot simulated mus with true mu
     plt.figure(500)
-    plt.plot(t, df, 'b-', t, mutrue, 'k')
+    plt.plot(t, mutrue, 'k.', label='observed')
+    plt.plot(t, musims, 'b-')
+    plt.xlabel('time (s)')
+    plt.ylabel('mu')
+    plt.title('Observed and simulated friction values')
+    plt.legend()
 
     print('post processing complete')
 
@@ -402,10 +414,10 @@ def get_priors():
     # Dc = pm.Normal('Dc', mu=61.8, sigma=20)
     # mu0 = pm.Normal('mu0', mu=0.44, sigma=0.1)
 
-    a = pm.Uniform('a', lower=0.006-0.008, upper=0.007+0.008)
-    b = pm.Uniform('b', lower=0.0059-0.008, upper=0.00617+0.008)
-    Dc = pm.Uniform('Dc', lower=61.8-20, upper=61.8+20)
-    mu0 = pm.Uniform('mu0', lower=0.44-0.2, upper=0.44+0.2)
+    a = pm.Uniform('a', lower=0.006 - 0.008, upper=0.007 + 0.008)
+    b = pm.Uniform('b', lower=0.0059 - 0.008, upper=0.00617 + 0.008)
+    Dc = pm.Uniform('Dc', lower=61.8 - 20, upper=61.8 + 20)
+    mu0 = pm.Uniform('mu0', lower=0.44 - 0.1, upper=0.44 + 0.1)
 
     priors = [a, b, Dc, mu0]
 
@@ -423,12 +435,24 @@ def save_figs(out_folder, sim_name):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'))
 
 
-def get_storage_folder(sim_name='test'):
+def check_file_exist(folder, name):
+    isExisting = os.path.exists(os.path.join(folder, name))
+    if isExisting is False:
+        print(f'file does not exist, returning file name --> {name}')
+        return name
+    elif isExisting is True:
+        print(f'file does exist, rename new output for now, eventually delete previous --> {name}')
+        oldname = name
+        newname = f'{oldname}_a'
+        return newname
+
+
+def get_storage_folder(dirname):
     print('checking if storage directory exists')
     homefolder = os.path.expanduser('~')
     outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
-    name = sim_name
-    fullpath = os.path.join(homefolder, outfolder, name)
+    # name = sim_name
+    fullpath = os.path.join(homefolder, outfolder, dirname)
     isExisting = os.path.exists(fullpath)
     if isExisting is False:
         print(f'directory does not exist, creating new directory --> {fullpath}')
@@ -436,8 +460,14 @@ def get_storage_folder(sim_name='test'):
         return fullpath
     elif isExisting is True:
         print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
-              'overwritten --> {fullpath}')
+              f'overwritten --> {fullpath}')
         return fullpath
+
+
+def get_sim_name(draws, chains):
+    global sim_name
+    sim_name = f'out_{draws}d{chains}ch'
+    return sim_name
 
 
 # def write_model_info(sim_name, smc_info, runtime, params_priors, constants, results_summary):
@@ -483,8 +513,10 @@ def sample_posterior_predcheck(idata):
     pm.sample_posterior_predictive(idata, extend_inferencedata=True)
 
     # save trace for easier debugging if needed
-    # out_name = 'idata2'
-    # idata.to_netcdf(os.path.join(r'C:\Users\fich146\PycharmProjects\mcmcrsf_xfiles\mcmc_out', 'idata'))
+    out_name = f'{sim_name}_idata'
+    folder = get_storage_folder(dirname='idata')
+    name = check_file_exist(folder, out_name)
+    idata.to_netcdf(os.path.join(folder, f'{name}'))
 
 
 def main():
@@ -503,21 +535,21 @@ def main():
 
     # define smc model parameters
     with pm.Model() as mcmcmodel:
-        global drawcount
+        global fmcount
 
         # priors on stochastic parameters, constants
         priors = get_priors()
         a, b, Dc, mu0 = priors
         k, vref = get_constants(vlps)
 
-        drawcount = 0
+        fmcount = 0
         # likelihood function
         simulator = pm.Simulator('simulator', mcmc_rsf_sim, params=(a, b, Dc, mu0), epsilon=0.01,
                                  observed=mutrue)
 
         # seq. mcmc sampler parameters
         # tune = 5
-        draws = 50
+        draws = 10
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns??
@@ -526,8 +558,10 @@ def main():
 
         # MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
         kernel_kwargs = dict(correlation_threshold=0.9)
-        idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores, **kernel_kwargs)
-        sim_name = f'out_{draws}d{chains_for_convergence}ch'
+        idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
+                              **kernel_kwargs)
+        sim_name = get_sim_name(draws, chains_for_convergence)
+
         root = get_storage_folder(sim_name)
 
         print(f'inference data = {idata}')
