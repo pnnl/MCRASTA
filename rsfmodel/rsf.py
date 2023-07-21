@@ -230,8 +230,8 @@ class Model(LoadingSystem):
             # print('forward model: append state var')
             w0.append(state_variable.state)
 
-        # Find any critial time points we need to let the integrator know about
-        # print('forward model: Find any critial time points we need to let the integrator know about')
+        # Find any critical time points we need to let the integrator know about
+        # print('forward model: Find any critical time points we need to let the integrator know about')
         self.critical_times = self._get_critical_times(threshold)
 
         # Solve it
@@ -263,27 +263,27 @@ class Model(LoadingSystem):
                                         velocity_contribution) / self.a)
 
         # TEMPORARY - LOOK INTO THIS FURTHER - ADDED BY MAR
-        self.results.slider_velocity = self.loadpoint_velocity
+        # self.results.slider_velocity = self.loadpoint_velocity
 
         # Calculate displacement from velocity and dt
         # print('forward model: Calculate displacement from velocity and dt')
-        # self.results.loadpoint_displacement = \
-        #     self._calculateDiscreteDisplacement(self.loadpoint_velocity)
+        self.results.loadpoint_displacement = \
+            self._calculateDiscreteDisplacement(self.loadpoint_velocity)
 
-        self.results.loadpoint_displacement = self.loadpoint_displacement
+        # self.results.loadpoint_displacement = self.loadpoint_displacement
 
         # Calculate the slider displacement
         # print('forward model: Calculate the slider displacement')
-        # self.results.slider_displacement = \
-        #     self._calculateContinuousDisplacement(self.results.slider_velocity)
+        self.results.slider_displacement = \
+            self._calculateContinuousDisplacement(self.results.slider_velocity)
 
-        self.results.slider_displacement = self.loadpoint_displacement
+        # self.results.slider_displacement = self.loadpoint_displacement
 
         # Check slider displacement for accumulated error and warn
         if not self._check_slider_displacement():
             warnings.warn("Slider displacement differs from prediction by over "
                           "1%. Smaller requested time resolution should be used "
-                          "If you intend to use the slider displacment output.")
+                          "If you intend to use the slider displacement output.")
 
         print('forward model: returning results')
         return self.results

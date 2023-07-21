@@ -390,17 +390,22 @@ def post_processing(idata, mutrue, times, vlps):
 
 
 def get_constants(vlps):
-    k = 0.002
+    k = 0.0015
     vref = vlps[0]
 
     return k, vref
 
 
 def get_priors():
-    a = pm.Normal('a', mu=0.006692, sigma=0.1)
-    b = pm.Normal('b', mu=0.00617, sigma=0.1)
-    Dc = pm.Normal('Dc', mu=61.8, sigma=20)
-    mu0 = pm.Normal('mu0', mu=0.44, sigma=0.1)
+    # a = pm.Normal('a', mu=0.006692, sigma=0.1)
+    # b = pm.Normal('b', mu=0.00617, sigma=0.1)
+    # Dc = pm.Normal('Dc', mu=61.8, sigma=20)
+    # mu0 = pm.Normal('mu0', mu=0.44, sigma=0.1)
+
+    a = pm.Uniform('a', lower=0.006-0.008, upper=0.007+0.008)
+    b = pm.Uniform('b', lower=0.0059-0.008, upper=0.00617+0.008)
+    Dc = pm.Uniform('Dc', lower=61.8-20, upper=61.8+20)
+    mu0 = pm.Uniform('mu0', lower=0.44-0.2, upper=0.44+0.2)
 
     priors = [a, b, Dc, mu0]
 
@@ -488,7 +493,6 @@ def main():
     # observed data
     global mutrue, times, vlps, lpdisp
     mutrue, times, vlps, lpdisp = get_obs_data()
-    times = times*0.001
 
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
@@ -513,7 +517,7 @@ def main():
 
         # seq. mcmc sampler parameters
         # tune = 5
-        draws = 500
+        draws = 5
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns??
@@ -544,7 +548,6 @@ def main():
 
         # post-processing takes results and makes plots, save figs saves figures
         post_processing(idata, mutrue, times, vlps)
-        plt.show()
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
