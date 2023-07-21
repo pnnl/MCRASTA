@@ -517,7 +517,7 @@ def main():
 
         # seq. mcmc sampler parameters
         # tune = 5
-        draws = 5
+        draws = 50
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns??
