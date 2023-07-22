@@ -441,7 +441,7 @@ def save_figs(out_folder, sim_name):
     print('w = ', w)
     for i in plt.get_fignums():
         print('i = ', i)
-        plt.figure(i).savefig(os.path.join(name, f'fig{i}.eps'), dpi=300)
+        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300)
 
 
 def check_file_exist(folder, name):
