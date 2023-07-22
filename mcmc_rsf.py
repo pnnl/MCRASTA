@@ -467,7 +467,7 @@ def get_storage_folder(dirname):
 
 def get_sim_name(draws, chains):
     global sim_name
-    sim_name = f'out_{draws}d{chains}ch'
+    sim_name = f'out_{draws}d{chains}ch_lowerthreshtest'
     return sim_name
 
 
@@ -550,7 +550,7 @@ def main():
 
         # seq. mcmc sampler parameters
         # tune = 5
-        draws = 2
+        draws = 10
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns??
@@ -558,7 +558,7 @@ def main():
         print(f'num draws = {draws}; num chains = {chains_for_convergence}')
 
         # MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
-        kernel_kwargs = dict(correlation_threshold=0.9)
+        kernel_kwargs = dict(correlation_threshold=0.5)
         idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
                               **kernel_kwargs)
         sim_name = get_sim_name(draws, chains_for_convergence)
