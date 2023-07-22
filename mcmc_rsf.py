@@ -12,7 +12,7 @@ import scipy as sp
 from scipy.signal import savgol_filter
 from multiprocessing import process
 
-global mutrue, times, vlps, lpdisp, fmcount, sim_name, dirpath
+global mutrue, times, vlps, x, fmcount, sim_name, dirpath, sample_name
 
 um_to_mm = 0.001
 
@@ -49,10 +49,12 @@ def calc_derivative(y, x, window_len=100):
 
 
 def get_obs_data():
+    global sample_name, mutrue, vlps, times, x
     homefolder = os.path.expanduser('~')
     path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', 'p5894')
     # path = r'PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare\p5756'
     name = 'p5894_proc.hdf5'
+    sample_name = name
     fullpath = os.path.join(homefolder, path, name)
     print(f'getting data from: {fullpath}')
     f = h5py.File(os.path.join(homefolder, path, name), 'r')
@@ -289,7 +291,7 @@ def generate_rsf_data(times, vlps):
 
 
 def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
-    global times, vlps, lpdisp, fmcount
+    global times, vlps, x, fmcount
     t = times
     k, vref = get_constants(vlps)
 
@@ -298,7 +300,6 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
 
     # Size of dataset
     model.datalen = len(t)
-    print(model.datalen)
 
     # model.create_h5py_dataset()
 
@@ -321,7 +322,7 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = lp_velocity
-    model.loadpoint_displacement = lpdisp
+    model.loadpoint_displacement = x
 
     # Run the model!
     fmcount += 1
@@ -339,7 +340,6 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
 
     # plot_rsfmodel_plots(mu_sim, t_sim)
 
-    print('returning simulated mu vals')
     return mu_sim
 
 
@@ -368,21 +368,23 @@ def get_time(name):
     return codetime
 
 
-def post_processing(idata, mutrue, times, vlps):
-    # to extract model parameters being estimated
-    modelsim_params = az.extract(idata.posterior)
-
-    print(f'model params = {modelsim_params}')
+def post_processing(idata):
+    # save dataset in case needed later
+    df_data = pd.DataFrame(np.column_stack((times, x, vlps, mutrue)), columns=['times', 'x', 'vlps', 'mutrue'])
+    df_data.to_csv(os.path.join(dirpath, 'section_data.csv'))
 
     # to extract simulated mu values for realizations
     stacked_pp = az.extract(idata.posterior_predictive)
     print(f'stacked = {stacked_pp}')
     musims = stacked_pp.simulator.values
-    df_musims = pd.DataFrame(musims)
-    df_musims.to_csv(os.path.join(root, 'musims.csv'))
 
-    print(f'simulated mu values = {musims}')
-    print(f'shape of posterior predictive dataset = {musims.shape}')
+    # df_musims = pd.DataFrame(musims)
+    # df_musims['t'] = times
+    #
+    # # now save them
+    # df_musims.to_csv(os.path.join(dirpath, 'musims.csv'))
+    # print(f'simulated mu values = {musims}')
+    # print(f'shape of posterior predictive dataset = {musims.shape}')
 
     # plot trace and then posterior predictive plot
     plot_trace(idata)
@@ -391,7 +393,7 @@ def post_processing(idata, mutrue, times, vlps):
     # now plot simulated mus with true mu
     t = times
     plt.figure(500)
-    plt.plot(t, mutrue, 'k.', label='observed')
+    plt.plot(t, mutrue, 'k.', label='observed', alpha=0.7)
     plt.plot(t, musims, 'b-', alpha=0.3)
     plt.xlabel('time (s)')
     plt.ylabel('mu')
@@ -435,14 +437,14 @@ def save_figs(out_folder):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300)
 
 
-def check_file_exist(folder, name):
-    isExisting = os.path.exists(os.path.join(folder, name))
+def check_file_exist(dirpath, filename):
+    isExisting = os.path.exists(os.path.join(dirpath, filename))
     if isExisting is False:
-        print(f'file does not exist, returning file name --> {name}')
-        return name
+        print(f'file does not exist, returning file name --> {filename}')
+        return filename
     elif isExisting is True:
-        print(f'file does exist, rename new output for now, eventually delete previous --> {name}')
-        oldname = name
+        print(f'file does exist, rename new output for now, eventually delete previous --> {filename}')
+        oldname = filename
         newname = f'{oldname}_a'
         return newname
 
@@ -469,22 +471,30 @@ def get_storage_folder(dirname):
 
 def get_sim_name(draws, chains):
     global sim_name
-    sim_name = f'out_{draws}d{chains}ch_lowerthreshtest'
+    sim_name = f'out_{draws}d{chains}ch'
     return sim_name
 
 
-# def write_model_info(sim_name, smc_info, runtime, params_priors, constants, results_summary):
-#     get_storage_folder(sim_name)
-#     lines = sim_name, smc_info, runtime, params_priors, constants, results_summary
-#     labels = 'sim_name', 'smc_info', 'runtime', 'params', 'constants', 'results'
-#     strings = []
-#     for line in lines:
-#         string = line.astype(str)
-#         value = f'{line}'
-#
-#
-#     with open('simulation_summary.txt', 'w') as f:
-#         f.writelines(strings)
+def write_model_info(draws, chains_for_convergence, time_elapsed, k, vref, vsummary, ppsummary):
+    fname = os.path.join(dirpath, 'out.txt')
+
+    samplerstrs = ['SAMPLER INFO', 'num draws', 'smc chains', 'runtime (s)']
+    modelstrs = ['MODEL INFO', 'constants', 'k', 'vref']
+    summarystr = ['SAMPLE VARS SUMMARY', 'POST PRED SAMPLE SUMMARY']
+    strlist = [samplerstrs, modelstrs, summarystr]
+
+    samplervals = ['', draws, chains_for_convergence, time_elapsed]
+    modelvals = ['', '', k, vref]
+    summaryvals = [vsummary, ppsummary]
+    vallist = [samplervals, modelvals, summaryvals]
+
+    with open(fname, mode='w') as f:
+        f.write(f'SAMPLE: {sample_name}\n')
+        f.write(f'from t = {times[0]} to t= {times[-1]} seconds\n')
+        for strings, vals in zip(strlist, vallist):
+            # f.writelines(f'{strings}: {vals}')
+            for string, val in zip(strings, vals):
+                f.write(f'{string}: {val}\n')
 
 
 def isMonotonic(A):
@@ -515,11 +525,12 @@ def remove_non_monotonic(times, data, axis=0):
 def sample_posterior_predcheck(idata):
     pm.sample_posterior_predictive(idata, extend_inferencedata=True)
 
+
+def save_trace(idata):
     # save trace for easier debugging if needed
-    # out_name = f'{sim_name}_idata'
-    # folder = get_storage_folder(dirname='idata')
-    # name = check_file_exist(folder, out_name)
-    # idata.to_netcdf(os.path.join(folder, f'{name}'))
+    out_name = f'{sim_name}_idata'
+    name = check_file_exist(dirpath, out_name)
+    idata.to_netcdf(os.path.join(dirpath, f'{name}'))
 
 
 def plot_trace(idata):
@@ -536,13 +547,15 @@ def save_stats(idata, root):
     print(f'summary: {summary}')
     summary.to_csv(os.path.join(root, 'idata.csv'))
 
+    return summary
+
 
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
 
     # observed data
-    global mutrue, times, vlps, lpdisp
-    mutrue, times, vlps, lpdisp = get_obs_data()
+    global mutrue, times, vlps, x
+    mutrue, times, vlps, x = get_obs_data()
 
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
@@ -566,7 +579,7 @@ def main():
                                  observed=mutrue)
 
         # seq. mcmc sampler parameters
-        draws = 10
+        draws = 2
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns?? doesn't work but maybe manually could do it
@@ -577,39 +590,45 @@ def main():
         kernel_kwargs = dict(correlation_threshold=0.5)
         idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
                               **kernel_kwargs)
-        get_sim_name(draws, chains_for_convergence)
 
+        get_sim_name(draws, chains_for_convergence)
         get_storage_folder(sim_name)
 
         print(f'inference data = {idata}')
 
         # save model parameter stats
-        save_stats(idata, dirpath)
+        vsummary = save_stats(idata, dirpath)
 
         # sample the posterior for validation
         sample_posterior_predcheck(idata)
 
+        # save the trace
+        save_trace(idata)
+
         # print and save new idata stats that includes posterior predictive check
-        summary_pp = az.summary(idata, kind='stats')
+        summary_pp = save_stats(idata, dirpath)
         print(f'idata summary: {summary_pp}')
-        save_stats(idata, dirpath)
+
+        print(times.shape)
+        print(x.shape)
+        print(vlps.shape)
+        print(mutrue.shape)
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata, mutrue, times, vlps)
+        post_processing(idata)
         save_figs(dirpath)
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
     print(f'time elapsed = {time_elapsed}')
 
-    # write simulation info to text file
-    sim_smc_info = [draws, chains_for_convergence, cores]
-    sim_runtime = time_elapsed
-    sim_params_priors = priors
-    sim_constants = k, vref
-    # sim_results_summary = summary
-
-    # write_model_info(sim_name, sim_smc_info, sim_runtime, sim_params_priors, sim_constants, sim_results_summary)
+    write_model_info(draws=draws,
+                     chains_for_convergence=chains_for_convergence,
+                     time_elapsed=time_elapsed,
+                     k=k,
+                     vref=vref,
+                     vsummary=vsummary,
+                     ppsummary=summary_pp)
 
     plt.show()
 

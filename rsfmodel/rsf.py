@@ -232,7 +232,7 @@ class Model(LoadingSystem):
         results : named tuple
             Results of the model
         """
-        print('FORWARD MODEL BEGIN MODEL.SOLVE')
+        # print('FORWARD MODEL BEGIN MODEL.SOLVE')
         odeint_kwargs = dict(rtol=1e-12, atol=1e-12, mxstep=5000)
         odeint_kwargs.update(kwargs)
         # print('forward model: odeint_kwargs')
@@ -304,8 +304,6 @@ class Model(LoadingSystem):
                           "1%. Smaller requested time resolution should be used "
                           "If you intend to use the slider displacement output.")
 
-        print('forward model: returning results')
-        # print('PID == ', os.getpid())
         # self.save_simulated_values(self.results.friction)
 
         return self.results
