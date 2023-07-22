@@ -534,7 +534,6 @@ def save_trace(idata):
 
 
 def plot_trace(idata):
-    plt.figure(400)
     az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], kind="rank_vlines")
 
 
@@ -579,7 +578,7 @@ def main():
                                  observed=mutrue)
 
         # seq. mcmc sampler parameters
-        draws = 2
+        draws = 501
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns?? doesn't work but maybe manually could do it
@@ -608,11 +607,6 @@ def main():
         # print and save new idata stats that includes posterior predictive check
         summary_pp = save_stats(idata, dirpath)
         print(f'idata summary: {summary_pp}')
-
-        print(times.shape)
-        print(x.shape)
-        print(vlps.shape)
-        print(mutrue.shape)
 
         # post-processing takes results and makes plots, save figs saves figures
         post_processing(idata)
