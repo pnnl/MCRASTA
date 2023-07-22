@@ -1,8 +1,13 @@
+import os
+
+import h5py
 import numpy as np
 from scipy import integrate
 from math import exp
 from collections import namedtuple
 import warnings
+import calendar
+import time
 
 
 class IncompleteModelError(Exception):
@@ -73,11 +78,25 @@ class Model(LoadingSystem):
         self.results = namedtuple("results", ["time", "loadpoint_displacement",
                                               "slider_velocity", "friction",
                                               "states", "slider_displacement"])
+        self.current_GMT = time.gmtime()
+        self.time_stamp = calendar.timegm(self.current_GMT)
+        self.pid = os.getpid()
+        self.homefolder = os.path.expanduser('~')
+        self.storage_name = os.path.join(self.homefolder, 'PycharmProjects', 'mcmcrsf_xfiles', 'musim_out', f'musim{self.pid}.hdf5')
+        self.datalen = None
+        self.count = 0
+
+
+    def create_h5py_dataset(self):
+        with h5py.File(self.storage_name, 'w') as f:
+            f['musimdata'] = f.create_dataset(f'{self.pid}init', shape=(0, self.datalen), maxshape=(None, self.datalen))
+
 
 
     def savetxt(self, fname, line_ending='\n'):
         """ Save the output of the model to a csv file.
         """
+        print('TEST TO SEE IF THIS GETS CALLED')
         with open(fname, 'w') as f:
             # Model Properties
             f.write(f'mu0 = {self.mu0}{line_ending}')
@@ -286,7 +305,16 @@ class Model(LoadingSystem):
                           "If you intend to use the slider displacement output.")
 
         print('forward model: returning results')
+        print('PID == ', os.getpid())
+        self.save_simulated_values(self.results.friction)
+
         return self.results
+
+    def save_simulated_values(self, var):
+        row = self.count
+        with h5py.File(self.storage_name, 'a') as f:
+            f['musimdata'].resize((f['musimdata'].shape[0]+row), axis=0)
+            f['musimdata'][row:] = var
 
     def _check_slider_displacement(self, tol=0.01):
         """

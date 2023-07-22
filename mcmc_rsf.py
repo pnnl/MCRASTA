@@ -10,6 +10,7 @@ import sys
 import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
+from multiprocessing import process
 
 global times, vlps, lpdisp, fmcount, sim_name
 
@@ -292,11 +293,15 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
     t = times
     k, vref = get_constants(vlps)
 
-    # Size of dataset
-    size = len(t)
 
     # Simulate outcome variable
     model = rsf.Model()
+
+    # Size of dataset
+    model.datalen = len(t)
+    print(model.datalen)
+
+    model.create_h5py_dataset()
 
     # Set model initial conditions
     model.mu0 = mu0  # Friction initial (at the reference velocity)
@@ -321,16 +326,19 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
 
     # Run the model!
     fmcount += 1
+    model.count += 1
     print(f'FWD MODEL RUN COUNT ===== {fmcount}')
     model.solve()
 
     mu_sim = model.results.friction
     t_sim = model.results.time
 
+    # print('process id == ', os.getpid())
+
     # plt.figure(100)
     # plot.dispPlot(model)
 
-    plot_rsfmodel_plots(mu_sim, t_sim)
+    # plot_rsfmodel_plots(mu_sim, t_sim)
 
     print('returning simulated mu vals')
     return mu_sim
@@ -550,7 +558,7 @@ def main():
 
         # seq. mcmc sampler parameters
         # tune = 5
-        draws = 10
+        draws = 2
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns??
@@ -576,13 +584,13 @@ def main():
         print(f'summary: {summary}')
         summary.to_csv(os.path.join(root, 'idata.csv'))
 
-        sample_posterior_predcheck(idata)
+        # sample_posterior_predcheck(idata)
 
         summary_pp = az.summary(idata, kind='stats')
         print(f'summary: {summary_pp}')
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata, mutrue, times, vlps)
+        # post_processing(idata, mutrue, times, vlps)
         save_figs(root, sim_name)
 
     comptime_end = get_time('end')
