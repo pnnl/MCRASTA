@@ -305,8 +305,8 @@ class Model(LoadingSystem):
                           "If you intend to use the slider displacement output.")
 
         print('forward model: returning results')
-        print('PID == ', os.getpid())
-        self.save_simulated_values(self.results.friction)
+        # print('PID == ', os.getpid())
+        # self.save_simulated_values(self.results.friction)
 
         return self.results
 

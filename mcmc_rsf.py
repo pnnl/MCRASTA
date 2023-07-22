@@ -12,7 +12,7 @@ import scipy as sp
 from scipy.signal import savgol_filter
 from multiprocessing import process
 
-global times, vlps, lpdisp, fmcount, sim_name
+global mutrue, times, vlps, lpdisp, fmcount, sim_name, dirpath
 
 um_to_mm = 0.001
 
@@ -293,7 +293,6 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
     t = times
     k, vref = get_constants(vlps)
 
-
     # Simulate outcome variable
     model = rsf.Model()
 
@@ -301,7 +300,7 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
     model.datalen = len(t)
     print(model.datalen)
 
-    model.create_h5py_dataset()
+    # model.create_h5py_dataset()
 
     # Set model initial conditions
     model.mu0 = mu0  # Friction initial (at the reference velocity)
@@ -372,36 +371,28 @@ def get_time(name):
 def post_processing(idata, mutrue, times, vlps):
     # to extract model parameters being estimated
     modelsim_params = az.extract(idata.posterior)
-    mvals = modelsim_params.sample.values
-    print(f'avals = {mvals}')
-
-    df_param_results = pd.DataFrame(mvals)
-    df_param_results.to_csv(r'C:\Users\fich146\PycharmProjects\mcmcrsf_xfiles\mcmc_out\presults.csv')
 
     print(f'model params = {modelsim_params}')
-    # mu0_realz = modelsim_params.mu0.values
-    # print('mu0 realz shape = ', mu0_realz.shape)
 
     # to extract simulated mu values for realizations
-    stacked = az.extract(idata.posterior_predictive)
-    print(f'stacked = {stacked}')
-    musims = stacked.simulator.values
+    stacked_pp = az.extract(idata.posterior_predictive)
+    print(f'stacked = {stacked_pp}')
+    musims = stacked_pp.simulator.values
+    df_musims = pd.DataFrame(musims)
+    df_musims.to_csv(os.path.join(root, 'musims.csv'))
 
     print(f'simulated mu values = {musims}')
     print(f'shape of posterior predictive dataset = {musims.shape}')
 
-    # plot post pred
-    az.plot_ppc(idata)
+    # plot trace and then posterior predictive plot
+    plot_trace(idata)
+    plot_posterior_predictive(idata)
 
-    # df = pd.DataFrame(mu_vals)
-
-    # mumeans = df.mean(axis=1)
+    # now plot simulated mus with true mu
     t = times
-
-    # plot simulated mus with true mu
     plt.figure(500)
     plt.plot(t, mutrue, 'k.', label='observed')
-    plt.plot(t, musims, 'b-')
+    plt.plot(t, musims, 'b-', alpha=0.3)
     plt.xlabel('time (s)')
     plt.ylabel('mu')
     plt.title('Observed and simulated friction values')
@@ -433,7 +424,7 @@ def get_priors():
     return priors
 
 
-def save_figs(out_folder, sim_name):
+def save_figs(out_folder):
     # check if folder exists, make one if it doesn't
     name = out_folder
     print(f'folder name for fig saving = {name}')
@@ -457,20 +448,23 @@ def check_file_exist(folder, name):
 
 
 def get_storage_folder(dirname):
+    global dirpath
+
     print('checking if storage directory exists')
     homefolder = os.path.expanduser('~')
     outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
     # name = sim_name
-    fullpath = os.path.join(homefolder, outfolder, dirname)
-    isExisting = os.path.exists(fullpath)
+
+    dirpath = os.path.join(homefolder, outfolder, dirname)
+    isExisting = os.path.exists(dirpath)
     if isExisting is False:
-        print(f'directory does not exist, creating new directory --> {fullpath}')
-        os.makedirs(fullpath)
-        return fullpath
+        print(f'directory does not exist, creating new directory --> {dirpath}')
+        os.makedirs(dirpath)
+        return dirpath
     elif isExisting is True:
         print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
-              f'overwritten --> {fullpath}')
-        return fullpath
+              f'overwritten --> {dirpath}')
+        return dirpath
 
 
 def get_sim_name(draws, chains):
@@ -528,6 +522,21 @@ def sample_posterior_predcheck(idata):
     # idata.to_netcdf(os.path.join(folder, f'{name}'))
 
 
+def plot_trace(idata):
+    plt.figure(400)
+    az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], kind="rank_vlines")
+
+
+def plot_posterior_predictive(idata):
+    az.plot_ppc(idata)
+
+
+def save_stats(idata, root):
+    summary = az.summary(idata, kind='stats')
+    print(f'summary: {summary}')
+    summary.to_csv(os.path.join(root, 'idata.csv'))
+
+
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
 
@@ -557,11 +566,10 @@ def main():
                                  observed=mutrue)
 
         # seq. mcmc sampler parameters
-        # tune = 5
-        draws = 200
+        draws = 10
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
-        # more cores for the markov chain spawns??
+        # more cores for the markov chain spawns?? doesn't work but maybe manually could do it
         cores = 39
         print(f'num draws = {draws}; num chains = {chains_for_convergence}')
 
@@ -569,29 +577,26 @@ def main():
         kernel_kwargs = dict(correlation_threshold=0.5)
         idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
                               **kernel_kwargs)
-        sim_name = get_sim_name(draws, chains_for_convergence)
+        get_sim_name(draws, chains_for_convergence)
 
-        root = get_storage_folder(sim_name)
+        get_storage_folder(sim_name)
 
         print(f'inference data = {idata}')
 
-        # plot model parameter traces
-        plt.figure(400)
-        az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], kind="rank_vlines")
+        # save model parameter stats
+        save_stats(idata, dirpath)
 
-        # print and save model parameter stats
-        summary = az.summary(idata, kind='stats')
-        print(f'summary: {summary}')
-        summary.to_csv(os.path.join(root, 'idata.csv'))
+        # sample the posterior for validation
+        sample_posterior_predcheck(idata)
 
-        # sample_posterior_predcheck(idata)
-
+        # print and save new idata stats that includes posterior predictive check
         summary_pp = az.summary(idata, kind='stats')
-        print(f'summary: {summary_pp}')
+        print(f'idata summary: {summary_pp}')
+        save_stats(idata, dirpath)
 
         # post-processing takes results and makes plots, save figs saves figures
-        # post_processing(idata, mutrue, times, vlps)
-        save_figs(root, sim_name)
+        post_processing(idata, mutrue, times, vlps)
+        save_figs(dirpath)
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
