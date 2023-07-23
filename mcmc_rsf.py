@@ -10,7 +10,6 @@ import sys
 import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
-from multiprocessing import process
 
 global mutrue, times, vlps, x, fmcount, sim_name, dirpath, sample_name
 
@@ -374,9 +373,9 @@ def post_processing(idata):
     df_data.to_csv(os.path.join(dirpath, 'section_data.csv'))
 
     # to extract simulated mu values for realizations
-    stacked_pp = az.extract(idata.posterior_predictive)
-    print(f'stacked = {stacked_pp}')
-    musims = stacked_pp.simulator.values
+    # stacked_pp = az.extract(idata.posterior_predictive)
+    # print(f'stacked = {stacked_pp}')
+    # musims = stacked_pp.simulator.values
 
     # df_musims = pd.DataFrame(musims)
     # df_musims['t'] = times
@@ -387,18 +386,18 @@ def post_processing(idata):
     # print(f'shape of posterior predictive dataset = {musims.shape}')
 
     # plot trace and then posterior predictive plot
-    plot_trace(idata)
-    plot_posterior_predictive(idata)
+    # plot_trace(idata)
+    # plot_posterior_predictive(idata)
 
     # now plot simulated mus with true mu
-    t = times
-    plt.figure(500)
-    plt.plot(t, mutrue, 'k.', label='observed', alpha=0.7)
-    plt.plot(t, musims, 'b-', alpha=0.3)
-    plt.xlabel('time (s)')
-    plt.ylabel('mu')
-    plt.title('Observed and simulated friction values')
-    plt.legend()
+    # t = times
+    # plt.figure(500)
+    # plt.plot(t, mutrue, 'k.', label='observed', alpha=0.7)
+    # plt.plot(t, musims, 'b-', alpha=0.3)
+    # plt.xlabel('time (s)')
+    # plt.ylabel('mu')
+    # plt.title('Observed and simulated friction values')
+    # plt.legend()
 
     print('post processing complete')
 
@@ -485,7 +484,7 @@ def write_model_info(draws, chains_for_convergence, time_elapsed, k, vref, vsumm
 
     samplervals = ['', draws, chains_for_convergence, time_elapsed]
     modelvals = ['', '', k, vref]
-    summaryvals = [vsummary, ppsummary]
+    summaryvals = [vsummary, 'none']
     vallist = [samplervals, modelvals, summaryvals]
 
     with open(fname, mode='w') as f:
@@ -578,6 +577,7 @@ def main():
                                  observed=mutrue)
 
         # seq. mcmc sampler parameters
+        tune = 1
         draws = 501
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
@@ -585,28 +585,29 @@ def main():
         cores = 39
         print(f'num draws = {draws}; num chains = {chains_for_convergence}')
 
-        # MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
-        kernel_kwargs = dict(correlation_threshold=0.5)
-        idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
-                              **kernel_kwargs)
-
+        # create storage directory
         get_sim_name(draws, chains_for_convergence)
         get_storage_folder(sim_name)
 
+        # sample. MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
+        kernel_kwargs = dict(correlation_threshold=0.5)
+        idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
+                              **kernel_kwargs)
         print(f'inference data = {idata}')
 
         # save model parameter stats
         vsummary = save_stats(idata, dirpath)
 
-        # sample the posterior for validation
-        sample_posterior_predcheck(idata)
-
         # save the trace
         save_trace(idata)
 
+        # sample the posterior for validation
+        # sample_posterior_predcheck(idata)
+
+
         # print and save new idata stats that includes posterior predictive check
-        summary_pp = save_stats(idata, dirpath)
-        print(f'idata summary: {summary_pp}')
+        # summary_pp = save_stats(idata, dirpath)
+        # print(f'idata summary: {summary_pp}')
 
         # post-processing takes results and makes plots, save figs saves figures
         post_processing(idata)
@@ -622,7 +623,7 @@ def main():
                      k=k,
                      vref=vref,
                      vsummary=vsummary,
-                     ppsummary=summary_pp)
+                     ppsummary=None)
 
     plt.show()
 
