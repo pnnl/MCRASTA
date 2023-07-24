@@ -579,7 +579,7 @@ def main():
         # seq. mcmc sampler parameters
         tune = 1
         # each draw spawns independent markov chain, therefore draws=chains for smcmc
-        draws = 2001
+        draws = 1001
         # THESE ARE NOT MARKOV CHAINS
         chains_for_convergence = 2
         # more cores for the markov chain spawns?? doesn't work but maybe manually could do it
