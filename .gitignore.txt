@@ -1,3 +1,4 @@
 .pyc
 .hdf5
 .nc
+.out
