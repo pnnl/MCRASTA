@@ -4,18 +4,21 @@ import pymc as pm
 import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
+
+import loglikelihoodtest
 from rsfmodel import staterelations, rsf, plot
-import pytensor
+import pytensor as pt
+import pytensor.tensor as tt
 import sys
 import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
 
-global mutrue, times, vlps, x, fmcount, sim_name, dirpath, sample_name
+# global mutrue, times, vlps, x, fmcount, sim_name, dirpath, sample_name
 
 um_to_mm = 0.001
 
-pytensor.config.optimizer = 'fast_compile'
+pt.config.optimizer = 'fast_compile'
 rng = np.random.normal()
 np.random.seed(1234)
 az.style.use("arviz-darkgrid")
@@ -289,10 +292,12 @@ def generate_rsf_data(times, vlps):
     return mutrue, thetatrue, size
 
 
-def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
-    global times, vlps, x, fmcount
-    t = times
-    k, vref = get_constants(vlps)
+def mcmc_rsf_sim(theta, t, v, k, vref):
+    a, b, Dc, mu0, sigma = theta
+    global fmcount
+    fmcount = 0
+    # t = times
+    # k, vref = get_constants(vlps)
 
     # Simulate outcome variable
     model = rsf.Model()
@@ -306,7 +311,7 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
     model.mu0 = mu0  # Friction initial (at the reference velocity)
     model.a = a  # Empirical coefficient for the direct effect
     model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.v = v[0]  # Initial slider velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
@@ -317,11 +322,11 @@ def mcmc_rsf_sim(rng, a, b, Dc, mu0, size=None):
 
     model.time = t
 
-    lp_velocity = vlps
+    lp_velocity = v
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = lp_velocity
-    model.loadpoint_displacement = x
+    # model.loadpoint_displacement = x
 
     # Run the model!
     fmcount += 1
@@ -548,33 +553,129 @@ def save_stats(idata, root):
     return summary
 
 
+## LogLikelihood and gradient of the LogLikelihood functions
+def log_likelihood(theta, times, vlps, k, vref, data):
+    if type(theta) == list:
+        theta = theta[0]
+    (
+        a,
+        b,
+        Dc,
+        mu0,
+        sigma,
+    ) = theta
+
+    y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref)
+    logp = -len(data) * np.log(np.sqrt(2.0 * np.pi) * sigma)
+    logp += -np.sum((data - y_pred) ** 2.0) / (2.0 * sigma ** 2.0)
+    return logp
+
+
+def der_log_likelihood(theta, times, vlps, k, vref, data):
+    def lnlike(values):
+        return log_likelihood(values, times, vlps, k, vref, data)
+
+    grads = sp.optimize.approx_fprime(theta[0], lnlike)
+    return grads
+
+
+## Wrapper classes to theano-ize LogLklhood and gradient...
+class Loglike(tt.Op):
+    itypes = [tt.dvector]
+    otypes = [tt.dscalar]
+    # times, vlps, k, vref, mutrue
+
+    def __init__(self, times, vlps, k, vref, data):
+        self.data = data
+        self.times = times
+        self.vlps = vlps
+        self.k = k
+        self.vref = vref
+        self.loglike_grad = LoglikeGrad(self.data, self.times, self.vlps, self.k, self.vref)
+
+    def perform(self, node, inputs, outputs):
+        logp = log_likelihood(inputs, self.times, self.vlps, self.k, self.vref, self.data)
+        outputs[0][0] = np.array(logp)
+
+    def grad(self, inputs, grad_outputs):
+        (theta,) = inputs
+        grads = self.loglike_grad(theta)
+        return [grad_outputs[0] * grads]
+
+
+class LoglikeGrad(tt.Op):
+    itypes = [tt.dvector]
+    otypes = [tt.dvector]
+
+    def __init__(self, data, times, vlps, k, vref):
+        self.der_likelihood = der_log_likelihood
+        self.data = data
+        self.times = times
+        self.vlps = vlps
+        self.k = k
+        self.vref = vref
+
+    def perform(self, node, inputs, outputs):
+        (theta,) = inputs
+        grads = self.der_likelihood(inputs, self.times, self.vlps, self.k, self.vref, self.data)
+        outputs[0][0] = grads
+
+
+## Sample!
+
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
-
-    # observed data
-    global mutrue, times, vlps, x
-    mutrue, times, vlps, x = get_obs_data()
-
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
+
+    # observed data
+    mutrue, times, vlps, x = get_obs_data()
+
+    theta = []
 
     # generate synthetic data
     # times, vlps = get_times_vlps()
     # mutrue, tht, datalen = generate_rsf_data(times, vlps)
 
-    # define smc model parameters
-    with pm.Model() as mcmcmodel:
-        global fmcount
+    # independent variables that forward model needs - need to be defined here then broadcasted to work with pymc
+    k, vref = get_constants(vlps)
+    # zeta = [times, vlps, k, vref]
+    sigma = 0.01  # standard deviation of measurements - change to actual eventually
 
+    # create our Op
+    # logl = loglikelihoodtest.LogLikeWithGrad(my_loglike, mutrue, zeta, times, sigma)
+    loglike = Loglike(times, vlps, k, vref, mutrue)
+
+    # use PyMC to sampler from log-likelihood
+    with pm.Model() as mcmcmodel:
         # priors on stochastic parameters, constants
         priors = get_priors()
         a, b, Dc, mu0 = priors
         k, vref = get_constants(vlps)
 
+        # convert parameters to be estimated to tensor vector
+        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
+
+        # convert other variables to tensor vector
+        # zeta = pt.tensor.as_tensor_variable([times, vlps, k, vref])
         fmcount = 0
+
+        # use a Potential
+        pm.Potential("likelihood", loglike(theta))
+
+        # seq. mcmc sampler parameters
+        tune = 5
+        draws = 10
+        chains = 1
+        cores = 1
+
+        idata_grad = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores)
+
+        sys.exit('testing')
+
         # likelihood function
-        simulator = pm.Simulator('simulator', mcmc_rsf_sim, params=(a, b, Dc, mu0), epsilon=0.01,
-                                 observed=mutrue)
+        # simulator = pm.Simulator('simulator', mcmc_rsf_sim, params=(a, b, Dc, mu0), epsilon=0.01,
+        #                          observed=mutrue)
 
         # seq. mcmc sampler parameters
         tune = 1
@@ -591,9 +692,14 @@ def main():
         get_storage_folder(sim_name)
 
         # sample. MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
-        kernel_kwargs = dict(correlation_threshold=0.5)
-        idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
-                              **kernel_kwargs)
+        # kernel_kwargs = dict(correlation_threshold=0.5)
+        # idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
+        #                       **kernel_kwargs)
+
+        # create custom distribution
+        pm.DensityDist('likelihood', my_loglike,
+                       observed={'theta': (a, b, Dc, mu0), 't': times, 'data': mu0, 'sigma': sigma})
+
         print(f'inference data = {idata}')
 
         # save model parameter stats
@@ -604,7 +710,6 @@ def main():
 
         # sample the posterior for validation
         # sample_posterior_predcheck(idata)
-
 
         # print and save new idata stats that includes posterior predictive check
         # summary_pp = save_stats(idata, dirpath)

@@ -1,5 +1,4 @@
 import os
-
 import h5py
 import numpy as np
 from scipy import integrate
@@ -90,7 +89,6 @@ class Model(LoadingSystem):
     def create_h5py_dataset(self):
         with h5py.File(self.storage_name, 'w') as f:
             f['musimdata'] = f.create_dataset(f'{self.pid}init', shape=(0, self.datalen), maxshape=(None, self.datalen))
-
 
 
     def savetxt(self, fname, line_ending='\n'):
@@ -216,6 +214,27 @@ class Model(LoadingSystem):
         critical_times = self.time[np.abs(acceleration) > threshold]
         return critical_times
 
+    # def run_complex_operations(self, operation, input, pool):
+    #     pool.map(operation, input)
+
+
+    # def solve_in_parallel(self, w0, **kwargs):
+    #     processes_count = 4
+    #     input = range(4)
+    #     processes_pool = Pool(processes_count)
+    #     self.run_complex_operations(self.integrate_in_parallel(w0, **kwargs), input=input, pool=processes_pool)
+
+
+
+    # def integrate_in_parallel(self, w0, **kwargs):
+    #     odeint_kwargs = dict(rtol=1e-12, atol=1e-12, mxstep=5000)
+    #     odeint_kwargs.update(kwargs)
+    #     wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
+    #                                               full_output=True, tcrit=self.critical_times,
+    #                                               args=(self,), **odeint_kwargs)
+
+        # return wsol, self.solver_info
+
     def solve(self, threshold=2, **kwargs):
         """
         Runs the integrator to actually solve the model and returns a
@@ -255,9 +274,12 @@ class Model(LoadingSystem):
 
         # Solve it
         # print('forward model: integrate.odeint solver')
+        # print('y0 = ', w0)
+
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
                                                   full_output=True, tcrit=self.critical_times,
                                                   args=(self,), **odeint_kwargs)
+
 
         self.results.friction = wsol[:, 0]
         self.results.states = wsol[:, 1:]
@@ -382,3 +404,5 @@ class Model(LoadingSystem):
         displacement = np.cumsum(velocity[:-1] * dt)
         displacement = np.insert(displacement, 0, 0)
         return displacement
+
+
