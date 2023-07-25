@@ -4,8 +4,6 @@ import pymc as pm
 import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
-
-import loglikelihoodtest
 from rsfmodel import staterelations, rsf, plot
 import pytensor as pt
 import pytensor.tensor as tt
