@@ -477,7 +477,7 @@ def get_sim_name(draws, chains):
     return sim_name
 
 
-def write_model_info(draws, chains_for_convergence, time_elapsed, k, vref, vsummary, ppsummary):
+def write_model_info(draws, chains, time_elapsed, k, vref, vsummary, ppsummary):
     fname = os.path.join(dirpath, 'out.txt')
 
     samplerstrs = ['SAMPLER INFO', 'num draws', 'smc chains', 'runtime (s)']
@@ -485,7 +485,7 @@ def write_model_info(draws, chains_for_convergence, time_elapsed, k, vref, vsumm
     summarystr = ['SAMPLE VARS SUMMARY', 'POST PRED SAMPLE SUMMARY']
     strlist = [samplerstrs, modelstrs, summarystr]
 
-    samplervals = ['', draws, chains_for_convergence, time_elapsed]
+    samplervals = ['', draws, chains, time_elapsed]
     modelvals = ['', '', k, vref]
     summaryvals = [vsummary, 'none']
     vallist = [samplervals, modelvals, summaryvals]
@@ -619,8 +619,6 @@ class LoglikeGrad(tt.Op):
         outputs[0][0] = grads
 
 
-## Sample!
-
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
     # so I can figure out how long it's taking when I inevitably forget to check
@@ -718,7 +716,7 @@ def main():
     print(f'time elapsed = {time_elapsed}')
 
     write_model_info(draws=draws,
-                     chains_for_convergence=chains_for_convergence,
+                     chains=chains,
                      time_elapsed=time_elapsed,
                      k=k,
                      vref=vref,
