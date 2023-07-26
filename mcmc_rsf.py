@@ -469,7 +469,7 @@ def get_sim_name(draws, chains):
 def write_model_info(draws, chains, time_elapsed, k, vref, vsummary, ppsummary):
     fname = os.path.join(dirpath, 'out.txt')
 
-    samplerstrs = ['SAMPLER INFO', 'num draws', 'smc chains', 'runtime (s)']
+    samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'runtime (s)']
     modelstrs = ['MODEL INFO', 'constants', 'k', 'vref']
     summarystr = ['SAMPLE VARS SUMMARY', 'POST PRED SAMPLE SUMMARY']
     strlist = [samplerstrs, modelstrs, summarystr]
