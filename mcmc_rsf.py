@@ -292,8 +292,6 @@ def generate_rsf_data(times, vlps):
 
 def mcmc_rsf_sim(theta, t, v, k, vref):
     a, b, Dc, mu0, sigma = theta
-    global fmcount
-    fmcount = 0
     # t = times
     # k, vref = get_constants(vlps)
 
@@ -324,12 +322,8 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = lp_velocity
-    # model.loadpoint_displacement = x
 
     # Run the model!
-    fmcount += 1
-    model.count += 1
-    print(f'FWD MODEL RUN COUNT ===== {fmcount}')
     model.solve()
 
     mu_sim = model.results.friction
@@ -536,7 +530,7 @@ def save_trace(idata):
 
 
 def plot_trace(idata):
-    az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], kind="rank_vlines")
+    az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
 
 
 def plot_posterior_predictive(idata):
@@ -656,14 +650,14 @@ def main():
         # zeta = pt.tensor.as_tensor_variable([times, vlps, k, vref])
         fmcount = 0
 
-        # use a Potential
+        # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
         tune = 5
-        draws = 10
-        chains = 1
-        cores = 1
+        draws = 100
+        chains = 2
+        cores = 2
 
         idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores)
 
@@ -690,7 +684,6 @@ def main():
         # kernel_kwargs = dict(correlation_threshold=0.5)
         # idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
         #                       **kernel_kwargs)
-
 
         print(f'inference data = {idata}')
 
