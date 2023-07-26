@@ -389,7 +389,7 @@ def post_processing(idata):
     # print(f'shape of posterior predictive dataset = {musims.shape}')
 
     # plot trace and then posterior predictive plot
-    # plot_trace(idata)
+    plot_trace(idata)
     # plot_posterior_predictive(idata)
 
     # now plot simulated mus with true mu
@@ -667,26 +667,25 @@ def main():
         chains = 1
         cores = 1
 
-        idata_grad = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores)
+        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores)
 
-        sys.exit('testing')
 
         # likelihood function
         # simulator = pm.Simulator('simulator', mcmc_rsf_sim, params=(a, b, Dc, mu0), epsilon=0.01,
         #                          observed=mutrue)
 
-        # seq. mcmc sampler parameters
-        tune = 1
-        # each draw spawns independent markov chain, therefore draws=chains for smcmc
-        draws = 1001
-        # THESE ARE NOT MARKOV CHAINS
-        chains_for_convergence = 2
-        # more cores for the markov chain spawns?? doesn't work but maybe manually could do it
-        cores = 39
-        print(f'num draws = {draws}; num chains = {chains_for_convergence}')
+        # # seq. mcmc sampler parameters
+        # tune = 1
+        # # each draw spawns independent markov chain, therefore draws=chains for smcmc
+        # draws = 1001
+        # # THESE ARE NOT MARKOV CHAINS
+        # chains_for_convergence = 2
+        # # more cores for the markov chain spawns?? doesn't work but maybe manually could do it
+        # cores = 39
+        print(f'num draws = {draws}; num chains = {chains}')
 
         # create storage directory
-        get_sim_name(draws, chains_for_convergence)
+        get_sim_name(draws, chains)
         get_storage_folder(sim_name)
 
         # sample. MUST BE SAMPLE SMC IF USING SIMULATOR FOR LIKELIHOOD FUNCTION
@@ -694,9 +693,6 @@ def main():
         # idata = pm.sample_smc(draws=draws, kernel=pm.smc.kernels.MH, chains=chains_for_convergence, cores=cores,
         #                       **kernel_kwargs)
 
-        # create custom distribution
-        pm.DensityDist('likelihood', my_loglike,
-                       observed={'theta': (a, b, Dc, mu0), 't': times, 'data': mu0, 'sigma': sigma})
 
         print(f'inference data = {idata}')
 
