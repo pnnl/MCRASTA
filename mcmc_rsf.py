@@ -83,12 +83,13 @@ def get_obs_data():
     t = df['time_s'].to_numpy()
     mu = df['mu'].to_numpy()
     x = df['vdcdt_um'].to_numpy()
+    xog = x
 
     vlps = calc_derivative(x, t)
 
-    f_ds = downsample_dataset(mu, t, vlps, x)
+    f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
 
-    sectioned_data = section_data(f_ds)
+    sectioned_data, start_idx, end_idx = section_data(f_ds)
 
     print(f'sectioned data shape = {sectioned_data.shape}')
 
@@ -104,17 +105,27 @@ def get_obs_data():
     vlps = cleaned_data[:, 2]
     x = cleaned_data[:, 3]
 
-    # plt.figure(1)
-    # plt.plot(times, vlps)
-    # plt.xlabel('time (s)')
-    #
-    # plt.figure(2)
-    # plt.plot(x*um_to_mm, mutrue)
-    # plt.xlabel('displacement (mm)')
-    # plt.ylabel('mu')
-    # plt.show()
+    # mu_og = mu
+    # mu_f_ds = mutrue
+    # # plot_obs_data_processing(x*um_to_mm, mu_og, mu_f, mu_f_ds, xog)
 
     return mutrue, times, vlps, x
+
+
+def plot_obs_data_processing(x, mu1, mu2, mu3, xog):
+    plt.figure(1)
+    plt.plot(xog*um_to_mm, mu1, '.', label='raw', alpha=0.3)
+    plt.plot(xog*um_to_mm, mu2, '.', label='filtered', alpha=0.4)
+    plt.plot(x, mu3, '.', label='filtered + downsampled', alpha=0.3)
+    plt.xlim([x[0], x[-1]])
+    plt.ylim([np.min(mu3) - 0.02, np.max(mu3) + 0.02])
+    plt.xlabel('displacement (mm)')
+    plt.ylabel('mu')
+    plt.title('Observed data section, p5756')
+    plt.legend()
+    save_figs('figs')
+
+    sys.exit()
 
 
 def read_hdf(fullpath):
@@ -155,14 +166,11 @@ def read_hdf(fullpath):
 
 def preplot(df, colnames):
     t = df['time_s']
+    x = df['vdcdt_um']
 
-    plt.plot(t, df['mu'])
+    plt.plot(x*um_to_mm, df['mu'])
     plt.title('mu')
-    plt.xlabel('time (s)')
-
-    plt.figure(2)
-    plt.plot(t, df['vdcdt_um'])
-    plt.title('displacement')
+    plt.xlabel('displacement (mm)')
 
     # for i, col in enumerate(colnames):
     #     plt.figure(i)
@@ -173,7 +181,9 @@ def preplot(df, colnames):
     # lpdisp = df['vdcdt_um']*um_to_mm
     # plt.figure(i+1)
     # plt.plot(lpdisp, df['mu'])
-    # plt.show()
+    plt.show()
+
+    sys.exit()
 
 
 def downsample_dataset(mu, t, vlps, x):
@@ -202,7 +212,7 @@ def downsample_dataset(mu, t, vlps, x):
     # plt.legend()
     # # plt.show()
 
-    return f_ds
+    return f_ds, mu_f
 
 
 def section_data(data):
@@ -219,7 +229,7 @@ def section_data(data):
     print(f'original shape = {df.shape}')
     print(f'section shape = {df_section.shape}')
 
-    return df_section.to_numpy()
+    return df_section.to_numpy(), start_idx, end_idx
 
 
 def generate_rsf_data(times, vlps):
@@ -410,7 +420,7 @@ def get_priors():
     a = pm.Uniform('a', lower=0.006 - 0.008, upper=0.007 + 0.008)
     b = pm.Uniform('b', lower=0.0059 - 0.008, upper=0.00617 + 0.008)
     Dc = pm.Uniform('Dc', lower=61.8 - 20, upper=61.8 + 20)
-    mu0 = pm.Uniform('mu0', lower=0.44 - 0.1, upper=0.44 + 0.1)
+    mu0 = pm.Uniform('mu0', lower=0.44 - 0.01, upper=0.44 + 0.01)
 
     priors = [a, b, Dc, mu0]
 
@@ -553,8 +563,12 @@ def log_likelihood(theta, times, vlps, k, vref, data):
     ) = theta
 
     y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref)
-    logp = -len(data) * np.log(np.sqrt(2.0 * np.pi) * sigma)
-    logp += -np.sum((data - y_pred) ** 2.0) / (2.0 * sigma ** 2.0)
+    resids = (data - y_pred)
+    logp = -1/2 * np.sum(resids ** 2)
+    print('logp = ', logp)
+    # logp = -len(data) * np.log(np.sqrt(2.0 * np.pi) * sigma)
+    # logp += -np.sum((data - y_pred) ** 2.0) / (2.0 * sigma ** 2.0)
+
     return logp
 
 
@@ -615,8 +629,6 @@ def main():
 
     # observed data
     mutrue, times, vlps, x = get_obs_data()
-
-    theta = []
 
     # generate synthetic data
     # times, vlps = get_times_vlps()

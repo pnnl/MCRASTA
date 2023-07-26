@@ -13,7 +13,7 @@ from scipy.signal import savgol_filter
 from multiprocessing import Pool
 
 home = os.path.expanduser('~')
-dirname = 'out_501d2ch'
+dirname = 'out_100d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
 idataname = f'{dirname}_idata'
 
@@ -85,9 +85,9 @@ def generate_rsf_data():
     # runs rsfmodel.py to generate synthetic friction data
     k, vref = get_constants(vlps)
 
-    nr = 16
     # nr = 10
     nobs = len(times)
+    nr = 10
     # print('num reals = ', nr)
     # print('num obs = ', nobs)
 
@@ -110,31 +110,32 @@ def generate_rsf_data():
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = vlps
 
-    # iterate over markov chain parameter (m) estimates and calculate each simulated mu value
     # need to iterate over nr rows, that's it
     print('this takes a long time for large number of realizations')
-    # for i in np.arange(nr):
-    print(f'solving for realization')
-    # Set model initial conditions
-    model.mu0 = mu0   # Friction initial (at the reference velocity)
-    print('model mu0 = ', model.mu0)
-    model.a = a          # Empirical coefficient for the direct effect
-    state1.b = b        # Empirical coefficient for the evolution effect
-    state1.Dc = Dc    # Critical slip distance
+    for i in np.arange(nr):
+        print(f'solving for realization')
+        # Set model initial conditions
+        model.mu0 = mu0[i]   # Friction initial (at the reference velocity)
+        # print('model mu0 = ', model.mu0)
+        model.a = a[i]          # Empirical coefficient for the direct effect
+        state1.b = b[i]        # Empirical coefficient for the evolution effect
+        state1.Dc = Dc[i]    # Critical slip distance
 
-    # Run the model!
-    model.solve()
+        # Run the model!
+        model.solve()
 
-    mu_sim = model.results.friction
-    mu_sims[:, nr] = mu_sim
+        mu_sim = model.results.friction
+        mu_sims[:, i] = mu_sim
 
+    print(mu_sims.shape)
     return mu_sims
 
 
 def plot_simulated_mus(x, times, mu_sims, mutrue, nr):
     plt.figure(1)
     plt.plot(x*um_to_mm, mutrue, '.', label='observed', alpha=0.5)
-    plt.plot(x*um_to_mm, mu_sims, 'b-', alpha=0.2)
+    plt.plot(x*um_to_mm, mu_sims[:, 0], 'b-', alpha=0.2)
+    plt.plot(x*um_to_mm, mu_sims[:, 8], 'r-')
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
     plt.title('Simulated mu values, {nr} realizations')
@@ -159,11 +160,11 @@ def main():
     m_reals = get_trace_variables(idata)
     mu_sims = generate_rsf_data()
 
-    return times, vlps, m_reals
+    # return times, vlps, m_reals
 
     # mu_sims = generate_rsf_data(times, vlps, m_reals)
 
-    # plot_simulated_mus(x, times, mu_sims, mutrue, nr=len(mu_sims[0:]))
+    plot_simulated_mus(x, times, mu_sims, mutrue, nr=len(mu_sims[0:]))
 
     # sample_posterior_predcheck(idata)
     # save_trace(idata, dirpath, idataname)
