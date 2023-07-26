@@ -407,11 +407,6 @@ def get_constants(vlps):
 
 
 def get_priors():
-    # a = pm.Normal('a', mu=0.006692, sigma=0.1)
-    # b = pm.Normal('b', mu=0.00617, sigma=0.1)
-    # Dc = pm.Normal('Dc', mu=61.8, sigma=20)
-    # mu0 = pm.Normal('mu0', mu=0.44, sigma=0.1)
-
     a = pm.Uniform('a', lower=0.006 - 0.008, upper=0.007 + 0.008)
     b = pm.Uniform('b', lower=0.0059 - 0.008, upper=0.00617 + 0.008)
     Dc = pm.Uniform('Dc', lower=61.8 - 20, upper=61.8 + 20)
@@ -425,7 +420,7 @@ def get_priors():
 def save_figs(out_folder):
     # check if folder exists, make one if it doesn't
     name = out_folder
-    print(f'folder name for fig saving = {name}')
+    print(f'find figures and .out file here: {name}')
     w = plt.get_fignums()
     print('w = ', w)
     for i in plt.get_fignums():
@@ -654,8 +649,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 5
-        draws = 100
+        tune = 100
+        draws = 1000
         chains = 2
         cores = 2
 
