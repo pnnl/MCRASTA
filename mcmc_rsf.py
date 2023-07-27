@@ -273,12 +273,12 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
     print(model.results)
 
     # plus noise
-    mutrue = mu + (1 / 100) * np.random.normal(np.mean(mu), 0.1, (len(mu),))
-
-    # change model results to noisy result, so I can still use the plots easily
-    model.results.friction = mutrue
-
-    thetatrue = theta
+    # mutrue = mu + (1 / 100) * np.random.normal(np.mean(mu), 0.1, (len(mu),))
+    #
+    # # change model results to noisy result, so I can still use the plots easily
+    # model.results.friction = mutrue
+    #
+    # thetatrue = theta
 
     # plt.figure(100)
     # plot.dispPlot(model)
@@ -290,15 +290,15 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
     # plt.hist(mutrue_mincon)
     # plt.show()
 
-    return mutrue, size
+    # return mutrue, size
 
 
 def mcmc_rsf_sim(theta, t, v, k, vref):
     a, b, Dc, mu0, sigma = theta
-    print('a = ', a)
-    print('b = ', b)
-    print('Dc = ', Dc)
-    print('mu0 = ', mu0)
+    # print('a = ', a)
+    # print('b = ', b)
+    # print('Dc = ', Dc)
+    # print('mu0 = ', mu0)
     # t = times
     # k, vref = get_constants(vlps)
 
@@ -380,33 +380,33 @@ def post_processing(idata, times, vlps, mutrue):
     plot_trace(idata)
     # plot_posterior_predictive(idata)
 
-    modelvals = az.extract(idata.posterior)
-    # print('modelvals = ', modelvals)
+    # modelvals = az.extract(idata.posterior)
+    # # print('modelvals = ', modelvals)
+    #
+    # a = modelvals.a.values
+    # b = modelvals.b.values
+    # Dc = modelvals.Dc.values
+    # mu0 = modelvals.mu0.values
 
-    a = modelvals.a.values
-    b = modelvals.b.values
-    Dc = modelvals.Dc.values
-    mu0 = modelvals.mu0.values
-
-    mu_sims = []
-    for i in np.arange(0, len(a), 1):
-        mu_sim, bs = generate_rsf_data(times, vlps, a[i], b[i], Dc[i], mu0[i])
-        mu_sims.append(mu_sim)
-
-    musims = np.array(mu_sims)
-    musims = np.transpose(musims)
-
-
-    # now plot simulated mus with true mu
-    t = times
-    plt.figure(500)
-    plt.plot(t, mutrue, 'k.', label='observed', alpha=0.7)
-    plt.plot(t, musims, 'b-', alpha=0.3)
-    plt.xlabel('time (s)')
-    plt.ylabel('mu')
-    plt.title('Observed and simulated friction values')
-    plt.legend()
-    plt.show()
+    # mu_sims = []
+    # for i in np.arange(0, len(a), 1):
+    #     mu_sim, bs = generate_rsf_data(times, vlps, a[i], b[i], Dc[i], mu0[i])
+    #     mu_sims.append(mu_sim)
+    #
+    # musims = np.array(mu_sims)
+    # musims = np.transpose(musims)
+    #
+    #
+    # # now plot simulated mus with true mu
+    # t = times
+    # plt.figure(500)
+    # plt.plot(t, mutrue, 'k.', label='observed', alpha=0.7)
+    # plt.plot(t, musims, 'b-', alpha=0.3)
+    # plt.xlabel('time (s)')
+    # plt.ylabel('mu')
+    # plt.title('Observed and simulated friction values')
+    # plt.legend()
+    # plt.show()
 
     print('post processing complete')
 
@@ -578,12 +578,9 @@ def log_likelihood(theta, times, vlps, k, vref, data):
     # plt.figure(200)
     # plt.plot(times, y_pred)
     resids = (data - y_pred)
-    print('resid = ', resids)
+    # print('resid = ', resids)
     logp = -1/2 * np.sum(resids ** 2)
-    print(f'logp = {logp}')
-
-    # logp = -len(data) * np.log(np.sqrt(2.0 * np.pi) * sigma)
-    # logp += -np.sum((data - y_pred) ** 2.0) / (2.0 * sigma ** 2.0)
+    # print(f'logp = {logp}')
 
     return logp
 
@@ -675,20 +672,17 @@ def main():
         # convert parameters to be estimated to tensor vector
         theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
 
-        # convert other variables to tensor vector
-        # zeta = pt.tensor.as_tensor_variable([times, vlps, k, vref])
-        fmcount = 0
-
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 5
-        draws = 10
+        tune = 10
+        draws = 100
         chains = 2
         cores = 4
 
-        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores)
+        print('starting sampler')
+        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis())
 
         print(f'num draws = {draws}; num chains = {chains}')
 
@@ -715,11 +709,10 @@ def main():
         # print and save new idata stats that includes posterior predictive check
         # summary_pp = save_stats(idata, dirpath)
         # print(f'idata summary: {summary_pp}')
-        plt.show()
 
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata, times, vlps, mutrue)
+        # post_processing(idata, times, vlps, mutrue)
         save_figs(dirpath)
 
     comptime_end = get_time('end')
