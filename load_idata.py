@@ -177,6 +177,9 @@ def dummy_fn(x):
 def run_complex_operations(operation, input, pool):
     pool.map(operation, input)
 
+    a =
+
+
 
 processes_count = 4
 input = range(4)
