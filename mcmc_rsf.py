@@ -688,7 +688,7 @@ def main():
         chains = 2
         cores = 4
 
-        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis())
+        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores)
 
         print(f'num draws = {draws}; num chains = {chains}')
 
