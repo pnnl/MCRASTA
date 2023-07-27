@@ -488,15 +488,15 @@ def get_sim_name(draws, chains):
     return sim_name
 
 
-def write_model_info(draws, chains, time_elapsed, k, vref, vsummary, ppsummary, sample_name, times):
+def write_model_info(draws, chains, tune, time_elapsed, k, vref, vsummary, ppsummary, sample_name, times):
     fname = os.path.join(dirpath, 'out.txt')
 
-    samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'runtime (s)']
+    samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'tune', 'runtime (s)']
     modelstrs = ['MODEL INFO', 'constants', 'k', 'vref']
     summarystr = ['SAMPLE VARS SUMMARY', 'POST PRED SAMPLE SUMMARY']
     strlist = [samplerstrs, modelstrs, summarystr]
 
-    samplervals = ['', draws, chains, time_elapsed]
+    samplervals = ['', draws, chains, tune, time_elapsed]
     modelvals = ['', '', k, vref]
     summaryvals = [vsummary, 'none']
     vallist = [samplervals, modelvals, summaryvals]
@@ -676,8 +676,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 10
-        draws = 102
+        tune = 100
+        draws = 502
         chains = 2
         cores = 4
 
@@ -721,6 +721,7 @@ def main():
 
     write_model_info(draws=draws,
                      chains=chains,
+                     tune=tune,
                      time_elapsed=time_elapsed,
                      k=k,
                      vref=vref,
