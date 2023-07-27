@@ -11,6 +11,8 @@ import sys
 import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
+from datetime import datetime
+import time
 
 um_to_mm = 0.001
 
@@ -24,11 +26,7 @@ az.style.use("arviz-darkgrid")
 # most functions below this are fetching folders, filenames, etc.
 # need to configure better
 def get_time(name):
-    from datetime import datetime
-    import time
-
     now = datetime.now()
-
     current_time = now.strftime("%H:%M:%S")
     print(f'{name} time = {current_time}')
 
@@ -95,7 +93,7 @@ def get_sim_name(draws, chains):
     return sim_name
 
 
-# POST MODEL RUN OPERATIONS AND PLOTTING FUNCTIONS
+# POST MODEL-RUN OPERATIONS AND PLOTTING FUNCTIONS
 def sample_posterior_predcheck(idata):
     pm.sample_posterior_predictive(idata, extend_inferencedata=True)
 
