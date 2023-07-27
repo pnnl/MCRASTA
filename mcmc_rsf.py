@@ -12,8 +12,6 @@ import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
 
-# global mutrue, times, vlps, x, fmcount, sim_name, dirpath, sample_name
-
 um_to_mm = 0.001
 
 pt.config.optimizer = 'fast_compile'
@@ -49,7 +47,7 @@ def calc_derivative(y, x, window_len=100):
 
 
 def get_obs_data():
-    global sample_name, mutrue, vlps, times, x
+    # global sample_name, mutrue, vlps, times, x
     homefolder = os.path.expanduser('~')
     path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', 'p5894')
     # path = r'PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare\p5756'
@@ -109,7 +107,7 @@ def get_obs_data():
     # mu_f_ds = mutrue
     # # plot_obs_data_processing(x*um_to_mm, mu_og, mu_f, mu_f_ds, xog)
 
-    return mutrue, times, vlps, x
+    return mutrue, times, vlps, x, sample_name
 
 
 def plot_obs_data_processing(x, mu1, mu2, mu3, xog):
@@ -232,19 +230,14 @@ def section_data(data):
     return df_section.to_numpy(), start_idx, end_idx
 
 
-def generate_rsf_data(times, vlps):
+def generate_rsf_data(times, vlps, a, b, Dc, mu0):
     # runs rsfmodel.py to generate synthetic friction data
-    a = 0.1
-    b = 0.13
-    Dc = 13
-    mu0_t = 0.814
-    vref = 1
-    k = 0.03
+    k, vref = get_constants(vlps)
     print('STARTING SYNTHETIC PARAMETERS - ANSWERS')
     print(f'a={a}')
     print(f'b={b}')
     print(f'Dc={Dc}')
-    print(f'mu0={mu0_t}')
+    print(f'mu0={mu0}')
 
     # Size of dataset
     size = len(times)
@@ -253,7 +246,7 @@ def generate_rsf_data(times, vlps):
     model = rsf.Model()
 
     # Set model initial conditions
-    model.mu0 = mu0_t  # Friction initial (at the reference velocity)
+    model.mu0 = mu0  # Friction initial (at the reference velocity)
     model.a = a  # Empirical coefficient for the direct effect
     model.k = k  # Normalized System stiffness (friction/micron)
     model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
@@ -297,11 +290,15 @@ def generate_rsf_data(times, vlps):
     # plt.hist(mutrue_mincon)
     # plt.show()
 
-    return mutrue, thetatrue, size
+    return mutrue, size
 
 
 def mcmc_rsf_sim(theta, t, v, k, vref):
     a, b, Dc, mu0, sigma = theta
+    print('a = ', a)
+    print('b = ', b)
+    print('Dc = ', Dc)
+    print('mu0 = ', mu0)
     # t = times
     # k, vref = get_constants(vlps)
 
@@ -344,20 +341,7 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
     # plt.figure(100)
     # plot.dispPlot(model)
 
-    # plot_rsfmodel_plots(mu_sim, t_sim)
-
     return mu_sim
-
-
-def plot_rsfmodel_plots(musim, t):
-    plt.figure(1000)
-    plt.plot(t, musim)
-    plt.plot(t, mutrue, 'k.')
-    plt.xlabel('time')
-    plt.ylabel('mu')
-    plt.title('simulated')
-
-    # plt.show(block=False)
 
 
 def get_time(name):
@@ -374,10 +358,10 @@ def get_time(name):
     return codetime
 
 
-def post_processing(idata):
+def post_processing(idata, times, vlps, mutrue):
     # save dataset in case needed later
-    df_data = pd.DataFrame(np.column_stack((times, x, vlps, mutrue)), columns=['times', 'x', 'vlps', 'mutrue'])
-    df_data.to_csv(os.path.join(dirpath, 'section_data.csv'))
+    # df_data = pd.DataFrame(np.column_stack((times, x, vlps, mutrue)), columns=['times', 'x', 'vlps', 'mutrue'])
+    # df_data.to_csv(os.path.join(dirpath, 'section_data.csv'))
 
     # to extract simulated mu values for realizations
     # stacked_pp = az.extract(idata.posterior_predictive)
@@ -396,15 +380,33 @@ def post_processing(idata):
     plot_trace(idata)
     # plot_posterior_predictive(idata)
 
+    modelvals = az.extract(idata.posterior)
+    # print('modelvals = ', modelvals)
+
+    a = modelvals.a.values
+    b = modelvals.b.values
+    Dc = modelvals.Dc.values
+    mu0 = modelvals.mu0.values
+
+    mu_sims = []
+    for i in np.arange(0, len(a), 1):
+        mu_sim, bs = generate_rsf_data(times, vlps, a[i], b[i], Dc[i], mu0[i])
+        mu_sims.append(mu_sim)
+
+    musims = np.array(mu_sims)
+    musims = np.transpose(musims)
+
+
     # now plot simulated mus with true mu
-    # t = times
-    # plt.figure(500)
-    # plt.plot(t, mutrue, 'k.', label='observed', alpha=0.7)
-    # plt.plot(t, musims, 'b-', alpha=0.3)
-    # plt.xlabel('time (s)')
-    # plt.ylabel('mu')
-    # plt.title('Observed and simulated friction values')
-    # plt.legend()
+    t = times
+    plt.figure(500)
+    plt.plot(t, mutrue, 'k.', label='observed', alpha=0.7)
+    plt.plot(t, musims, 'b-', alpha=0.3)
+    plt.xlabel('time (s)')
+    plt.ylabel('mu')
+    plt.title('Observed and simulated friction values')
+    plt.legend()
+    plt.show()
 
     print('post processing complete')
 
@@ -417,6 +419,16 @@ def get_constants(vlps):
 
 
 def get_priors():
+    # a = 0.01
+    # b = 0.013
+    # Dc = 13
+    # mu0 = 0.814
+    #
+    # a = pm.Uniform('a', lower=0.009, upper=0.011)
+    # b = pm.Uniform('b', lower=0.011, upper=0.015)
+    # Dc = pm.Uniform('Dc', lower=11, upper=15)
+    # mu0 = pm.Uniform('mu0', lower=0.8, upper=0.9)
+
     a = pm.Uniform('a', lower=0.006 - 0.008, upper=0.007 + 0.008)
     b = pm.Uniform('b', lower=0.0059 - 0.008, upper=0.00617 + 0.008)
     Dc = pm.Uniform('Dc', lower=61.8 - 20, upper=61.8 + 20)
@@ -476,7 +488,7 @@ def get_sim_name(draws, chains):
     return sim_name
 
 
-def write_model_info(draws, chains, time_elapsed, k, vref, vsummary, ppsummary):
+def write_model_info(draws, chains, time_elapsed, k, vref, vsummary, ppsummary, sample_name, times):
     fname = os.path.join(dirpath, 'out.txt')
 
     samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'runtime (s)']
@@ -563,21 +575,25 @@ def log_likelihood(theta, times, vlps, k, vref, data):
     ) = theta
 
     y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref)
+    # plt.figure(200)
+    # plt.plot(times, y_pred)
     resids = (data - y_pred)
+    print('resid = ', resids)
     logp = -1/2 * np.sum(resids ** 2)
-    print('logp = ', logp)
+    print(f'logp = {logp}')
+
     # logp = -len(data) * np.log(np.sqrt(2.0 * np.pi) * sigma)
     # logp += -np.sum((data - y_pred) ** 2.0) / (2.0 * sigma ** 2.0)
 
     return logp
 
 
-def der_log_likelihood(theta, times, vlps, k, vref, data):
-    def lnlike(values):
-        return log_likelihood(values, times, vlps, k, vref, data)
-
-    grads = sp.optimize.approx_fprime(theta[0], lnlike)
-    return grads
+# def der_log_likelihood(theta, times, vlps, k, vref, data):
+#     def lnlike(values):
+#         return log_likelihood(values, times, vlps, k, vref, data)
+#
+#     grads = sp.optimize.approx_fprime(theta[0], lnlike)
+#     return grads
 
 
 ## Wrapper classes to theano-ize LogLklhood and gradient...
@@ -592,34 +608,34 @@ class Loglike(tt.Op):
         self.vlps = vlps
         self.k = k
         self.vref = vref
-        self.loglike_grad = LoglikeGrad(self.data, self.times, self.vlps, self.k, self.vref)
+        # self.loglike_grad = LoglikeGrad(self.data, self.times, self.vlps, self.k, self.vref)
 
     def perform(self, node, inputs, outputs):
         logp = log_likelihood(inputs, self.times, self.vlps, self.k, self.vref, self.data)
         outputs[0][0] = np.array(logp)
 
-    def grad(self, inputs, grad_outputs):
-        (theta,) = inputs
-        grads = self.loglike_grad(theta)
-        return [grad_outputs[0] * grads]
+    # def grad(self, inputs, grad_outputs):
+    #     (theta,) = inputs
+    #     grads = self.loglike_grad(theta)
+    #     return [grad_outputs[0] * grads]
 
 
-class LoglikeGrad(tt.Op):
-    itypes = [tt.dvector]
-    otypes = [tt.dvector]
-
-    def __init__(self, data, times, vlps, k, vref):
-        self.der_likelihood = der_log_likelihood
-        self.data = data
-        self.times = times
-        self.vlps = vlps
-        self.k = k
-        self.vref = vref
-
-    def perform(self, node, inputs, outputs):
-        (theta,) = inputs
-        grads = self.der_likelihood(inputs, self.times, self.vlps, self.k, self.vref, self.data)
-        outputs[0][0] = grads
+# class LoglikeGrad(tt.Op):
+#     itypes = [tt.dvector]
+#     otypes = [tt.dvector]
+#
+#     def __init__(self, data, times, vlps, k, vref):
+#         self.der_likelihood = der_log_likelihood
+#         self.data = data
+#         self.times = times
+#         self.vlps = vlps
+#         self.k = k
+#         self.vref = vref
+#
+#     def perform(self, node, inputs, outputs):
+#         (theta,) = inputs
+#         grads = self.der_likelihood(inputs, self.times, self.vlps, self.k, self.vref, self.data)
+#         outputs[0][0] = grads
 
 
 def main():
@@ -628,19 +644,26 @@ def main():
     comptime_start = get_time('start')
 
     # observed data
-    mutrue, times, vlps, x = get_obs_data()
+    mutrue, times, vlps, x, sample_name = get_obs_data()
 
-    # generate synthetic data
-    # times, vlps = get_times_vlps()
-    # mutrue, tht, datalen = generate_rsf_data(times, vlps)
+    # # generate synthetic data
+    # times = np.arange(0, 60, 0.1)
+    # vlps = np.ones_like(times)
+    # vlps[10*10:] = 10
+    # vlps[30*10:] = 1
+    #
+    # a = 0.01
+    # b = 0.013
+    # Dc = 13
+    # mu0 = 0.814
+    #
+    # mutrue, datalen = generate_rsf_data(times, vlps, a, b, Dc, mu0)
 
     # independent variables that forward model needs - need to be defined here then broadcasted to work with pymc
     k, vref = get_constants(vlps)
-    # zeta = [times, vlps, k, vref]
-    sigma = 0.01  # standard deviation of measurements - change to actual eventually
+    sigma = 0.001  # standard deviation of measurements - change to actual eventually
 
     # create our Op
-    # logl = loglikelihoodtest.LogLikeWithGrad(my_loglike, mutrue, zeta, times, sigma)
     loglike = Loglike(times, vlps, k, vref, mutrue)
 
     # use PyMC to sampler from log-likelihood
@@ -648,7 +671,6 @@ def main():
         # priors on stochastic parameters, constants
         priors = get_priors()
         a, b, Dc, mu0 = priors
-        k, vref = get_constants(vlps)
 
         # convert parameters to be estimated to tensor vector
         theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
@@ -661,26 +683,13 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 100
-        draws = 1000
+        tune = 5
+        draws = 10
         chains = 2
-        cores = 2
+        cores = 4
 
-        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores)
+        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis())
 
-
-        # likelihood function
-        # simulator = pm.Simulator('simulator', mcmc_rsf_sim, params=(a, b, Dc, mu0), epsilon=0.01,
-        #                          observed=mutrue)
-
-        # # seq. mcmc sampler parameters
-        # tune = 1
-        # # each draw spawns independent markov chain, therefore draws=chains for smcmc
-        # draws = 1001
-        # # THESE ARE NOT MARKOV CHAINS
-        # chains_for_convergence = 2
-        # # more cores for the markov chain spawns?? doesn't work but maybe manually could do it
-        # cores = 39
         print(f'num draws = {draws}; num chains = {chains}')
 
         # create storage directory
@@ -706,9 +715,11 @@ def main():
         # print and save new idata stats that includes posterior predictive check
         # summary_pp = save_stats(idata, dirpath)
         # print(f'idata summary: {summary_pp}')
+        plt.show()
+
 
         # post-processing takes results and makes plots, save figs saves figures
-        post_processing(idata)
+        post_processing(idata, times, vlps, mutrue)
         save_figs(dirpath)
 
     comptime_end = get_time('end')
@@ -721,7 +732,9 @@ def main():
                      k=k,
                      vref=vref,
                      vsummary=vsummary,
-                     ppsummary=None)
+                     ppsummary=None,
+                     sample_name=sample_name,
+                     times=times)
 
     plt.show()
 
