@@ -18,7 +18,7 @@ um_to_mm = 0.001
 
 pt.config.optimizer = 'fast_compile'
 rng = np.random.normal()
-np.random.seed(1234)
+# np.random.seed(1234)
 az.style.use("arviz-darkgrid")
 
 
