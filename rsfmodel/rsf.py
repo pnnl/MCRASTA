@@ -211,9 +211,17 @@ class Model(LoadingSystem):
         velocity_gradient = np.gradient(self.loadpoint_velocity)
         time_gradient = np.gradient(self.time)
         acceleration = velocity_gradient / time_gradient
-        plt.plot(np.abs(acceleration))
-        plt.show()
-        critical_times = self.time[np.abs(acceleration) > threshold]
+        # plt.plot(np.abs(acceleration))
+        # plt.show()
+        above_threshold_times = self.time[np.abs(acceleration) > threshold]
+        critical_times = []
+        critical_times.append(above_threshold_times[0])
+        for i in np.arange(1, len(above_threshold_times)):
+            if above_threshold_times[i] > above_threshold_times[i-1] + 20:
+                critical_times.append(above_threshold_times[i])
+
+        critical_times = np.array(critical_times)
+        # critical_times = self.time[np.abs(acceleration) > threshold]
         return critical_times
 
     def solve(self, threshold=5, **kwargs):
