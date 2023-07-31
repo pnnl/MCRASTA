@@ -7,7 +7,7 @@ from collections import namedtuple
 import warnings
 import calendar
 import time
-
+import matplotlib.pyplot as plt
 
 class IncompleteModelError(Exception):
     """
@@ -211,10 +211,12 @@ class Model(LoadingSystem):
         velocity_gradient = np.gradient(self.loadpoint_velocity)
         time_gradient = np.gradient(self.time)
         acceleration = velocity_gradient / time_gradient
+        plt.plot(np.abs(acceleration))
+        plt.show()
         critical_times = self.time[np.abs(acceleration) > threshold]
         return critical_times
 
-    def solve(self, threshold=2, **kwargs):
+    def solve(self, threshold=5, **kwargs):
         """
         Runs the integrator to actually solve the model and returns a
         named tuple of results.

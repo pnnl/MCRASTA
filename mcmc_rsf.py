@@ -609,8 +609,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 1000
-        draws = 10002
+        tune = 10
+        draws = 100
         chains = 2
         cores = 4
 
