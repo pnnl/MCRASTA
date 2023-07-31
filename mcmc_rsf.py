@@ -252,6 +252,7 @@ def calc_derivative(y, x, window_len=100):
         return dydx
 
 
+# imports observed data, sends it through series of processing steps
 def get_obs_data():
     # global sample_name, mutrue, vlps, times, x
     homefolder = os.path.expanduser('~')
@@ -580,6 +581,7 @@ class Loglike(tt.Op):
         outputs[0][0] = np.array(logp)
 
 
+# MAIN - CALLS ALL FUNCTIONS AND IMPLEMENTS MCMC MODEL RUN
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
     # so I can figure out how long it's taking when I inevitably forget to check
