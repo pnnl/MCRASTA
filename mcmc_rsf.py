@@ -574,7 +574,6 @@ class Loglike(tt.Op):
         self.vlps = vlps
         self.k = k
         self.vref = vref
-        # self.loglike_grad = LoglikeGrad(self.data, self.times, self.vlps, self.k, self.vref)
 
     def perform(self, node, inputs, outputs):
         logp = log_likelihood(inputs, self.times, self.vlps, self.k, self.vref, self.data)
