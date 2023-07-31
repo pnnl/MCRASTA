@@ -34,6 +34,7 @@ class LoadingSystem(object):
     mu : float
         The current friciton value of the system.
     """
+
     def __init__(self):
         self.k = None
         self.time = None  # List of times we want answers at
@@ -66,6 +67,7 @@ class Model(LoadingSystem):
     results : namedtuple
         Stores all model outputs.
     """
+
     def __init__(self):
         LoadingSystem.__init__(self)
         self.mu0 = 0.6
@@ -81,15 +83,14 @@ class Model(LoadingSystem):
         self.time_stamp = calendar.timegm(self.current_GMT)
         self.pid = os.getpid()
         self.homefolder = os.path.expanduser('~')
-        self.storage_name = os.path.join(self.homefolder, 'PycharmProjects', 'mcmcrsf_xfiles', 'musim_out', f'musim{self.pid}.hdf5')
+        self.storage_name = os.path.join(self.homefolder, 'PycharmProjects', 'mcmcrsf_xfiles', 'musim_out',
+                                         f'musim{self.pid}.hdf5')
         self.datalen = None
         self.count = 0
-
 
     def create_h5py_dataset(self):
         with h5py.File(self.storage_name, 'w') as f:
             f['musimdata'] = f.create_dataset(f'{self.pid}init', shape=(0, self.datalen), maxshape=(None, self.datalen))
-
 
     def savetxt(self, fname, line_ending='\n'):
         """ Save the output of the model to a csv file.
@@ -119,13 +120,12 @@ class Model(LoadingSystem):
                            self.results.slider_velocity,
                            self.results.friction,
                            self.results.slider_displacement):
-                 t, lp_disp, s_vel, fric, s_disp = row
-                 f.write(f'{t},{lp_disp},{s_vel},{fric},{s_disp}')
-                 for state in self.state_relations:
-                     f.write(f',{state.state[i]}')
-                 f.write(f'{line_ending}')
-                 i += 1
-
+                t, lp_disp, s_vel, fric, s_disp = row
+                f.write(f'{t},{lp_disp},{s_vel},{fric},{s_disp}')
+                for state in self.state_relations:
+                    f.write(f',{state.state[i]}')
+                f.write(f'{line_ending}')
+                i += 1
 
     def _integrationStep(self, w, t, system):
         """ Do the calculation for a time-step
@@ -147,7 +147,7 @@ class Model(LoadingSystem):
 
         system.mu = w[0]
         for i, state_variable in enumerate(system.state_relations):
-            state_variable.state = w[i+1]
+            state_variable.state = w[i + 1]
 
         system.velocity_evolution()
 
@@ -214,27 +214,6 @@ class Model(LoadingSystem):
         critical_times = self.time[np.abs(acceleration) > threshold]
         return critical_times
 
-    # def run_complex_operations(self, operation, input, pool):
-    #     pool.map(operation, input)
-
-
-    # def solve_in_parallel(self, w0, **kwargs):
-    #     processes_count = 4
-    #     input = range(4)
-    #     processes_pool = Pool(processes_count)
-    #     self.run_complex_operations(self.integrate_in_parallel(w0, **kwargs), input=input, pool=processes_pool)
-
-
-
-    # def integrate_in_parallel(self, w0, **kwargs):
-    #     odeint_kwargs = dict(rtol=1e-12, atol=1e-12, mxstep=5000)
-    #     odeint_kwargs.update(kwargs)
-    #     wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
-    #                                               full_output=True, tcrit=self.critical_times,
-    #                                               args=(self,), **odeint_kwargs)
-
-        # return wsol, self.solver_info
-
     def solve(self, threshold=2, **kwargs):
         """
         Runs the integrator to actually solve the model and returns a
@@ -280,7 +259,6 @@ class Model(LoadingSystem):
                                                   full_output=True, tcrit=self.critical_times,
                                                   args=(self,), **odeint_kwargs)
 
-
         self.results.friction = wsol[:, 0]
         self.results.states = wsol[:, 1:]
         self.results.time = self.time
@@ -294,17 +272,14 @@ class Model(LoadingSystem):
         velocity_contribution = 0
         for i, state_variable in enumerate(self.state_relations):
             # print('forward model: define state_variable.state from soln')
-            state_variable.state = wsol[:, i+1]
+            state_variable.state = wsol[:, i + 1]
             # print('forward model: define velocity contribution as += velocity component')
             velocity_contribution += state_variable.velocity_component(self)
 
         # print('forward model: calculate slider velocity from vref, friction results, mu0, velocity contribution, a')
         self.results.slider_velocity = self.vref * np.exp(
-                                       (self.results.friction - self.mu0 -
-                                        velocity_contribution) / self.a)
-
-        # TEMPORARY - LOOK INTO THIS FURTHER - ADDED BY MAR
-        # self.results.slider_velocity = self.loadpoint_velocity
+            (self.results.friction - self.mu0 -
+             velocity_contribution) / self.a)
 
         # Calculate displacement from velocity and dt
         # print('forward model: Calculate displacement from velocity and dt')
@@ -318,23 +293,13 @@ class Model(LoadingSystem):
         self.results.slider_displacement = \
             self._calculateContinuousDisplacement(self.results.slider_velocity)
 
-        # self.results.slider_displacement = self.loadpoint_displacement
-
         # Check slider displacement for accumulated error and warn
         if not self._check_slider_displacement():
             warnings.warn("Slider displacement differs from prediction by over "
                           "1%. Smaller requested time resolution should be used "
                           "If you intend to use the slider displacement output.")
 
-        # self.save_simulated_values(self.results.friction)
-
         return self.results
-
-    def save_simulated_values(self, var):
-        row = self.count
-        with h5py.File(self.storage_name, 'a') as f:
-            f['musimdata'].resize((f['musimdata'].shape[0]+row), axis=0)
-            f['musimdata'][row:] = var
 
     def _check_slider_displacement(self, tol=0.01):
         """
@@ -355,13 +320,13 @@ class Model(LoadingSystem):
         for state_relation in self.state_relations:
             a_minus_b -= state_relation.b
 
-        dmu = a_minus_b * np.log(self.results.slider_velocity[-1]/self.vref)
-        dx = -dmu/self.k
+        dmu = a_minus_b * np.log(self.results.slider_velocity[-1] / self.vref)
+        dx = -dmu / self.k
 
         predicted_slider_displacement = self.results.loadpoint_displacement[-1] + dx
         actual_slider_diaplacement = self.results.slider_displacement[-1]
 
-        difference = np.abs(predicted_slider_displacement - actual_slider_diaplacement)/\
+        difference = np.abs(predicted_slider_displacement - actual_slider_diaplacement) / \
                      predicted_slider_displacement
 
         if difference > tol:
@@ -404,5 +369,3 @@ class Model(LoadingSystem):
         displacement = np.cumsum(velocity[:-1] * dt)
         displacement = np.insert(displacement, 0, 0)
         return displacement
-
-
