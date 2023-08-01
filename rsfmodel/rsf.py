@@ -231,7 +231,7 @@ class Model(LoadingSystem):
             Results of the model
         """
         # print('FORWARD MODEL BEGIN MODEL.SOLVE')
-        odeint_kwargs = dict(rtol=0.1, atol=0.1, mxstep=5000)
+        odeint_kwargs = dict(rtol=1e-8, atol=1e-8, mxstep=5000)
         odeint_kwargs.update(kwargs)
         # print('forward model: odeint_kwargs')
 
