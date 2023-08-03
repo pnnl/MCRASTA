@@ -106,7 +106,7 @@ def save_trace(idata):
 
 
 def plot_trace(idata):
-    az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
+    az.plot_trace(idata, var_names=['a', 'b', 'Dc_nd', 'mu0'])
 
 
 def plot_posterior_predictive(idata):
@@ -121,10 +121,10 @@ def save_stats(idata, root):
     return summary
 
 
-def post_processing(idata, times, vlps, mutrue):
+def post_processing(idata, times, vlps, mutrue, x):
     # save dataset in case needed later
-    # df_data = pd.DataFrame(np.column_stack((times, x, vlps, mutrue)), columns=['times', 'x', 'vlps', 'mutrue'])
-    # df_data.to_csv(os.path.join(dirpath, 'section_data.csv'))
+    df_data = pd.DataFrame(np.column_stack((times, x, vlps, mutrue)), columns=['times', 'x', 'vlps', 'mutrue'])
+    df_data.to_csv(os.path.join(dirpath, 'section_data.csv'))
 
     # to extract simulated mu values for realizations
     # stacked_pp = az.extract(idata.posterior_predictive)
@@ -262,11 +262,11 @@ def get_obs_data():
     fullpath = os.path.join(homefolder, path, name)
     print(f'getting data from: {fullpath}')
     f = h5py.File(os.path.join(homefolder, path, name), 'r')
-    print(list(f.keys()))
+    # print(list(f.keys()))
 
     # read in data from hdf file, print column names
     df, names = read_hdf(fullpath)
-    print(names)
+    # print(names)
 
     # preplot(df, names)
 
@@ -287,7 +287,7 @@ def get_obs_data():
 
     # sections data
     sectioned_data, start_idx, end_idx = section_data(f_ds)
-    print(f'sectioned data shape = {sectioned_data.shape}')
+    # print(f'sectioned data shape = {sectioned_data.shape}')
 
     # need to check that time vals are monotonically increasing after being processed
     t = sectioned_data[:, 1]
@@ -322,7 +322,7 @@ def remove_non_monotonic(times, data, axis=0):
         print(f'input downsampled data shape = {data.shape}')
         # Find the indices where the array is not monotonically increasing
         non_monotonic_indices = np.where(np.diff(times) < 0)[0]
-        print(f'non monotonic time indices = {non_monotonic_indices}')
+        # print(f'non monotonic time indices = {non_monotonic_indices}')
 
         # Remove the non-monotonic data points
         cleaned_data = np.delete(data, non_monotonic_indices, axis)
@@ -344,30 +344,30 @@ def read_hdf(fullpath):
     with h5py.File(filename, 'r') as f:
         # Print all root level object names (aka keys)
         # these can be group or dataset names
-        print("Keys: %s" % f.keys())
+        # print("Keys: %s" % f.keys())
         # get first object name/key; may or may NOT be a group
         a_group_key = list(f.keys())[0]
 
         # loop on names:
         for name in f.keys():
-            print(name)
+            # print(name)
             names.append(name)
         # loop on names and H5 objects:
         for name, h5obj in f.items():
             if isinstance(h5obj, h5py.Group):
                 print(f'{name} is a Group')
             elif isinstance(h5obj, h5py.Dataset):
-                print(f'{name} is a Dataset')
+                # print(f'{name} is a Dataset')
                 # return a np.array using dataset object:
                 arr1 = h5obj[:]
-                print(type(arr1))
+                # print(type(arr1))
                 # return a np.array using dataset name:
                 arr2 = f[name][:]
                 # compare arr1 to arr2 (should always return True):
-                print(np.array_equal(arr1, arr2))
+                # print(np.array_equal(arr1, arr2))
                 df[f'{name}'] = arr1
 
-    print('df = ', df)
+    # print('df = ', df)
 
     return df, names
 
@@ -375,16 +375,16 @@ def read_hdf(fullpath):
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter
     mu_f = savgol_filter(mu, 50, 2, mode='mirror')
-    print(f'mu_f.shape = {mu_f.shape}')
+    # print(f'mu_f.shape = {mu_f.shape}')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
-    print(f't_muf.shape = {f_data.shape}')
+    # print(f't_muf.shape = {f_data.shape}')
 
     # downsamples to every qth sample after applying low-pass filter along columns
     q = 10
     f_ds = sp.signal.decimate(f_data, q, ftype='fir', axis=0)
-    print(f'number samples in downsampled series = {f_ds.shape}')
+    # print(f'number samples in downsampled series = {f_ds.shape}')
     t_ds = f_ds[:, 1]
     mu_ds = f_ds[:, 0]
     x_ds = f_ds[:, 3]
@@ -404,17 +404,17 @@ def downsample_dataset(mu, t, vlps, x):
 # section_data(...) slices friction data into model-able sections
 def section_data(data):
     df0 = pd.DataFrame(data)
-    print(f'dataframe col names = {list(df0)}')
+    # print(f'dataframe col names = {list(df0)}')
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
-    print(f'new dataframe col names = {list(df)}')
+    # print(f'new dataframe col names = {list(df)}')
 
     start_idx = np.argmax(df['x'] > 18 / um_to_mm)
     end_idx = np.argmax(df['x'] > 20 / um_to_mm)
 
     df_section = df.iloc[start_idx:end_idx]
 
-    print(f'original shape = {df.shape}')
-    print(f'section shape = {df_section.shape}')
+    # print(f'original shape = {df.shape}')
+    # print(f'section shape = {df_section.shape}')
 
     return df_section.to_numpy(), start_idx, end_idx
 
@@ -494,12 +494,14 @@ def get_constants(vlps):
 
 # MCMC priors
 def get_priors():
-    a = pm.Uniform('a', lower=0.006 - 0.008, upper=0.007 + 0.008)
-    b = pm.Uniform('b', lower=0.0059 - 0.008, upper=0.00617 + 0.008)
-    Dc = pm.Uniform('Dc', lower=61.8 - 20, upper=61.8 + 20)
-    mu0 = pm.Uniform('mu0', lower=0.44 - 0.01, upper=0.44 + 0.01)
+    a = pm.LogNormal('a', mu=np.log(1000*0.006), sigma=0.5)
+    b = pm.LogNormal('b', mu=np.log(1000*0.0059), sigma=0.5)
+    Dc_nd = pm.LogNormal('Dc_nd', mu=np.log(1000*0.00146), sigma=0.5)
+    mu0 = pm.LogNormal('mu0', mu=0.5, sigma=0.25)
 
-    priors = [a, b, Dc, mu0]
+    print('a = 0.006; b = 0.0059; Dc = 61.8; mu0 = 0.44')
+
+    priors = [a, b, Dc_nd, mu0]
 
     return priors
 
@@ -508,7 +510,7 @@ def get_priors():
 # returns simulated mu value for use in pymc
 def mcmc_rsf_sim(theta, t, v, k, vref):
     # unpack parameters
-    a, b, Dc, mu0, sigma = theta
+    a, b, Dc_nd, mu0, sigma = theta
 
     # initialize rsf model
     model = rsf.Model()
@@ -525,7 +527,7 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
 
     state1 = staterelations.DieterichState()
     state1.b = b  # Empirical coefficient for the evolution effect
-    state1.Dc = Dc  # Critical slip distance
+    state1.Dc = Dc_nd  # Critical slip distance
 
     model.state_relations = [state1]  # Which state relation we want to use
 
@@ -541,6 +543,18 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
     mu_sim = model.results.friction
 
     return mu_sim
+
+
+def nondimensionalize_parameters(vlps, vref, times):
+    time_total = times[-1] - times[0]
+    times_nd = times / time_total
+    # Dc_nd = pm.Deterministic('Dc_nd', Dc / (time_total * vref))
+    vlps_nd = vlps / vref
+    vref_nd = vref / vref
+
+    return times_nd, vlps_nd, vref_nd
+
+
 
 
 # LogLikelihood
@@ -591,26 +605,29 @@ def main():
     mutrue, times, vlps, x, sample_name = get_obs_data()
 
     k, vref = get_constants(vlps)
+    print(f'k = {k}; vref = {vref}')
     sigma = 0.001  # standard deviation of measurements - change to actual eventually
-
-    # create loglikelihood Op (wrapper for numerical solution to work with pymc)
-    loglike = Loglike(times, vlps, k, vref, mutrue)
 
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters, constants
         priors = get_priors()
-        a, b, Dc, mu0 = priors
+        a, b, Dc_nd, mu0 = priors
+
+        times_nd, vlps_nd, vref_nd = nondimensionalize_parameters(vlps, vref, times)
+
+        # create loglikelihood Op (wrapper for numerical solution to work with pymc)
+        loglike = Loglike(times_nd, vlps_nd, k, vref_nd, mutrue)
 
         # convert parameters to be estimated to tensor vector
-        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
+        theta = pt.tensor.as_tensor_variable([a, b, Dc_nd, mu0, sigma])
 
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 10
-        draws = 100
+        tune = 1000
+        draws = 5000
         chains = 2
         cores = 4
 
@@ -637,7 +654,7 @@ def main():
         # print(f'idata summary: {summary_pp}')
 
         # post-processing takes results and makes plots, save figs saves figures
-        # post_processing(idata, times, vlps, mutrue)
+        post_processing(idata, times, vlps, mutrue, x)
         save_figs(dirpath)
 
     comptime_end = get_time('end')

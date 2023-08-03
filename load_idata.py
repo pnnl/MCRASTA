@@ -12,10 +12,13 @@ import scipy as sp
 from scipy.signal import savgol_filter
 from multiprocessing import Pool
 
+
 home = os.path.expanduser('~')
-dirname = 'out_100d2ch'
-dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
-idataname = f'{dirname}_idata'
+nr = 500
+dirname = f'out_{nr}d2ch'
+dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', dirname)
+idataname = f'{dirname}_idata_a'
+
 
 um_to_mm = 0.001
 
@@ -58,9 +61,9 @@ def get_trace_variables(idata):
     modelvals = az.extract(idata.posterior)
     # print('modelvals = ', modelvals)
 
-    a = modelvals.a.values
-    b = modelvals.b.values
-    Dc = modelvals.Dc.values
+    a = modelvals.a.values / 1000
+    b = modelvals.b.values / 1000
+    Dc_nd = modelvals.Dc_nd.values / 1000
     mu0 = modelvals.mu0.values
 
     # all = np.vstack((a, b, Dc, mu0))
@@ -68,7 +71,7 @@ def get_trace_variables(idata):
     # m_reals = pd.DataFrame(allt, columns=['a', 'b', 'Dc', 'mu0'])
     # print('m_reals = ', m_reals)
 
-    return a, b, Dc, mu0
+    return a, b, Dc_nd, mu0
 
 
 def get_constants(vlps):
@@ -78,18 +81,25 @@ def get_constants(vlps):
     return k, vref
 
 
-def generate_rsf_data():
+def redimensionalize_vars(Dc_nd, times, vref):
+    time_total = times[-1] - times[0]
+    Dc = Dc_nd * (time_total * vref)
+
+    return Dc
+
+
+def generate_rsf_data(nr):
     idata = load_inference_data(dirpath, idataname)
-    a, b, Dc, mu0 = get_trace_variables(idata)
+    a, b, Dc_nd, mu0 = get_trace_variables(idata)
+
     times, mutrue, vlps, x = load_section_data(dirpath)
+
     # runs rsfmodel.py to generate synthetic friction data
     k, vref = get_constants(vlps)
 
-    # nr = 10
+    Dc = redimensionalize_vars(Dc_nd, times, vref)
+
     nobs = len(times)
-    nr = 10
-    # print('num reals = ', nr)
-    # print('num obs = ', nobs)
 
     # pre-allocate array
     mu_sims = np.ones((nobs, nr))
@@ -134,11 +144,10 @@ def generate_rsf_data():
 def plot_simulated_mus(x, times, mu_sims, mutrue, nr):
     plt.figure(1)
     plt.plot(x*um_to_mm, mutrue, '.', label='observed', alpha=0.5)
-    plt.plot(x*um_to_mm, mu_sims[:, 0], 'b-', alpha=0.2)
-    plt.plot(x*um_to_mm, mu_sims[:, 8], 'r-')
+    plt.plot(x*um_to_mm, mu_sims, 'b-', alpha=0.2)
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
-    plt.title('Simulated mu values, {nr} realizations')
+    plt.title(f'Simulated mu values, {nr} realizations')
     plt.show()
 
 
@@ -154,33 +163,23 @@ def load_section_data(dirpath):
 
 
 def main():
-    idata = load_inference_data(dirpath, idataname)
+    # idata = load_inference_data(dirpath, idataname)
     times, mutrue, vlps, x = load_section_data(dirpath)
 
-    m_reals = get_trace_variables(idata)
-    mu_sims = generate_rsf_data()
+    # m_reals = get_trace_variables(idata)
+    mu_sims = generate_rsf_data(nr)
 
     # return times, vlps, m_reals
 
     # mu_sims = generate_rsf_data(times, vlps, m_reals)
 
-    plot_simulated_mus(x, times, mu_sims, mutrue, nr=len(mu_sims[0:]))
+    plot_simulated_mus(x, times, mu_sims, mutrue, nr=nr)
 
     # sample_posterior_predcheck(idata)
     # save_trace(idata, dirpath, idataname)
     # plot_trace(idata)
 
-def dummy_fn(x):
-    y = np.sqrt(x)
-    return y
 
-def run_complex_operations(operation, input, pool):
-    pool.map(operation, input)
-
-
-
-processes_count = 4
-input = range(4)
 if __name__ == '__main__':
     main()
     # processes_pool = Pool(processes_count)
