@@ -44,7 +44,13 @@ class LoadingSystem(object):
         v_contribution = 0
         for state in self.state_relations:
             v_contribution += state.velocity_component(self)
+        print('a = ', self.a)
+        print('vref = ', self.vref)
+        print('mu = ', self.mu)
+        print('mu0 = ', self.mu0)
+        print('v_contribution = ', v_contribution)
         self.v = self.vref * exp((self.mu - self.mu0 - v_contribution) / self.a)
+
 
     def friction_evolution(self, loadpoint_vel):
         return self.k * (loadpoint_vel - self.v)
@@ -283,8 +289,7 @@ class Model(LoadingSystem):
 
         # Calculate displacement from velocity and dt
         # print('forward model: Calculate displacement from velocity and dt')
-        self.results.loadpoint_displacement = \
-            self._calculateDiscreteDisplacement(self.loadpoint_velocity)
+        self.results.loadpoint_displacement = self._calculateDiscreteDisplacement(self.loadpoint_velocity)
 
         # self.results.loadpoint_displacement = self.loadpoint_displacement
 
@@ -326,8 +331,7 @@ class Model(LoadingSystem):
         predicted_slider_displacement = self.results.loadpoint_displacement[-1] + dx
         actual_slider_diaplacement = self.results.slider_displacement[-1]
 
-        difference = np.abs(predicted_slider_displacement - actual_slider_diaplacement) / \
-                     predicted_slider_displacement
+        difference = np.abs(predicted_slider_displacement - actual_slider_diaplacement) / predicted_slider_displacement
 
         if difference > tol:
             return False
