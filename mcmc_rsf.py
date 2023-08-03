@@ -552,7 +552,7 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
 
 def nondimensionalize_parameters(vlps, vref, times):
     time_total = times[-1] - times[0]
-    times_nd = times / time_total
+    times_nd = (times / time_total) / times[0]
     # Dc_nd = pm.Deterministic('Dc_nd', Dc / (time_total * vref))
     vlps_nd = vlps / vref
     vref_nd = vref / vref
@@ -631,8 +631,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 2000
-        draws = 10005
+        tune = 200
+        draws = 1000
         chains = 2
         cores = 4
 
