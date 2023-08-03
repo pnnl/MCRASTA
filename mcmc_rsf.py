@@ -493,10 +493,15 @@ def get_constants(vlps):
 
 
 # MCMC priors
-def get_priors():
-    a = pm.LogNormal('a', mu=np.log(1000*0.006), sigma=0.5)
-    b = pm.LogNormal('b', mu=np.log(1000*0.0059), sigma=0.5)
-    Dc_nd = pm.LogNormal('Dc_nd', mu=np.log(1000*0.00146), sigma=0.5)
+def get_priors(vref, times):
+    # for a, b: np.log(0.003), 0.8
+    a = pm.LogNormal('a', mu=np.log(1000*0.003), sigma=0.8)
+    b = pm.LogNormal('b', mu=np.log(1000*0.003), sigma=0.8)
+
+    time_total = times[-1] - times[0]
+    # for Dc: np.log(50), 0.8
+    # Dc_nd = Dc / (time_total * vref)
+    Dc_nd = pm.LogNormal('Dc_nd', mu=np.log(1000*0.0012), sigma=0.8)
     mu0 = pm.LogNormal('mu0', mu=0.5, sigma=0.25)
 
     print('a = 0.006; b = 0.0059; Dc = 61.8; mu0 = 0.44')
@@ -611,7 +616,7 @@ def main():
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters, constants
-        priors = get_priors()
+        priors = get_priors(vref, times)
         a, b, Dc_nd, mu0 = priors
 
         times_nd, vlps_nd, vref_nd = nondimensionalize_parameters(vlps, vref, times)
@@ -626,8 +631,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 1000
-        draws = 5000
+        tune = 2000
+        draws = 10000
         chains = 2
         cores = 4
 
