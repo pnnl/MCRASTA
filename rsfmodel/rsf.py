@@ -44,11 +44,11 @@ class LoadingSystem(object):
         v_contribution = 0
         for state in self.state_relations:
             v_contribution += state.velocity_component(self)
-        print('a = ', self.a)
-        print('vref = ', self.vref)
-        print('mu = ', self.mu)
-        print('mu0 = ', self.mu0)
-        print('v_contribution = ', v_contribution)
+        # print('a = ', self.a)
+        # print('vref = ', self.vref)
+        # print('mu = ', self.mu)
+        # print('mu0 = ', self.mu0)
+        # print('v_contribution = ', v_contribution)
         self.v = self.vref * exp((self.mu - self.mu0 - v_contribution) / self.a)
 
 
