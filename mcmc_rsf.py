@@ -18,7 +18,7 @@ um_to_mm = 0.001
 
 pt.config.optimizer = 'fast_compile'
 rng = np.random.normal()
-# np.random.seed(1234)
+np.random.seed(1234)
 az.style.use("arviz-darkgrid")
 
 
@@ -631,8 +631,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 200
-        draws = 1000
+        tune = 2000
+        draws = 10000
         chains = 2
         cores = 4
 
