@@ -631,8 +631,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 5000
-        draws = 20002
+        tune = 10000
+        draws = 50002
         chains = 2
         cores = 4
 
@@ -652,7 +652,7 @@ def main():
         save_trace(idata)
 
         # sample the posterior for validation (can only use if using gradient-based solver)
-        # sample_posterior_predcheck(idata)
+        sample_posterior_predcheck(idata)
 
         # print and save new idata stats that includes posterior predictive check
         # summary_pp = save_stats(idata, dirpath)
