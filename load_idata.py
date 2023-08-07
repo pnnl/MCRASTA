@@ -5,37 +5,44 @@ import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
 from rsfmodel import staterelations, rsf, plot
+import mcmc_rsf
 import pytensor
 import sys
 import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
-from multiprocessing import Pool
-
 
 home = os.path.expanduser('~')
-nr = 500
+nr = 50002
 dirname = f'out_{nr}d2ch'
-dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', dirname)
-idataname = f'{dirname}_idata_a'
-
+dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
+idataname = f'{dirname}_idata'
 
 um_to_mm = 0.001
+
+
+def get_storage_folder(dirname):
+    print('checking if storage directory exists')
+    homefolder = os.path.expanduser('~')
+    outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'postprocess_out')
+    # name = sim_name
+
+    dirpath = os.path.join(homefolder, outfolder, dirname)
+    isExisting = os.path.exists(dirpath)
+    if isExisting is False:
+        print(f'directory does not exist, creating new directory --> {dirpath}')
+        os.makedirs(dirpath)
+        return dirpath
+    elif isExisting is True:
+        print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
+              f'overwritten --> {dirpath}')
+        return dirpath
 
 
 def load_inference_data(dirpath, name):
     fullname = os.path.join(dirpath, name)
     trace = az.from_netcdf(fullname)
 
-    # print('trace = ', trace)
-
-    # to extract simulated mu values for realizations
-    # stacked_pp = az.extract(trace.posterior_predictive)
-    # print(f'stacked = {stacked_pp}')
-    # musims = stacked_pp.simulator.values
-    #
-    # plt.plot(musims)
-    # plt.show()
     return trace
 
 
@@ -53,23 +60,43 @@ def plot_posterior_predictive(idata):
 
 
 def plot_trace(idata):
-    az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], kind="rank_vlines")
+    az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
+    az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'])
+
+def plot_pairs(idata):
+    ax = az.plot_pair(
+        idata,
+        var_names=['a', 'b', 'Dc', 'mu0'],
+        kind=["scatter", "kde"],
+        marginals=True,
+    )
+
     plt.show()
 
+    sys.exit()
 
-def get_trace_variables(idata):
-    modelvals = az.extract(idata.posterior)
+
+def get_model_vals(idata):
+    modelvals = az.extract(idata.posterior, combined=False)
     # print('modelvals = ', modelvals)
 
+    return modelvals
+
+
+def get_trace_variables_allchains(modelvals):
     a = modelvals.a.values / 1000
     b = modelvals.b.values / 1000
     Dc_nd = modelvals.Dc_nd.values / 1000
     mu0 = modelvals.mu0.values
 
-    # all = np.vstack((a, b, Dc, mu0))
-    # allt = np.transpose(all)
-    # m_reals = pd.DataFrame(allt, columns=['a', 'b', 'Dc', 'mu0'])
-    # print('m_reals = ', m_reals)
+    return a, b, Dc_nd, mu0
+
+
+def get_trace_variables(modelvals, chain):
+    a = modelvals.a.values[chain, :] / 1000
+    b = modelvals.b.values[chain, :] / 1000
+    Dc_nd = modelvals.Dc_nd.values[chain, :] / 1000
+    mu0 = modelvals.mu0.values[chain, :]
 
     return a, b, Dc_nd, mu0
 
@@ -81,23 +108,18 @@ def get_constants(vlps):
     return k, vref
 
 
-def redimensionalize_vars(Dc_nd, times, vref):
+def redimensionalize_Dc_nd(Dc_nd, times, vref):
     time_total = times[-1] - times[0]
     Dc = Dc_nd * (time_total * vref)
 
     return Dc
 
 
-def generate_rsf_data(nr):
-    idata = load_inference_data(dirpath, idataname)
-    a, b, Dc_nd, mu0 = get_trace_variables(idata)
+def generate_rsf_data(nr, vars):
+    a, b, Dc, mu0 = vars
 
     times, mutrue, vlps, x = load_section_data(dirpath)
-
-    # runs rsfmodel.py to generate synthetic friction data
     k, vref = get_constants(vlps)
-
-    Dc = redimensionalize_vars(Dc_nd, times, vref)
 
     nobs = len(times)
 
@@ -125,11 +147,11 @@ def generate_rsf_data(nr):
     for i in np.arange(nr):
         print(f'solving for realization')
         # Set model initial conditions
-        model.mu0 = mu0[i]   # Friction initial (at the reference velocity)
+        model.mu0 = mu0[i]  # Friction initial (at the reference velocity)
         # print('model mu0 = ', model.mu0)
-        model.a = a[i]          # Empirical coefficient for the direct effect
-        state1.b = b[i]        # Empirical coefficient for the evolution effect
-        state1.Dc = Dc[i]    # Critical slip distance
+        model.a = a[i]  # Empirical coefficient for the direct effect
+        state1.b = b[i]  # Empirical coefficient for the evolution effect
+        state1.Dc = Dc[i]  # Critical slip distance
 
         # Run the model!
         model.solve()
@@ -137,14 +159,14 @@ def generate_rsf_data(nr):
         mu_sim = model.results.friction
         mu_sims[:, i] = mu_sim
 
-    print(mu_sims.shape)
     return mu_sims
 
 
-def plot_simulated_mus(x, times, mu_sims, mutrue, nr):
-    plt.figure(1)
-    plt.plot(x*um_to_mm, mutrue, '.', label='observed', alpha=0.5)
-    plt.plot(x*um_to_mm, mu_sims, 'b-', alpha=0.2)
+def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain, mu_95):
+    plt.figure(chain)
+    # plt.plot(x * um_to_mm, mu_sims, 'k-', alpha=0.2)
+    plt.plot(x * um_to_mm, mutrue, '.', label='observed')
+    plt.plot(x * um_to_mm, mu_95, 'r-', label='95% cred. interval')
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
     plt.title(f'Simulated mu values, {nr} realizations')
@@ -162,32 +184,86 @@ def load_section_data(dirpath):
     return times, mutrue, vlps, x
 
 
+def get_credible_int_bounds(idata, chain):
+    hdi_data = az.hdi(idata, hdi_prob=0.95, coords={'chain': [chain]})
+
+    aci = hdi_data.a.data / 1000
+    bci = hdi_data.b.data / 1000
+    Dc_ndci = hdi_data.Dc_nd.data / 1000
+    mu0ci = hdi_data.mu0.data
+
+    return [aci, bci, Dc_ndci, mu0ci]
+
+
+def get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci):
+    # a.sort()
+    # b.sort()
+    # Dc.sort()
+    # mu0.sort()
+
+    a95 = a[np.where((a >= aci[0]) & (a <= aci[1]))]
+    b95 = b[np.where((b >= bci[0]) & (b <= bci[1]))]
+    Dc95 = Dc[np.where((Dc >= Dcci[0]) & (Dc <= Dcci[1]))]
+    mu095 = mu0[np.where((mu0 >= mu0ci[0]) & (mu0 <= mu0ci[1]))]
+
+    return a95, b95, Dc95, mu095
+
+
+def original_trace_all_chains(modelvals, times, vref):
+    a, b, Dc_nd, mu0 = get_trace_variables_allchains(modelvals)
+    Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
+    new_idata = az.convert_to_inference_data(datadict)
+
+    plot_pairs(new_idata)
+    plot_trace(new_idata)
+
+
+def save_figs(out_folder):
+    # check if folder exists, make one if it doesn't
+    name = out_folder
+    print(f'find figures and .out file here: {name}')
+    w = plt.get_fignums()
+    print('w = ', w)
+    for i in plt.get_fignums():
+        print('i = ', i)
+        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300)
+
+
 def main():
-    # idata = load_inference_data(dirpath, idataname)
+    out_folder = get_storage_folder(dirname)
     times, mutrue, vlps, x = load_section_data(dirpath)
+    k, vref = get_constants(vlps)
 
-    # m_reals = get_trace_variables(idata)
-    mu_sims = generate_rsf_data(nr)
+    idata = load_inference_data(dirpath, idataname)
 
-    # return times, vlps, m_reals
+    modelvals = get_model_vals(idata)
 
-    # mu_sims = generate_rsf_data(times, vlps, m_reals)
+    original_trace_all_chains(modelvals, times, vref)
 
-    plot_simulated_mus(x, times, mu_sims, mutrue, nr=nr)
+    numchains = 2
+    for chain in np.arange(numchains):
+        a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
+        cints = get_credible_int_bounds(modelvals, chain)
+        aci, bci, Dc_ndci, mu0ci = cints
 
-    # sample_posterior_predcheck(idata)
-    # save_trace(idata, dirpath, idataname)
-    # plot_trace(idata)
+        Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+        Dcci = redimensionalize_Dc_nd(Dc_ndci, times, vref)
+
+        # a95, b95, Dc95, mu095 = get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci)
+
+        vars_all = a, b, Dc, mu0
+
+        # vars95 = a95, b95, Dc95, mu095
+
+        mu_sims = generate_rsf_data(2, vars_all)
+        cints = aci, bci, Dcci, mu0ci
+        mu_95 = generate_rsf_data(2, cints)
+
+        plot_simulated_mus(x, times, mu_sims, mutrue, len(a), chain, mu_95)
+
+    save_figs(out_folder)
 
 
 if __name__ == '__main__':
     main()
-    # processes_pool = Pool(processes_count)
-    # # times, vlps, ms = main()
-    #
-    # run_complex_operations(generate_rsf_data, input, processes_pool)
-    # print('done')
-
-
-
-
