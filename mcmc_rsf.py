@@ -504,8 +504,6 @@ def get_priors(vref, times):
     Dc_nd = pm.LogNormal('Dc_nd', mu=np.log(1000*0.0012), sigma=0.8)
     mu0 = pm.LogNormal('mu0', mu=0.5, sigma=0.25)
 
-    print('a = 0.006; b = 0.0059; Dc = 61.8; mu0 = 0.44')
-
     priors = [a, b, Dc_nd, mu0]
 
     return priors
