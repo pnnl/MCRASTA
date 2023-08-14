@@ -287,6 +287,7 @@ def get_obs_data():
 
     # sections data
     sectioned_data, start_idx, end_idx = section_data(f_ds)
+
     # print(f'sectioned data shape = {sectioned_data.shape}')
 
     # need to check that time vals are monotonically increasing after being processed
@@ -302,10 +303,6 @@ def get_obs_data():
     times = cleaned_data[:, 1]
     vlps = cleaned_data[:, 2]
     x = cleaned_data[:, 3]
-
-    # mu_og = mu
-    # mu_f_ds = mutrue
-    # # plot_obs_data_processing(x*um_to_mm, mu_og, mu_f, mu_f_ds, xog)
 
     return mutrue, times, vlps, x, sample_name
 
@@ -382,7 +379,7 @@ def downsample_dataset(mu, t, vlps, x):
     # print(f't_muf.shape = {f_data.shape}')
 
     # downsamples to every qth sample after applying low-pass filter along columns
-    q = 10
+    q = 11
     f_ds = sp.signal.decimate(f_data, q, ftype='fir', axis=0)
     # print(f'number samples in downsampled series = {f_ds.shape}')
     t_ds = f_ds[:, 1]
@@ -553,7 +550,10 @@ def nondimensionalize_parameters(vlps, vref, times):
     times_nd = times / times[0]
     # Dc_nd = pm.Deterministic('Dc_nd', Dc / (time_total * vref))
     vlps_nd = vlps / vref
-    vref_nd = vref / vref
+    vref_nd = vref / np.mean(vlps)
+
+    test = np.argwhere(vlps < 0)
+
 
     return times_nd, vlps_nd, vref_nd
 
@@ -629,8 +629,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 10000
-        draws = 500000
+        tune = 5000
+        draws = 50009
         chains = 2
         cores = 4
 

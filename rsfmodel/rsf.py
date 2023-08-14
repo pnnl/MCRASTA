@@ -158,11 +158,7 @@ class Model(LoadingSystem):
         system.mu = w[0]
         for i, state_variable in enumerate(system.state_relations):
             state_variable.state = w[i + 1]
-        try:
             system.velocity_evolution()
-        except OverflowError as exc:
-            print('overflow error --> moving on')
-            print(exc)
 
         # Find the loadpoint_velocity corresponding to the most recent time
         # <= the current time.
@@ -281,27 +277,20 @@ class Model(LoadingSystem):
         # print(f'self.results.time =  {self.results.time}; results time shape = {self.results.time.shape}')
 
         # Calculate slider velocity after we have solved everything
-        # print('forward model: Calculate slider velocity after we have solved everything')
         velocity_contribution = 0
         for i, state_variable in enumerate(self.state_relations):
             # print('forward model: define state_variable.state from soln')
             state_variable.state = wsol[:, i + 1]
-            # print('forward model: define velocity contribution as += velocity component')
             velocity_contribution += state_variable.velocity_component(self)
 
-        # print('forward model: calculate slider velocity from vref, friction results, mu0, velocity contribution, a')
         self.results.slider_velocity = self.vref * np.exp(
             (self.results.friction - self.mu0 -
              velocity_contribution) / self.a)
 
         # Calculate displacement from velocity and dt
-        # print('forward model: Calculate displacement from velocity and dt')
         self.results.loadpoint_displacement = self._calculateDiscreteDisplacement(self.loadpoint_velocity)
 
-        # self.results.loadpoint_displacement = self.loadpoint_displacement
-
         # Calculate the slider displacement
-        # print('forward model: Calculate the slider displacement')
         self.results.slider_displacement = \
             self._calculateContinuousDisplacement(self.results.slider_velocity)
 
