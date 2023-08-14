@@ -630,7 +630,7 @@ def main():
 
         # seq. mcmc sampler parameters
         tune = 10000
-        draws = 500002
+        draws = 500000
         chains = 2
         cores = 4
 

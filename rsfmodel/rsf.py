@@ -44,12 +44,16 @@ class LoadingSystem(object):
         v_contribution = 0
         for state in self.state_relations:
             v_contribution += state.velocity_component(self)
-        # print('a = ', self.a)
-        # print('vref = ', self.vref)
-        # print('mu = ', self.mu)
-        # print('mu0 = ', self.mu0)
-        # print('v_contribution = ', v_contribution)
-        self.v = self.vref * exp((self.mu - self.mu0 - v_contribution) / self.a)
+        try:
+            self.v = self.vref * exp((self.mu - self.mu0 - v_contribution) / self.a)
+        except OverflowError as exc:
+            print(exc)
+            print('overflow error, here are the vars that caused it')
+            print('a = ', self.a)
+            print('vref = ', self.vref)
+            print('mu = ', self.mu)
+            print('mu0 = ', self.mu0)
+            print('v_contribution = ', v_contribution)
 
 
     def friction_evolution(self, loadpoint_vel):
@@ -154,8 +158,11 @@ class Model(LoadingSystem):
         system.mu = w[0]
         for i, state_variable in enumerate(system.state_relations):
             state_variable.state = w[i + 1]
-
-        system.velocity_evolution()
+        try:
+            system.velocity_evolution()
+        except OverflowError as exc:
+            print('overflow error --> moving on')
+            print(exc)
 
         # Find the loadpoint_velocity corresponding to the most recent time
         # <= the current time.
