@@ -492,13 +492,13 @@ def get_constants(vlps):
 # MCMC priors
 def get_priors(vref, times):
     # for a, b: np.log(0.003), 0.8
-    a = pm.LogNormal('a', mu=np.log(1000*0.003), sigma=0.8)
-    b = pm.LogNormal('b', mu=np.log(1000*0.003), sigma=0.8)
+    a = pm.LogNormal('a', mu=1000*0.003, sigma=0.8)
+    b = pm.LogNormal('b', mu=1000*0.003, sigma=0.8)
 
     time_total = times[-1] - times[0]
     # for Dc: np.log(50), 0.8
     # Dc_nd = Dc / (time_total * vref)
-    Dc_nd = pm.LogNormal('Dc_nd', mu=np.log(1000*0.0012), sigma=0.8)
+    Dc_nd = pm.LogNormal('Dc_nd', mu=1000*0.0012, sigma=0.8)
     mu0 = pm.LogNormal('mu0', mu=0.5, sigma=0.25)
 
     priors = [a, b, Dc_nd, mu0]
@@ -629,8 +629,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 5000
-        draws = 50009
+        tune = 10
+        draws = 1000
         chains = 2
         cores = 4
 
