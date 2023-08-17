@@ -637,7 +637,7 @@ def main():
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
 
-        # seq. mcmc sampler parameters
+        # seq. mcmc sampler parameterss
         tune = 5000
         draws = 50000
         chains = 2
