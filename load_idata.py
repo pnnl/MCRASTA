@@ -1,3 +1,4 @@
+import math
 import os
 import numpy as np
 import pymc as pm
@@ -11,12 +12,15 @@ import sys
 import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
+from scipy.stats import lognorm, mode, skew, kurtosis
+import seaborn as sns
+
 
 home = os.path.expanduser('~')
-nr = 50002
+nr = 1000
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
-idataname = f'{dirname}_idata'
+idataname = f'{dirname}_idata_a'
 
 um_to_mm = 0.001
 
@@ -60,8 +64,11 @@ def plot_posterior_predictive(idata):
 
 
 def plot_trace(idata):
-    az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
-    az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'])
+    # az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
+    plt.figure(300)
+    az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
+    # az.plot_posterior(idata, var_names=['a'], point_estimate='mode')
+
 
 def plot_pairs(idata):
     ax = az.plot_pair(
@@ -71,14 +78,9 @@ def plot_pairs(idata):
         marginals=True,
     )
 
-    plt.show()
-
-    sys.exit()
-
 
 def get_model_vals(idata):
     modelvals = az.extract(idata.posterior, combined=False)
-    # print('modelvals = ', modelvals)
 
     return modelvals
 
@@ -93,9 +95,9 @@ def get_trace_variables_allchains(modelvals):
 
 
 def get_trace_variables(modelvals, chain):
-    a = modelvals.a.values[chain, :] / 1000
-    b = modelvals.b.values[chain, :] / 1000
-    Dc_nd = modelvals.Dc_nd.values[chain, :] / 1000
+    a = modelvals.a.values[chain, :]
+    b = modelvals.b.values[chain, :]
+    Dc_nd = modelvals.Dc_nd.values[chain, :]
     mu0 = modelvals.mu0.values[chain, :]
 
     return a, b, Dc_nd, mu0
@@ -219,6 +221,7 @@ def original_trace_all_chains(modelvals, times, vref):
     plot_trace(new_idata)
 
 
+
 def save_figs(out_folder):
     # check if folder exists, make one if it doesn't
     name = out_folder
@@ -230,25 +233,116 @@ def save_figs(out_folder):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300)
 
 
+# Create a custom lognormal mode function to estimate the parameters needed for lognormal distr
+def lognormal_mode_to_parameters(desired_modes):
+    sigmas = []
+    mus = []
+    for desired_mode in desired_modes:
+        sigma = np.sqrt(np.log(1 + (desired_mode ** 2)))
+        mu = np.log(desired_mode) - (sigma ** 2) / 2
+        sigmas.append(sigma)
+        mus.append(mu)
+    return mus, sigmas
+
+
+def get_priors(vref, times, idata, modelvals):
+    size = (nr,)
+    desired_modes = (3, 3, 1.2, 0.5)
+
+    # Estimate parameters from the desired mode
+    mus, sigmas = lognormal_mode_to_parameters(desired_modes)
+
+    # generate upscaled lognormal priors
+    a = np.random.lognormal(mean=mus[0], sigma=sigmas[0], size=size)
+    b = np.random.lognormal(mean=mus[1], sigma=sigmas[1], size=size)
+    Dc = np.random.lognormal(mean=mus[2], sigma=sigmas[2], size=size)
+    mu0 = np.random.lognormal(mean=mus[3], sigma=sigmas[3], size=size)
+
+    # downscale priors for a, b, Dc
+    a = a / 1000
+    b = b / 1000
+    Dc_nd = Dc / 1000
+
+    # re-dimensionlize Dc
+    Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+
+    return a, b, Dc, mu0, mus, sigmas, desired_modes
+
+
+def plot_priors(a, b, Dc, mu0, mus, sigmas, desired_modes):
+    datas = a, b, Dc, mu0
+    dataname = ['a', 'b', 'Dc', 'mu0']
+    num_bins = 1000
+
+    i = 1
+    for data, mu, sigma, mod, name in zip(datas, mus, sigmas, desired_modes, dataname):
+        hist, bins = np.histogram(data, bins=num_bins, density=True)
+        plt.figure(i)
+        sns.histplot(data, color='b', kde=True, label=f'{name} prior')
+        plt.legend()
+        # plt.hist(data, bins=num_bins, density=True, alpha=0.6, color='blue')
+        # plt.plot(bins, pdf_vals, 'r', label=f'{name} prior PDF')
+        i += 1
+
+
+def get_posteriors(modelvals, times, vref, chain):
+    a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
+    Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+
+    # downscale posteriors for a, b, Dc
+    a = a / 1000
+    b = b / 1000
+    Dc = Dc / 1000
+
+    return a, b, Dc, mu0
+
+
+def plot_posteriors(a, b, Dc, mu0):
+    datas = a, b, Dc, mu0
+    num_bins = 1000
+    dataname = ['a', 'b', 'Dc', 'mu0']
+
+    i = 1
+    for data, name in zip(datas, dataname):
+        mu = np.mean(data)
+        sigma = np.std(data)
+        plt.figure(i)
+        sns.histplot(data, color='g', kde=True, label=f'{name} posterior')
+        # hist, bins = np.histogram(data, bins=num_bins, density=True)
+        # pdf_vals = lognorm.pdf(bins, s=sigma, scale=np.exp(mu / 1000))
+        # plt.hist(data, bins=num_bins, density=True, alpha=0.6, color='blue')
+        # plt.plot(bins, pdf_vals, 'r', label=f'{name} posterior PDF')
+        i += 1
+        plt.legend()
+    plt.show()
+
+
 def main():
     out_folder = get_storage_folder(dirname)
     times, mutrue, vlps, x = load_section_data(dirpath)
     k, vref = get_constants(vlps)
 
     idata = load_inference_data(dirpath, idataname)
-
     modelvals = get_model_vals(idata)
 
     original_trace_all_chains(modelvals, times, vref)
 
+    # get priors and plot them
+    a, b, Dc, mu0, mus, sigmas, desired_modes = get_priors(vref, times, idata, modelvals)
+    plot_priors(a, b, Dc, mu0, mus, sigmas, desired_modes)
+
     numchains = 2
     for chain in np.arange(numchains):
+        # get posteriors and plot them
+        a, b, Dc, mu0 = get_posteriors(modelvals, times, vref, chain)
+        plot_posteriors(a, b, Dc, mu0)
+
         a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
-        cints = get_credible_int_bounds(modelvals, chain)
-        aci, bci, Dc_ndci, mu0ci = cints
+        # cints = get_credible_int_bounds(modelvals, chain)
+        # aci, bci, Dc_ndci, mu0ci = cints
 
         Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
-        Dcci = redimensionalize_Dc_nd(Dc_ndci, times, vref)
+        # Dcci = redimensionalize_Dc_nd(Dc_ndci, times, vref)
 
         # a95, b95, Dc95, mu095 = get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci)
 
@@ -257,10 +351,13 @@ def main():
         # vars95 = a95, b95, Dc95, mu095
 
         mu_sims = generate_rsf_data(2, vars_all)
-        cints = aci, bci, Dcci, mu0ci
-        mu_95 = generate_rsf_data(2, cints)
+        # cints = aci, bci, Dcci, mu0ci
+        # mu_95 = generate_rsf_data(2, cints)
 
-        plot_simulated_mus(x, times, mu_sims, mutrue, len(a), chain, mu_95)
+
+
+        plt.show()
+        # plot_simulated_mus(x, times, mu_sims, mutrue, len(a), chain, mu_95)
 
     save_figs(out_folder)
 
