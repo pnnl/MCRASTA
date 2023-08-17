@@ -489,17 +489,26 @@ def get_constants(vlps):
     return k, vref
 
 
+def lognormal_mode_to_parameters(desired_modes):
+    sigmas = []
+    mus = []
+    for desired_mode in desired_modes:
+        sigma = np.sqrt(np.log(1 + (desired_mode ** 2)))
+        mu = np.log(desired_mode) - (sigma ** 2) / 2
+        sigmas.append(sigma)
+        mus.append(mu)
+    return mus, sigmas
+
+
 # MCMC priors
 def get_priors(vref, times):
-    # for a, b: np.log(0.003), 0.8
-    a = pm.LogNormal('a', mu=1000*0.003, sigma=0.8)
-    b = pm.LogNormal('b', mu=1000*0.003, sigma=0.8)
+    desired_modes = (3, 3, 1.2, 0.5)
+    mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
-    time_total = times[-1] - times[0]
-    # for Dc: np.log(50), 0.8
-    # Dc_nd = Dc / (time_total * vref)
-    Dc_nd = pm.LogNormal('Dc_nd', mu=1000*0.0012, sigma=0.8)
-    mu0 = pm.LogNormal('mu0', mu=0.5, sigma=0.25)
+    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
+    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
+    Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
+    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
     priors = [a, b, Dc_nd, mu0]
 
@@ -629,8 +638,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameters
-        tune = 5000
-        draws = 50000
+        tune = 1000
+        draws = 10000
         chains = 2
         cores = 4
 
