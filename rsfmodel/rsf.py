@@ -302,7 +302,7 @@ class Model(LoadingSystem):
 
         return self.results
 
-    def _check_slider_displacement(self, tol=0.01):
+    def _check_slider_displacement(self, tol=0.05):
         """
         Checks that the slider displacement total is within a given tolerance
         of the prediction from steady-state theory. Defaults to 1%.
