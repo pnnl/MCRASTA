@@ -503,7 +503,7 @@ def lognormal_mode_to_parameters(desired_modes):
 
 # MCMC priors
 def get_priors(vref, times):
-    desired_modes = (6, 6, 3.2, 0.5)
+    desired_modes = (8, 4, 5.2, 0.2)
     mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
@@ -511,13 +511,13 @@ def get_priors(vref, times):
     Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
-    #print(a)
-    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=100)
-    sns.kdeplot(vpriors[0], color='b', label='A prior', common_norm=False, bw_method=0.1)
-    #sns.kdeplot(vpriors, common_norm=False, bw_method=0.1)
-    sns.kdeplot(vpriors[1], color='r', label='B prior')
-    plt.legend()
-    plt.show()
+    # #print(a)
+    # vpriors = pm.draw([a, b, Dc_nd, mu0], draws=100)
+    # sns.kdeplot(vpriors[0], color='b', label='A prior', common_norm=False, bw_method=0.1)
+    # #sns.kdeplot(vpriors, common_norm=False, bw_method=0.1)
+    # sns.kdeplot(vpriors[1], color='r', label='B prior')
+    # plt.legend()
+    # # plt.show()
 
     priors = [a, b, Dc_nd, mu0]
 
@@ -647,8 +647,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameterss
-        tune = 5
-        draws = 10
+        tune = 10000
+        draws = 50005
         chains = 2
         cores = 4
 

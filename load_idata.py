@@ -64,9 +64,16 @@ def plot_posterior_predictive(idata):
 
 
 def plot_trace(idata):
-    # az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
-    plt.figure(300)
-    ax = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
+    ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
+    ax[0][0].set_xlim(0, 200)
+    ax[1][0].set_xlim(0, 200)
+    ax[2][0].set_xlim(0, 25)
+
+    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
+    print(ax2)
+    ax2[0].set_xlim(0, 200)
+    ax2[1].set_xlim(0, 200)
+    ax2[2].set_xlim(0, 25)
 
 
 def plot_pairs(idata):
@@ -75,7 +82,7 @@ def plot_pairs(idata):
         var_names=['a', 'b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
-        scatter_kwargs={'color': (1,0,0,0.4)}
+        scatter_kwargs={'color': (1, 0, 0, 0.4)}
     )
     #xlims = [50, 50, 25, 1]
 
@@ -222,7 +229,7 @@ def original_trace_all_chains(modelvals, times, vref):
     new_idata = az.convert_to_inference_data(datadict)
 
     plot_pairs(new_idata)
-    # plot_trace(new_idata)
+    plot_trace(new_idata)
 
 
 
@@ -403,6 +410,8 @@ def main():
     k, vref = get_constants(vlps)
 
     idata = load_inference_data(dirpath, idataname)
+    az.plot_trace(idata, var_names=['a', 'b', 'Dc_nd', 'mu0'])
+
     modelvals = get_model_vals(idata)
 
     original_trace_all_chains(modelvals, times, vref)
