@@ -54,7 +54,7 @@ class LoadingSystem(object):
             print('mu = ', self.mu)
             print('mu0 = ', self.mu0)
             print('v_contribution = ', v_contribution)
-            print(f'Dc = {self.Dc}')
+            print(f'Dc = {self.state_relations.Dc}')
 
 
     def friction_evolution(self, loadpoint_vel):
