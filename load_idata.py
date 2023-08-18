@@ -20,7 +20,7 @@ home = os.path.expanduser('~')
 nr = 50000
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
-idataname = f'{dirname}_idata'
+idataname = f'{dirname}_idata_a'
 
 um_to_mm = 0.001
 
@@ -64,30 +64,43 @@ def plot_posterior_predictive(idata):
 
 
 def plot_trace(idata):
-    ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
-    ax[0][0].set_xlim(0, 200)
-    ax[1][0].set_xlim(0, 200)
-    ax[2][0].set_xlim(0, 25)
+    ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], combined=False)
+    ax[0][0].set_xlim(0, 0.05)
+    ax[1][0].set_xlim(0, 0.05)
+    ax[2][0].set_xlim(0, 400)
 
     ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
     print(ax2)
-    ax2[0].set_xlim(0, 200)
-    ax2[1].set_xlim(0, 200)
-    ax2[2].set_xlim(0, 25)
+    ax2[0].set_xlim(0, 0.05)
+    ax2[1].set_xlim(0, 0.05)
+    ax2[2].set_xlim(0, 400)
 
 
 def plot_pairs(idata):
+    # plot_kwargs = {'linewidths': 0.2}
+    marginal_kwargs = {'color': 'teal'}
+    kde_kwargs = {'hdi_probs': [0.8, 0.95]}
     ax = az.plot_pair(
         idata,
         var_names=['a', 'b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
-        scatter_kwargs={'color': (1, 0, 0, 0.4)}
+        scatter_kwargs={'color': 'teal', 'alpha': 0.2},
+        kde_kwargs=kde_kwargs,
+        marginal_kwargs=marginal_kwargs
     )
     #xlims = [50, 50, 25, 1]
 
     #1plt.gca().set_xlim(0, xmax)
-    ax[0][0].set_xlim(0, 100)  # set the x limits for the first row first col e.g upper left
+    # ax[0][0].set_xlim(0, 100)  # set the x limits for the first row first col e.g upper left
+    print('pairs ax = ', ax)
+
+    # sys.exit()
+    ax[0][0].set_xlim(0, 0.05)
+    ax[1][0].set_ylim(0, 0.2)
+    ax[2][0].set_ylim(0, 500)
+    ax[1][1].set_xlim(0, 0.05)
+    ax[2][2].set_xlim(0, 400)
 
 
 def get_model_vals(idata):
@@ -97,18 +110,18 @@ def get_model_vals(idata):
 
 
 def get_trace_variables_allchains(modelvals):
-    a = modelvals.a.values
-    b = modelvals.b.values
-    Dc_nd = modelvals.Dc_nd.values
+    a = modelvals.a.values / 1000
+    b = modelvals.b.values / 1000
+    Dc_nd = modelvals.Dc_nd.values / 1000
     mu0 = modelvals.mu0.values
 
     return a, b, Dc_nd, mu0
 
 
 def get_trace_variables(modelvals, chain):
-    a = modelvals.a.values[chain, :]
-    b = modelvals.b.values[chain, :]
-    Dc_nd = modelvals.Dc_nd.values[chain, :]
+    a = modelvals.a.values[chain, :] / 1000
+    b = modelvals.b.values[chain, :] / 1000
+    Dc_nd = modelvals.Dc_nd.values[chain, :] / 1000
     mu0 = modelvals.mu0.values[chain, :]
 
     return a, b, Dc_nd, mu0
@@ -183,7 +196,7 @@ def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain):
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
     plt.title(f'Simulated mu values, {nr} realizations')
-    plt.show()
+    # plt.show()
 
 
 def load_section_data(dirpath):
@@ -224,8 +237,8 @@ def get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci):
 
 def original_trace_all_chains(modelvals, times, vref):
     a, b, Dc_nd, mu0 = get_trace_variables_allchains(modelvals)
-    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
-    datadict = {'a': a, 'b': b, 'Dc': Dc_nd, 'mu0': mu0}
+    Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
 
     plot_pairs(new_idata)
@@ -256,7 +269,7 @@ def lognormal_mode_to_parameters(desired_modes):
     return mus, sigmas
 
 
-def plot_priors_posteriors(*posts):
+def plot_priors_posteriors(times, vref, *posts):
     # get info for priors
     desired_modes = (6, 6, 3.2, 0.5)
     mus, sigmas = lognormal_mode_to_parameters(desired_modes)
@@ -268,12 +281,15 @@ def plot_priors_posteriors(*posts):
     mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
     # take same number of draws as in mcmc_rsf.py
-    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=500)
+    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=1000)
+
+    Dc_redim = redimensionalize_Dc_nd(vpriors[2], times, vref)
+    vpriors_scaled = (vpriors[0]/1000, vpriors[1]/1000, Dc_redim/1000, vpriors[3])
 
     # plot priors with posteriors
-    xlims = [50, 50, 25, 1]
+    xlims = [0.05, 0.05, 400, 1]
 
-    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc_nd', 'mu0'), xlims)):
+    for i, (prior, post, label, xmax) in enumerate(zip(vpriors_scaled, posts, ('a', 'b', 'dc_nd', 'mu0'), xlims)):
         plt.figure(10+i)
         # sns.histplot(prior, kde=True)
         sns.kdeplot(prior, color='b', label=f'{label} prior', common_norm=False, bw_method=0.1)
@@ -281,7 +297,7 @@ def plot_priors_posteriors(*posts):
         plt.gca().set_xlim(0, xmax)
         plt.legend()
 
-    plt.show()
+    # plt.show()
 
     #
     # plt.figure(10)
@@ -369,9 +385,9 @@ def plot_priors(a, b, Dc, mu0, mus, sigmas, desired_modes):
 
 def get_posteriors(modelvals, times, vref, chain):
     a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
-    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
 
-    return a, b, Dc_nd, mu0
+    return a, b, Dc, mu0
 
 
 def plot_posteriors(a, b, Dc, mu0):
@@ -401,7 +417,7 @@ def plot_posteriors(a, b, Dc, mu0):
         # plt.plot(bins, pdf_vals, 'r', label=f'{name} posterior PDF')
         i += 1
         plt.legend()
-    plt.show()
+    # plt.show()
 
 
 def main():
@@ -410,10 +426,11 @@ def main():
     k, vref = get_constants(vlps)
 
     idata = load_inference_data(dirpath, idataname)
-    az.plot_trace(idata, var_names=['a', 'b', 'Dc_nd', 'mu0'])
+    # az.plot_trace(idata, var_names=['a', 'b', 'Dc_nd', 'mu0'])
 
     modelvals = get_model_vals(idata)
 
+    # plots trace pairs and samples
     original_trace_all_chains(modelvals, times, vref)
 
     numchains = 2
@@ -421,7 +438,7 @@ def main():
         # get posteriors and plot them
         with pm.Model() as model:
             apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, times, vref, chain)
-            plot_priors_posteriors(apost, bpost, Dcpost, mu0post)
+            plot_priors_posteriors(times, vref, apost, bpost, Dcpost, mu0post)
 
         # plot_posteriors(apost, bpost, Dcpost, mu0post)
 
@@ -442,7 +459,7 @@ def main():
         # cints = aci, bci, Dcci, mu0ci
         # mu_95 = generate_rsf_data(2, cints)
 
-        plt.show()
+        # plt.show()
         # plot_simulated_mus(x, times, mu_sims, mutrue, len(a), chain)
 
     save_figs(out_folder)

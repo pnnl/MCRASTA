@@ -503,7 +503,7 @@ def lognormal_mode_to_parameters(desired_modes):
 
 # MCMC priors
 def get_priors(vref, times):
-    desired_modes = (8, 4, 5.2, 0.2)
+    desired_modes = (6, 6, 3.2, 0.5)
     mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
