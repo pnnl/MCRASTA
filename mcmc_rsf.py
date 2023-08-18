@@ -186,15 +186,15 @@ def save_figs(out_folder):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300)
 
 
-def write_model_info(draws, chains, tune, time_elapsed, k, vref, vsummary, ppsummary, sample_name, times):
+def write_model_info(draws, chains, tune, prior_mus, prior_sigmas, time_elapsed, k, vref, vsummary, ppsummary, sample_name, times):
     fname = os.path.join(dirpath, 'out.txt')
 
-    samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'tune', 'runtime (s)']
+    samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'tune', 'prior mus', 'prior sigmas', 'runtime (s)']
     modelstrs = ['MODEL INFO', 'constants', 'k', 'vref']
     summarystr = ['SAMPLE VARS SUMMARY', 'POST PRED SAMPLE SUMMARY']
     strlist = [samplerstrs, modelstrs, summarystr]
 
-    samplervals = ['', draws, chains, tune, time_elapsed]
+    samplervals = ['', draws, chains, tune, prior_mus, prior_sigmas, time_elapsed]
     modelvals = ['', '', k, vref]
     summaryvals = [vsummary, 'none']
     vallist = [samplervals, modelvals, summaryvals]
@@ -506,6 +506,9 @@ def get_priors(vref, times):
     desired_modes = (6, 6, 3.2, 0.5)
     mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
+    # keep mus, overwrite sigmas to make priors wider
+    sigmas = [4, 4, 2, 1]
+
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
     Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
@@ -519,9 +522,9 @@ def get_priors(vref, times):
     # plt.legend()
     # # plt.show()
 
-    priors = [a, b, Dc_nd, mu0]
+    # priors = [a, b, Dc_nd, mu0]
 
-    return priors
+    return a, b, Dc_nd, mu0, mus, sigmas
 
 
 # forward RSF model - from Leeman (2016) and uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
@@ -632,8 +635,8 @@ def main():
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters, constants
-        priors = get_priors(vref, times)
-        a, b, Dc_nd, mu0 = priors
+        a, b, Dc_nd, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
+        # a, b, Dc_nd, mu0 = priors
 
         times_nd, vlps_nd, vref_nd = nondimensionalize_parameters(vlps, vref, times)
 
@@ -648,7 +651,7 @@ def main():
 
         # seq. mcmc sampler parameterss
         tune = 10000
-        draws = 50005
+        draws = 50006
         chains = 2
         cores = 4
 
@@ -685,6 +688,8 @@ def main():
     write_model_info(draws=draws,
                      chains=chains,
                      tune=tune,
+                     prior_mus=prior_mus,
+                     prior_sigmas=prior_sigmas,
                      time_elapsed=time_elapsed,
                      k=k,
                      vref=vref,
