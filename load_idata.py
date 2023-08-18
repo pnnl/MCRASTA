@@ -17,10 +17,10 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 1000
+nr = 50000
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
-idataname = f'{dirname}_idata_a'
+idataname = f'{dirname}_idata'
 
 um_to_mm = 0.001
 
@@ -66,8 +66,7 @@ def plot_posterior_predictive(idata):
 def plot_trace(idata):
     # az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
     plt.figure(300)
-    az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
-    # az.plot_posterior(idata, var_names=['a'], point_estimate='mode')
+    ax = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
 
 
 def plot_pairs(idata):
@@ -76,7 +75,12 @@ def plot_pairs(idata):
         var_names=['a', 'b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
+        scatter_kwargs={'color': (1,0,0,0.4)}
     )
+    #xlims = [50, 50, 25, 1]
+
+    #1plt.gca().set_xlim(0, xmax)
+    ax[0][0].set_xlim(0, 100)  # set the x limits for the first row first col e.g upper left
 
 
 def get_model_vals(idata):
@@ -86,9 +90,9 @@ def get_model_vals(idata):
 
 
 def get_trace_variables_allchains(modelvals):
-    a = modelvals.a.values / 1000
-    b = modelvals.b.values / 1000
-    Dc_nd = modelvals.Dc_nd.values / 1000
+    a = modelvals.a.values
+    b = modelvals.b.values
+    Dc_nd = modelvals.Dc_nd.values
     mu0 = modelvals.mu0.values
 
     return a, b, Dc_nd, mu0
@@ -164,11 +168,11 @@ def generate_rsf_data(nr, vars):
     return mu_sims
 
 
-def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain, mu_95):
+def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain):
     plt.figure(chain)
-    # plt.plot(x * um_to_mm, mu_sims, 'k-', alpha=0.2)
+    plt.plot(x * um_to_mm, mu_sims, 'k-', alpha=0.2)
     plt.plot(x * um_to_mm, mutrue, '.', label='observed')
-    plt.plot(x * um_to_mm, mu_95, 'r-', label='95% cred. interval')
+    # plt.plot(x * um_to_mm, mu_95, 'r-', label='95% cred. interval')
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
     plt.title(f'Simulated mu values, {nr} realizations')
@@ -213,12 +217,12 @@ def get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci):
 
 def original_trace_all_chains(modelvals, times, vref):
     a, b, Dc_nd, mu0 = get_trace_variables_allchains(modelvals)
-    Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
-    datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
+    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    datadict = {'a': a, 'b': b, 'Dc': Dc_nd, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
 
     plot_pairs(new_idata)
-    plot_trace(new_idata)
+    # plot_trace(new_idata)
 
 
 
@@ -245,40 +249,111 @@ def lognormal_mode_to_parameters(desired_modes):
     return mus, sigmas
 
 
-def get_priors(vref, times, idata, modelvals):
-    size = (nr,)
-    desired_modes = (3, 3, 1.2, 0.5)
-
-    # Estimate parameters from the desired mode
+def plot_priors_posteriors(*posts):
+    # get info for priors
+    desired_modes = (6, 6, 3.2, 0.5)
     mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
-    # generate upscaled lognormal priors
-    a = np.random.lognormal(mean=mus[0], sigma=sigmas[0], size=size)
-    b = np.random.lognormal(mean=mus[1], sigma=sigmas[1], size=size)
-    Dc = np.random.lognormal(mean=mus[2], sigma=sigmas[2], size=size)
-    mu0 = np.random.lognormal(mean=mus[3], sigma=sigmas[3], size=size)
+    # define priors same as in mcmc_rsf.py
+    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
+    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
+    Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
+    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
-    # downscale priors for a, b, Dc
-    a = a / 1000
-    b = b / 1000
-    Dc_nd = Dc / 1000
+    # take same number of draws as in mcmc_rsf.py
+    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=500)
 
-    # re-dimensionlize Dc
-    Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    # plot priors with posteriors
+    xlims = [50, 50, 25, 1]
 
-    return a, b, Dc, mu0, mus, sigmas, desired_modes
+    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc_nd', 'mu0'), xlims)):
+        plt.figure(10+i)
+        # sns.histplot(prior, kde=True)
+        sns.kdeplot(prior, color='b', label=f'{label} prior', common_norm=False, bw_method=0.1)
+        sns.kdeplot(post, color='g', label=f'{label} post', common_norm=False)
+        plt.gca().set_xlim(0, xmax)
+        plt.legend()
+
+    plt.show()
+
+    #
+    # plt.figure(10)
+    # sns.kdeplot(vpriors[0], color='b', label='a prior', common_norm=False, bw_method=0.1)
+    # sns.kdeplot(apost, color='g', label='a posterior', common_norm=False, bw_method=0.1)
+    # plt.legend()
+    #
+    #
+    # plt.figure(11)
+    # sns.kdeplot(vpriors[1], color='b', label='b prior', common_norm=False, bw_method=0.1)
+    # sns.kdeplot(bpost, color='g', label='b posterior', common_norm=False, bw_method=0.1)
+    # plt.legend()
+    #
+    #
+    # plt.figure(12)
+    # sns.kdeplot(vpriors[2], color='b', label='Dc_nd prior', common_norm=False, bw_method=0.1)
+    # sns.kdeplot(Dcpost, color='g', label='Dc_nd posterior', common_norm=False, bw_method=0.1)
+    # plt.legend()
+    #
+    #
+    # plt.figure(13)
+    # sns.kdeplot(vpriors[3], color='b', label='mu0 prior', common_norm=False, bw_method=0.1)
+    # sns.kdeplot(mu0post, color='g', label='mu0 posterior', common_norm=False, bw_method=0.1)
+    #
+    # plt.legend()
+    # plt.show()
+
+    # size = (nr,)
+    # desired_modes = (0.01, 0.01, 0.003, 0.5)
+    #
+    # # Estimate parameters from the desired mode
+    # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
+    # #
+    # # # generate upscaled lognormal priors
+    # # a = np.random.lognormal(mean=mus[0], sigma=sigmas[0], size=size)
+    # # b = np.random.lognormal(mean=mus[1], sigma=sigmas[1], size=size)
+    # # Dc = np.random.lognormal(mean=mus[2], sigma=sigmas[2], size=size)
+    # # mu0 = np.random.lognormal(mean=mus[3], sigma=sigmas[3], size=size)
+    #
+    # # sigmas = [0.001, 0.1, 1, 0.4]
+    # a = np.random.lognormal(mean=mus[0], sigma=sigmas[0], size=size)
+    # b = np.random.lognormal(mean=mus[1], sigma=sigmas[1], size=size)
+    # Dc_nd = np.random.lognormal(mean=mus[2], sigma=sigmas[2], size=size)
+    # mu0 = np.random.lognormal(mean=mus[3], sigma=sigmas[3], size=size)
+    #
+    # # downscale priors for a, b, Dc
+    # # a = a / 1000
+    # # b = b / 1000
+    # # Dc_nd = Dc / 1000
+    #
+    # # re-dimensionlize Dc
+    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    #
+    # return a, b, Dc, mu0, mus, sigmas, desired_modes
 
 
 def plot_priors(a, b, Dc, mu0, mus, sigmas, desired_modes):
     datas = a, b, Dc, mu0
     dataname = ['a', 'b', 'Dc', 'mu0']
-    num_bins = 1000
+    num_bins = 100
 
-    i = 1
-    for data, mu, sigma, mod, name in zip(datas, mus, sigmas, desired_modes, dataname):
-        hist, bins = np.histogram(data, bins=num_bins, density=True)
-        plt.figure(i)
-        sns.histplot(data, color='b', kde=True, label=f'{name} prior')
+    i = 10
+    for data, name in zip(datas[0:2], dataname[0:2]):
+        plt.figure(i+1)
+        kde = sns.kdeplot(data, color='b', label=f'{name} prior', common_norm=False, bw_method=0.1)
+        plt.xlim(-0.02, 0.05)
+        y_max = kde.get_lines()[0].get_ydata().max()
+        kde.get_lines()[0].set_ydata(kde.get_lines()[0].get_ydata() / y_max)
+        i += 1
+        plt.legend()
+
+    i = 20
+    for data, name in zip(datas[2:], dataname[2:]):
+        # hist, bins = np.histogram(data, bins=num_bins, density=True)
+        plt.figure(i+1)
+        kde = sns.kdeplot(data, color='b', label=f'{name} prior', common_norm=False, bw_method=0.1)
+        y_max = kde.get_lines()[0].get_ydata().max()
+        kde.get_lines()[0].set_ydata(kde.get_lines()[0].get_ydata() / y_max)
+        # plt.ylim(0, 1)
         plt.legend()
         # plt.hist(data, bins=num_bins, density=True, alpha=0.6, color='blue')
         # plt.plot(bins, pdf_vals, 'r', label=f'{name} prior PDF')
@@ -287,27 +362,32 @@ def plot_priors(a, b, Dc, mu0, mus, sigmas, desired_modes):
 
 def get_posteriors(modelvals, times, vref, chain):
     a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
-    Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
 
-    # downscale posteriors for a, b, Dc
-    a = a / 1000
-    b = b / 1000
-    Dc = Dc / 1000
-
-    return a, b, Dc, mu0
+    return a, b, Dc_nd, mu0
 
 
 def plot_posteriors(a, b, Dc, mu0):
     datas = a, b, Dc, mu0
-    num_bins = 1000
     dataname = ['a', 'b', 'Dc', 'mu0']
 
-    i = 1
-    for data, name in zip(datas, dataname):
-        mu = np.mean(data)
-        sigma = np.std(data)
-        plt.figure(i)
-        sns.histplot(data, color='g', kde=True, label=f'{name} posterior')
+    i = 10
+    for data, name in zip(datas[0:2], dataname[0:2]):
+        plt.figure(i+1)
+        kde = sns.kdeplot(data, color='g', label=f'{name} posterior', common_norm=False, bw_method=0.1)
+        y_max = kde.get_lines()[0].get_ydata().max()
+        kde.get_lines()[0].set_ydata(kde.get_lines()[0].get_ydata() / y_max)
+        plt.xlim(-0.02, 0.05)
+        i += 1
+        plt.legend()
+
+    i = 20
+    for data, name in zip(datas[2:], dataname[2:]):
+        plt.figure(i+1)
+        kde = sns.kdeplot(data, color='g', label=f'{name} posterior', common_norm=False, bw_method=0.1)
+        y_max = kde.get_lines()[0].get_ydata().max()
+        kde.get_lines()[0].set_ydata(kde.get_lines()[0].get_ydata() / y_max)
+        # plt.ylim(0, 1)
         # hist, bins = np.histogram(data, bins=num_bins, density=True)
         # pdf_vals = lognorm.pdf(bins, s=sigma, scale=np.exp(mu / 1000))
         # plt.hist(data, bins=num_bins, density=True, alpha=0.6, color='blue')
@@ -327,37 +407,34 @@ def main():
 
     original_trace_all_chains(modelvals, times, vref)
 
-    # get priors and plot them
-    a, b, Dc, mu0, mus, sigmas, desired_modes = get_priors(vref, times, idata, modelvals)
-    plot_priors(a, b, Dc, mu0, mus, sigmas, desired_modes)
-
     numchains = 2
     for chain in np.arange(numchains):
         # get posteriors and plot them
-        a, b, Dc, mu0 = get_posteriors(modelvals, times, vref, chain)
-        plot_posteriors(a, b, Dc, mu0)
+        with pm.Model() as model:
+            apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, times, vref, chain)
+            plot_priors_posteriors(apost, bpost, Dcpost, mu0post)
+
+        # plot_posteriors(apost, bpost, Dcpost, mu0post)
 
         a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
-        # cints = get_credible_int_bounds(modelvals, chain)
-        # aci, bci, Dc_ndci, mu0ci = cints
-
+        # # cints = get_credible_int_bounds(modelvals, chain)
+        # # aci, bci, Dc_ndci, mu0ci = cints
+        #
         Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
-        # Dcci = redimensionalize_Dc_nd(Dc_ndci, times, vref)
-
-        # a95, b95, Dc95, mu095 = get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci)
-
+        # # Dcci = redimensionalize_Dc_nd(Dc_ndci, times, vref)
+        #
+        # # a95, b95, Dc95, mu095 = get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci)
+        #
         vars_all = a, b, Dc, mu0
-
-        # vars95 = a95, b95, Dc95, mu095
-
-        mu_sims = generate_rsf_data(2, vars_all)
+        #
+        # # vars95 = a95, b95, Dc95, mu095
+        #
+        # mu_sims = generate_rsf_data(nr, vars_all)
         # cints = aci, bci, Dcci, mu0ci
         # mu_95 = generate_rsf_data(2, cints)
 
-
-
         plt.show()
-        # plot_simulated_mus(x, times, mu_sims, mutrue, len(a), chain, mu_95)
+        # plot_simulated_mus(x, times, mu_sims, mutrue, len(a), chain)
 
     save_figs(out_folder)
 

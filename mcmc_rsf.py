@@ -13,6 +13,7 @@ import scipy as sp
 from scipy.signal import savgol_filter
 from datetime import datetime
 import time
+import seaborn as sns
 
 um_to_mm = 0.001
 
@@ -106,7 +107,7 @@ def save_trace(idata):
 
 
 def plot_trace(idata):
-    az.plot_trace(idata, var_names=['a', 'b', 'Dc_nd', 'mu0'])
+    ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc_nd', 'mu0'])
 
 
 def plot_posterior_predictive(idata):
@@ -502,13 +503,21 @@ def lognormal_mode_to_parameters(desired_modes):
 
 # MCMC priors
 def get_priors(vref, times):
-    desired_modes = (3, 3, 1.2, 0.5)
+    desired_modes = (6, 6, 3.2, 0.5)
     mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
     Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
+
+    #print(a)
+    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=100)
+    sns.kdeplot(vpriors[0], color='b', label='A prior', common_norm=False, bw_method=0.1)
+    #sns.kdeplot(vpriors, common_norm=False, bw_method=0.1)
+    sns.kdeplot(vpriors[1], color='r', label='B prior')
+    plt.legend()
+    plt.show()
 
     priors = [a, b, Dc_nd, mu0]
 
@@ -638,8 +647,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameterss
-        tune = 5000
-        draws = 50000
+        tune = 5
+        draws = 10
         chains = 2
         cores = 4
 
@@ -659,7 +668,7 @@ def main():
         save_trace(idata)
 
         # sample the posterior for validation (can only use if using gradient-based solver)
-        sample_posterior_predcheck(idata)
+        # sample_posterior_predcheck(idata)
 
         # print and save new idata stats that includes posterior predictive check
         # summary_pp = save_stats(idata, dirpath)
