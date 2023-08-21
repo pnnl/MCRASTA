@@ -13,6 +13,7 @@ import scipy as sp
 from scipy.signal import savgol_filter
 from datetime import datetime
 import time
+import seaborn as sns
 
 
 um_to_mm = 0.001
@@ -503,28 +504,34 @@ def lognormal_mode_to_parameters(desired_modes):
 
 # MCMC priors
 def get_priors(vref, times):
-    desired_modes = (6, 6, 32, 0.5)
-    mus, sigmas = lognormal_mode_to_parameters(desired_modes)
+    # desired_modes = (10, 10, 32, 0.5)
+    # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
+    mus = [0, 0, 0, 1.5]
     # keep mus, overwrite sigmas to make priors wider
-    sigmas = [4, 4, 2, 1]
+    sigmas = [0.7, 0.7, 1, 0.2]
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
     Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
-    # #print(a)
-    # vpriors = pm.draw([a, b, Dc_nd, mu0], draws=100)
-    # sns.kdeplot(vpriors[0], color='b', label='A prior', common_norm=False, bw_method=0.1)
-    # #sns.kdeplot(vpriors, common_norm=False, bw_method=0.1)
-    # sns.kdeplot(vpriors[1], color='r', label='B prior')
-    # plt.legend()
-    # # plt.show()
-
-    # priors = [a, b, Dc_nd, mu0]
+    check_priors(a, b, Dc_nd, mu0, mus, sigmas)
 
     return a, b, Dc_nd, mu0, mus, sigmas
+
+
+def check_priors(a, b, Dc_nd, mu0, mus, sigmas):
+    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=10000)
+    names = ['a', 'b', 'Dc_nd', 'mu0']
+
+    for i, name in enumerate(names):
+        print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
+        print(f'{name} prior min,max = {np.min(vpriors[i])}, {np.max(vpriors[i])}')
+        plt.figure(1000)
+        sns.kdeplot(vpriors[i], label=f'{name}', common_norm=False, bw_method=0.1)
+        plt.title('prior distributions')
+        plt.legend()
 
 
 # forward RSF model - from Leeman (2016) and uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
