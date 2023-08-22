@@ -29,6 +29,11 @@ class StateRelation(object):
         .. math::
             V_\\text{contribution} = b \\text{ln}\\left(\\frac{V_0 \\theta}{D_c}\\right)
         """
+        # print('look at these variables and see which is causing v contribution to explode')
+        # print(f'b = {self.b}')
+        # print(f'vref = {system.vref}')
+        # print(f'state = {self.state}')
+        # print(f'Dc = {self.Dc}')
         return self.b * np.log(system.vref * self.state / self.Dc)
 
 

@@ -17,10 +17,10 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 50000
+nr = 50005
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
-idataname = f'{dirname}_idata_a'
+idataname = f'{dirname}_idata'
 
 um_to_mm = 0.001
 
@@ -79,14 +79,14 @@ def plot_trace(idata):
 def plot_pairs(idata):
     # plot_kwargs = {'linewidths': 0.2}
     marginal_kwargs = {'color': 'teal'}
-    kde_kwargs = {'hdi_probs': [0.8, 0.95]}
+    # kde_kwargs = {'hdi_probs': [0.95]}
     ax = az.plot_pair(
         idata,
         var_names=['a', 'b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
         scatter_kwargs={'color': 'teal', 'alpha': 0.2},
-        kde_kwargs=kde_kwargs,
+        # kde_kwargs=kde_kwargs,
         marginal_kwargs=marginal_kwargs
     )
     #xlims = [50, 50, 25, 1]
@@ -271,9 +271,11 @@ def lognormal_mode_to_parameters(desired_modes):
 
 def plot_priors_posteriors(times, vref, *posts):
     # get info for priors
-    desired_modes = (6, 6, 3.2, 0.5)
+    desired_modes = (8, 4, 5.2, 0.3)
     mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
+    # keep mus, overwrite sigmas to make priors wider
+    sigmas = [4, 4, 2, 1]
     # define priors same as in mcmc_rsf.py
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
@@ -287,71 +289,15 @@ def plot_priors_posteriors(times, vref, *posts):
     vpriors_scaled = (vpriors[0]/1000, vpriors[1]/1000, Dc_redim/1000, vpriors[3])
 
     # plot priors with posteriors
-    xlims = [0.05, 0.05, 400, 1]
+    xlims = [10, 10, 400, 1]
 
     for i, (prior, post, label, xmax) in enumerate(zip(vpriors_scaled, posts, ('a', 'b', 'dc_nd', 'mu0'), xlims)):
         plt.figure(10+i)
         # sns.histplot(prior, kde=True)
         sns.kdeplot(prior, color='b', label=f'{label} prior', common_norm=False, bw_method=0.1)
-        sns.kdeplot(post, color='g', label=f'{label} post', common_norm=False)
+        # sns.kdeplot(post, color='g', label=f'{label} post', common_norm=False)
         plt.gca().set_xlim(0, xmax)
         plt.legend()
-
-    # plt.show()
-
-    #
-    # plt.figure(10)
-    # sns.kdeplot(vpriors[0], color='b', label='a prior', common_norm=False, bw_method=0.1)
-    # sns.kdeplot(apost, color='g', label='a posterior', common_norm=False, bw_method=0.1)
-    # plt.legend()
-    #
-    #
-    # plt.figure(11)
-    # sns.kdeplot(vpriors[1], color='b', label='b prior', common_norm=False, bw_method=0.1)
-    # sns.kdeplot(bpost, color='g', label='b posterior', common_norm=False, bw_method=0.1)
-    # plt.legend()
-    #
-    #
-    # plt.figure(12)
-    # sns.kdeplot(vpriors[2], color='b', label='Dc_nd prior', common_norm=False, bw_method=0.1)
-    # sns.kdeplot(Dcpost, color='g', label='Dc_nd posterior', common_norm=False, bw_method=0.1)
-    # plt.legend()
-    #
-    #
-    # plt.figure(13)
-    # sns.kdeplot(vpriors[3], color='b', label='mu0 prior', common_norm=False, bw_method=0.1)
-    # sns.kdeplot(mu0post, color='g', label='mu0 posterior', common_norm=False, bw_method=0.1)
-    #
-    # plt.legend()
-    # plt.show()
-
-    # size = (nr,)
-    # desired_modes = (0.01, 0.01, 0.003, 0.5)
-    #
-    # # Estimate parameters from the desired mode
-    # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
-    # #
-    # # # generate upscaled lognormal priors
-    # # a = np.random.lognormal(mean=mus[0], sigma=sigmas[0], size=size)
-    # # b = np.random.lognormal(mean=mus[1], sigma=sigmas[1], size=size)
-    # # Dc = np.random.lognormal(mean=mus[2], sigma=sigmas[2], size=size)
-    # # mu0 = np.random.lognormal(mean=mus[3], sigma=sigmas[3], size=size)
-    #
-    # # sigmas = [0.001, 0.1, 1, 0.4]
-    # a = np.random.lognormal(mean=mus[0], sigma=sigmas[0], size=size)
-    # b = np.random.lognormal(mean=mus[1], sigma=sigmas[1], size=size)
-    # Dc_nd = np.random.lognormal(mean=mus[2], sigma=sigmas[2], size=size)
-    # mu0 = np.random.lognormal(mean=mus[3], sigma=sigmas[3], size=size)
-    #
-    # # downscale priors for a, b, Dc
-    # # a = a / 1000
-    # # b = b / 1000
-    # # Dc_nd = Dc / 1000
-    #
-    # # re-dimensionlize Dc
-    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
-    #
-    # return a, b, Dc, mu0, mus, sigmas, desired_modes
 
 
 def plot_priors(a, b, Dc, mu0, mus, sigmas, desired_modes):
