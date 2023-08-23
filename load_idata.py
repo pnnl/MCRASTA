@@ -17,7 +17,7 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 50005
+nr = 60000
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
 idataname = f'{dirname}_idata'
@@ -71,9 +71,9 @@ def plot_trace(idata):
 
     ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
     print(ax2)
-    ax2[0].set_xlim(0, 0.05)
-    ax2[1].set_xlim(0, 0.05)
-    ax2[2].set_xlim(0, 400)
+    ax2[0].set_xlim(0, 10)
+    ax2[1].set_xlim(0, 10)
+    ax2[2].set_xlim(0, 100)
 
 
 def plot_pairs(idata):
@@ -110,8 +110,8 @@ def get_model_vals(idata):
 
 
 def get_trace_variables_allchains(modelvals):
-    a = modelvals.a.values / 1000
-    b = modelvals.b.values / 1000
+    a = modelvals.a.values / 100
+    b = modelvals.b.values / 100
     Dc_nd = modelvals.Dc_nd.values / 1000
     mu0 = modelvals.mu0.values
 
@@ -119,8 +119,8 @@ def get_trace_variables_allchains(modelvals):
 
 
 def get_trace_variables(modelvals, chain):
-    a = modelvals.a.values[chain, :] / 1000
-    b = modelvals.b.values[chain, :] / 1000
+    a = modelvals.a.values[chain, :] / 100
+    b = modelvals.b.values[chain, :] / 100
     Dc_nd = modelvals.Dc_nd.values[chain, :] / 1000
     mu0 = modelvals.mu0.values[chain, :]
 
@@ -144,6 +144,8 @@ def redimensionalize_Dc_nd(Dc_nd, times, vref):
 def generate_rsf_data(nr, vars):
     a, b, Dc, mu0 = vars
 
+    print(mu0)
+
     times, mutrue, vlps, x = load_section_data(dirpath)
     k, vref = get_constants(vlps)
 
@@ -162,7 +164,6 @@ def generate_rsf_data(nr, vars):
     state1 = staterelations.DieterichState()
     model.state_relations = [state1]  # Which state relation we want to use
 
-    # We want to solve for 40 seconds at 100Hz
     model.time = times
 
     # Set the model load point velocity, must be same shape as model.model_time
@@ -196,7 +197,8 @@ def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain):
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
     plt.title(f'Simulated mu values, {nr} realizations')
-    # plt.show()
+    plt.show()
+    sys.exit()
 
 
 def load_section_data(dirpath):
@@ -238,6 +240,7 @@ def get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci):
 def original_trace_all_chains(modelvals, times, vref):
     a, b, Dc_nd, mu0 = get_trace_variables_allchains(modelvals)
     Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    # datadict = {'a': a, 'b': b, 'Dc': Dc_nd, 'mu0': mu0}
     datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
 
@@ -271,32 +274,33 @@ def lognormal_mode_to_parameters(desired_modes):
 
 def plot_priors_posteriors(times, vref, *posts):
     # get info for priors
-    desired_modes = (8, 4, 5.2, 0.3)
-    mus, sigmas = lognormal_mode_to_parameters(desired_modes)
+    # desired_modes = (8, 4, 5.2, 0.3)
+    # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
-    # keep mus, overwrite sigmas to make priors wider
-    sigmas = [4, 4, 2, 1]
-    # define priors same as in mcmc_rsf.py
+    # define priors same as in mcmc_rsf.py - get this info from out file
+    mus = [0, 0, 0, 1.5]
+    sigmas = [0.7, 0.7, 1, 0.2]
+
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
     Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
     # take same number of draws as in mcmc_rsf.py
-    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=1000)
+    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=60000)
 
-    Dc_redim = redimensionalize_Dc_nd(vpriors[2], times, vref)
-    vpriors_scaled = (vpriors[0]/1000, vpriors[1]/1000, Dc_redim/1000, vpriors[3])
+    # Dc_redim = redimensionalize_Dc_nd(vpriors[2], times, vref)
+    # vpriors_scaled = (vpriors[0]/1000, vpriors[1]/1000, Dc_redim/1000, vpriors[3]/100)
 
     # plot priors with posteriors
-    xlims = [10, 10, 400, 1]
+    xlims = [5, 5, 400, 10]
 
-    for i, (prior, post, label, xmax) in enumerate(zip(vpriors_scaled, posts, ('a', 'b', 'dc_nd', 'mu0'), xlims)):
+    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc_nd', 'mu0'), xlims)):
         plt.figure(10+i)
         # sns.histplot(prior, kde=True)
-        sns.kdeplot(prior, color='b', label=f'{label} prior', common_norm=False, bw_method=0.1)
-        # sns.kdeplot(post, color='g', label=f'{label} post', common_norm=False)
-        plt.gca().set_xlim(0, xmax)
+        # sns.kdeplot(prior, color='b', label=f'{label} prior', common_norm=False, bw_method=0.1)
+        sns.kdeplot(post, color='g', label=f'{label} post', common_norm=False)
+        # plt.gca().set_xlim(0, xmax)
         plt.legend()
 
 
@@ -366,6 +370,17 @@ def plot_posteriors(a, b, Dc, mu0):
     # plt.show()
 
 
+def get_modes(modelvals, chain):
+    a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
+
+    amode = mode(a, axis=None, keepdims=False)
+    bmode = mode(b, axis=None, keepdims=False)
+    Dcndmode = mode(Dc_nd, axis=None, keepdims=False)
+    mu0mode = mode(mu0, axis=None, keepdims=False)
+
+    return amode.mode, bmode.mode, Dcndmode.mode, mu0mode.mode
+
+
 def main():
     out_folder = get_storage_folder(dirname)
     times, mutrue, vlps, x = load_section_data(dirpath)
@@ -388,25 +403,36 @@ def main():
 
         # plot_posteriors(apost, bpost, Dcpost, mu0post)
 
-        a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
+        # a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
         # # cints = get_credible_int_bounds(modelvals, chain)
         # # aci, bci, Dc_ndci, mu0ci = cints
         #
-        Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+        # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
         # # Dcci = redimensionalize_Dc_nd(Dc_ndci, times, vref)
         #
         # # a95, b95, Dc95, mu095 = get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci)
         #
-        vars_all = a, b, Dc, mu0
+        # vars_all = a, b, Dc, mu0
         #
         # # vars95 = a95, b95, Dc95, mu095
         #
-        # mu_sims = generate_rsf_data(nr, vars_all)
+        amode, bmode, Dcndmode, mu0mode = get_modes(modelvals, chain)
+
+        # now rescale Dc mode
+        Dcmode = redimensionalize_Dc_nd(Dcndmode, times, vref)
+
+        modes = amode, bmode, Dcmode, mu0mode
+        print(f'a mode = {amode}')
+        print(f'b mode = {bmode}')
+        print(f'Dc mode = {Dcmode}')
+        print(f'mu0 mode = {mu0mode}')
+
+        mu_sims = generate_rsf_data(2, modes)
         # cints = aci, bci, Dcci, mu0ci
         # mu_95 = generate_rsf_data(2, cints)
 
         # plt.show()
-        # plot_simulated_mus(x, times, mu_sims, mutrue, len(a), chain)
+        plot_simulated_mus(x, times, mu_sims, mutrue, len(apost), chain)
 
     save_figs(out_folder)
 

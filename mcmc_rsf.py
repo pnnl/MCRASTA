@@ -507,14 +507,14 @@ def get_priors(vref, times):
     # desired_modes = (10, 10, 32, 0.5)
     # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
-    mus = [0, 0, 2, 1.5]
+    mus = [-3, -3, 2, -1]
     # keep mus, overwrite sigmas to make priors wider
     sigmas = [1, 1, 1, 0.3]
 
-    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
-    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
-    Dc = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
-    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
+    a = pm.LogNormal('a', mu=mus[0], sigma=0.5)
+    b = pm.LogNormal('b', mu=mus[1], sigma=0.5)
+    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=1)
+    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=0.1)
 
     check_priors(a, b, Dc, mu0, mus, sigmas)
 
@@ -523,7 +523,7 @@ def get_priors(vref, times):
 
 def check_priors(a, b, Dc, mu0, mus, sigmas):
     vpriors = pm.draw([a, b, Dc, mu0], draws=60000)
-    names = ['a', 'b', 'Dc_nd', 'mu0']
+    names = ['a', 'b', 'Dc', 'mu0']
 
     for i, name in enumerate(names):
         print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
@@ -542,7 +542,7 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
 # returns simulated mu value for use in pymc
 def mcmc_rsf_sim(theta, t, v, k, vref):
     # unpack parameters
-    a, b, Dc_nd, mu0, sigma = theta
+    a, b, Dc, mu0, sigma = theta
 
     # initialize rsf model
     model = rsf.Model()
@@ -559,7 +559,7 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
 
     state1 = staterelations.DieterichState()
     state1.b = b  # Empirical coefficient for the evolution effect
-    state1.Dc = Dc_nd  # Critical slip distance
+    state1.Dc = Dc  # Critical slip distance
 
     model.state_relations = [state1]  # Which state relation we want to use
 
@@ -649,10 +649,10 @@ def main():
         a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
         # a, b, Dc_nd, mu0 = priors
 
-        # times_nd, vlps_nd, vref_nd = nondimensionalize_parameters(vlps, vref, times)
+        times_nd, vlps_nd, vref_nd = nondimensionalize_parameters(vlps, vref, times)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
-        loglike = Loglike(times, vlps, k, vref, mutrue)
+        loglike = Loglike(times_nd, vlps, k, vref, mutrue)
 
         # convert parameters to be estimated to tensor vector
         theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
