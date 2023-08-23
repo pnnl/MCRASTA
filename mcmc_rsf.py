@@ -507,31 +507,35 @@ def get_priors(vref, times):
     # desired_modes = (10, 10, 32, 0.5)
     # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
-    mus = [0, 0, 0, 1.5]
+    mus = [0, 0, 2, 1.5]
     # keep mus, overwrite sigmas to make priors wider
-    sigmas = [0.7, 0.7, 1, 0.2]
+    sigmas = [1, 1, 1, 0.3]
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
-    Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
+    Dc = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
-    check_priors(a, b, Dc_nd, mu0, mus, sigmas)
+    check_priors(a, b, Dc, mu0, mus, sigmas)
 
-    return a, b, Dc_nd, mu0, mus, sigmas
+    return a, b, Dc, mu0, mus, sigmas
 
 
-def check_priors(a, b, Dc_nd, mu0, mus, sigmas):
-    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=10000)
+def check_priors(a, b, Dc, mu0, mus, sigmas):
+    vpriors = pm.draw([a, b, Dc, mu0], draws=60000)
     names = ['a', 'b', 'Dc_nd', 'mu0']
 
     for i, name in enumerate(names):
         print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
         print(f'{name} prior min,max = {np.min(vpriors[i])}, {np.max(vpriors[i])}')
+        print(f'{name} prior mode = {(sp.stats.mode(vpriors[i])).mode}')
         plt.figure(1000)
         sns.kdeplot(vpriors[i], label=f'{name}', common_norm=False, bw_method=0.1)
+        plt.xlim(-0.1, 100)
         plt.title('prior distributions')
         plt.legend()
+    # plt.show()
+    # sys.exit()
 
 
 # forward RSF model - from Leeman (2016) and uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
@@ -642,23 +646,23 @@ def main():
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters, constants
-        a, b, Dc_nd, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
+        a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
         # a, b, Dc_nd, mu0 = priors
 
-        times_nd, vlps_nd, vref_nd = nondimensionalize_parameters(vlps, vref, times)
+        # times_nd, vlps_nd, vref_nd = nondimensionalize_parameters(vlps, vref, times)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
-        loglike = Loglike(times_nd, vlps_nd, k, vref_nd, mutrue)
+        loglike = Loglike(times, vlps, k, vref, mutrue)
 
         # convert parameters to be estimated to tensor vector
-        theta = pt.tensor.as_tensor_variable([a, b, Dc_nd, mu0, sigma])
+        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
 
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameterss
-        tune = 10000
-        draws = 60000
+        tune = 1000
+        draws = 10000
         chains = 2
         cores = 4
 
