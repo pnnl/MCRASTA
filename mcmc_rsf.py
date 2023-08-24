@@ -108,7 +108,7 @@ def save_trace(idata):
 
 
 def plot_trace(idata):
-    ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc_nd', 'mu0'])
+    ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
 
 
 def plot_posterior_predictive(idata):
