@@ -491,24 +491,9 @@ def get_constants(vlps):
     return k, vref
 
 
-def lognormal_mode_to_parameters(desired_modes):
-    sigmas = []
-    mus = []
-    for desired_mode in desired_modes:
-        sigma = np.sqrt(np.log(1 + (desired_mode ** 2)))
-        mu = np.log(desired_mode) - (sigma ** 2) / 2
-        sigmas.append(sigma)
-        mus.append(mu)
-    return mus, sigmas
-
-
 # MCMC priors
 def get_priors(vref, times):
-    # desired_modes = (10, 10, 32, 0.5)
-    # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
-
     mus = [-3, -3, 2, -1]
-    # keep mus, overwrite sigmas to make priors wider
     sigmas = [1, 1, 1, 0.3]
 
     a = pm.LogNormal('a', mu=mus[0], sigma=0.5)
@@ -534,8 +519,8 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
         plt.xlim(-0.1, 100)
         plt.title('prior distributions')
         plt.legend()
-    # plt.show()
-    # sys.exit()
+    plt.show()
+    sys.exit()
 
 
 # forward RSF model - from Leeman (2016) and uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
@@ -557,13 +542,15 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
     model.v = v[0]  # Initial slider velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
+    model.tc = 1 / (k * vref)   # nondimensionalizing parameter to multiply things by.
+
     state1 = staterelations.DieterichState()
     state1.b = b  # Empirical coefficient for the evolution effect
     state1.Dc = Dc  # Critical slip distance
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t
+    model.time = t   # nondimensionalized time now (nondim'd in separate function)
     lp_velocity = v
 
     # Set the model load point velocity, must be same shape as model.model_time
@@ -577,18 +564,15 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
     return mu_sim
 
 
-def nondimensionalize_parameters(vlps, vref, times):
-    time_total = times[-1] - times[0]
-    times_nd = times / times[0]
+def nondimensionalize_parameters(vlps, vref, k, times):
+    times_nd = times * k * vref
     # Dc_nd = pm.Deterministic('Dc_nd', Dc / (time_total * vref))
-    vlps_nd = vlps / vref
-    vref_nd = vref / np.mean(vlps)
+    # vlps_nd = vlps / vref
+    # vref_nd = vref / np.mean(vlps)
 
     test = np.argwhere(vlps < 0)
 
-
-    return times_nd, vlps_nd, vref_nd
-
+    return times_nd
 
 
 
@@ -649,10 +633,11 @@ def main():
         a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
         # a, b, Dc_nd, mu0 = priors
 
-        times_nd, vlps_nd, vref_nd = nondimensionalize_parameters(vlps, vref, times)
+        times_nd = nondimensionalize_parameters(vlps, vref, k, times)
+        mutrue_nd = mutrue / (k * vref)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
-        loglike = Loglike(times_nd, vlps, k, vref, mutrue)
+        loglike = Loglike(times_nd, vlps, k, vref, mutrue_nd)
 
         # convert parameters to be estimated to tensor vector
         theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
@@ -661,8 +646,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # seq. mcmc sampler parameterss
-        tune = 1000
-        draws = 10000
+        tune = 5000
+        draws = 50004
         chains = 2
         cores = 4
 
