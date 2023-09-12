@@ -496,10 +496,10 @@ def get_priors(vref, times):
     mus = [-3, -3, 2, 0]
     sigmas = [1, 1, 1, 3]
 
-    a = pm.LogNormal('a', mu=mus[0], sigma=0.5)
-    b = pm.LogNormal('b', mu=mus[1], sigma=0.5)
-    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=1)
-    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=0.1)
+    a = pm.LogNormal('a', mu=mus[0], sigma=0.5, transform=None)
+    b = pm.LogNormal('b', mu=mus[1], sigma=0.5, transform=None)
+    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=1, transform=None)
+    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=0.1, transform=None)
 
     check_priors(a, b, Dc, mu0, mus, sigmas)
 
@@ -645,11 +645,14 @@ def main():
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
 
-        # seq. mcmc sampler parameterss
-        tune = 5000
-        draws = 50004
+        # mcmc sampler parameterss
+        tune = 100
+        draws = 1004
         chains = 2
         cores = 4
+
+        # find the MAP solution
+        # map_solution = pm.find_MAP()
 
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')
