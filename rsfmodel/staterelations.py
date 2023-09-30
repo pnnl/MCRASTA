@@ -19,6 +19,8 @@ class StateRelation(object):
         self.b = None
         self.Dc = None
         self.state = None
+        self.vmax = None
+        self.l0 = None
 
     def velocity_component(self, system):
         """
@@ -57,7 +59,8 @@ class DieterichState(StateRelation):
         return s
 
     def set_steady_state(self, system):
-        self.state = self.Dc/system.vref
+        state_dim = self.Dc/system.vref
+        self.state = state_dim * self.vmax / self.l0
 
     def evolve_state(self, system):
         return 1. - system.v * self.state / self.Dc

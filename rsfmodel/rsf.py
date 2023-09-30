@@ -40,7 +40,7 @@ class LoadingSystem(object):
         self.k = None
         self.time = None  # List of times we want answers at
         self.loadpoint_velocity = None  # Matching list of velocities
-        self.tc = None  # nondimensionalized
+        # self.tc = None  # nondimensionalized
 
     def velocity_evolution(self):
         v_contribution = 0
@@ -58,8 +58,8 @@ class LoadingSystem(object):
             print('v_contribution = ', v_contribution)
 
     def friction_evolution(self, loadpoint_vel):
-        # return self.k * (loadpoint_vel - self.v)
-        return self.tc * self.k * (loadpoint_vel - self.v)
+        return self.k * (loadpoint_vel - self.v)
+        # return self.tc * self.k * (loadpoint_vel - self.v)
 
 
 class Model(LoadingSystem):

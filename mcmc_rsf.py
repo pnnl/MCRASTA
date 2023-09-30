@@ -528,6 +528,7 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
 def mcmc_rsf_sim(theta, t, v, k, vref):
     # unpack parameters
     a, b, Dc, mu0, sigma = theta
+    vmax, l0 = get_vmax_l0(v)
 
     # initialize rsf model
     model = rsf.Model()
@@ -542,11 +543,14 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
     model.v = v[0]  # Initial slider velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
-    model.tc = 1 / (k * vref)   # nondimensionalizing parameter to multiply things by.
+    # model.tc = 1 / (k * vref)   # nondimensionalizing parameter to multiply things by.
 
     state1 = staterelations.DieterichState()
     state1.b = b  # Empirical coefficient for the evolution effect
     state1.Dc = Dc  # Critical slip distance
+    # all other parameters are already nondimensionalized, but the state parameter is nd'd in the staterelations.py
+    state1.vmax = vmax
+    state1.l0 = l0
 
     model.state_relations = [state1]  # Which state relation we want to use
 
@@ -564,15 +568,33 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
     return mu_sim
 
 
+def get_vmax_l0(vlps):
+    vmax = np.max(vlps)
+    l0 = 100000
+
+    return vmax, l0
+
+
 def nondimensionalize_parameters(vlps, vref, k, times):
     times_nd = times * k * vref
     # Dc_nd = pm.Deterministic('Dc_nd', Dc / (time_total * vref))
     # vlps_nd = vlps / vref
     # vref_nd = vref / np.mean(vlps)
 
-    test = np.argwhere(vlps < 0)
+    l0 = 100000 # characteristic length = length of sample = 100 mm (estimated) = 100000 micrometers
+    vmax = np.max(vlps)  # characteristic velocity = max loading velocity = 300 micrometers/s
 
-    return times_nd
+    k0 = k * l0
+    vlps0 = vlps / vmax
+    vref0 = vref / vmax
+    # state0 = state * vmax / l0
+    # Dc0 = Dc / l0
+    t0 = times * vmax / l0
+
+    # test = np.argwhere(vlps < 0)
+
+    # return times_nd
+    return k0, vlps0, vref0, t0
 
 
 
@@ -633,11 +655,11 @@ def main():
         a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
         # a, b, Dc_nd, mu0 = priors
 
-        times_nd = nondimensionalize_parameters(vlps, vref, k, times)
-        mutrue_nd = mutrue / (k * vref)
+        k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times)
+        # mutrue_nd = mutrue / (k * vref)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
-        loglike = Loglike(times_nd, vlps, k, vref, mutrue_nd)
+        loglike = Loglike(t0, vlps0, k0, vref, mutrue)
 
         # convert parameters to be estimated to tensor vector
         theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
@@ -646,13 +668,10 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # mcmc sampler parameterss
-        tune = 100
-        draws = 1004
+        tune = 2000
+        draws = 20004
         chains = 2
         cores = 4
-
-        # find the MAP solution
-        # map_solution = pm.find_MAP()
 
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')

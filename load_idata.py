@@ -65,15 +65,15 @@ def plot_posterior_predictive(idata):
 
 def plot_trace(idata):
     ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], combined=False)
-    ax[0][0].set_xlim(0, 0.05)
-    ax[1][0].set_xlim(0, 0.05)
-    ax[2][0].set_xlim(0, 400)
+    ax[0][0].set_xlim(0, 0.08)
+    ax[1][0].set_xlim(0, 0.12)
+    ax[2][0].set_xlim(0, 50)
 
     ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
     print(ax2)
-    ax2[0].set_xlim(0, 10)
-    ax2[1].set_xlim(0, 10)
-    ax2[2].set_xlim(0, 100)
+    ax2[0].set_xlim(0, 0.08)
+    ax2[1].set_xlim(0, 0.12)
+    ax2[2].set_xlim(0, 50)
 
 
 def plot_pairs(idata):
@@ -96,11 +96,11 @@ def plot_pairs(idata):
     print('pairs ax = ', ax)
 
     # sys.exit()
-    ax[0][0].set_xlim(0, 0.05)
-    ax[1][0].set_ylim(0, 0.2)
-    ax[2][0].set_ylim(0, 500)
-    ax[1][1].set_xlim(0, 0.05)
-    ax[2][2].set_xlim(0, 400)
+    ax[0][0].set_xlim(0, 0.08)
+    ax[1][0].set_xlim(0, 0.12)
+    ax[2][0].set_ylim(0, 50)
+    ax[1][1].set_xlim(0, 0.12)
+    ax[2][2].set_xlim(0, 50)
 
 
 def get_model_vals(idata):
@@ -142,7 +142,6 @@ def redimensionalize_Dc_nd(Dc_nd, times, vref):
 
 
 def generate_rsf_data(nr, vars, mutrue_nd):
-    # nr = 1000
     a, b, Dc, mu0 = vars
 
     print(mu0)
@@ -190,6 +189,9 @@ def generate_rsf_data(nr, vars, mutrue_nd):
         model.solve()
 
         mu_sim = model.results.friction
+        state_sim = model.results.states
+        print(f'state sim = {state_sim}')
+
         resids = mutrue_nd - mu_sim
         logp = -1/2 * np.sum(resids ** 2)
         logps.append(logp)
@@ -455,12 +457,8 @@ def main():
         plt.figure(70)
         plt.plot(times, mutrue_nd, '.', alpha=0.2, label='observed')
         plt.plot(times, map_mu_sim, label='max logp solution')
-        plt.show()
 
-        print('map vars = ', map_vars)
-        # logps = calc_logp(mutrue_nd, mu_sims, nr)
-
-        plot_simulated_mus(x, times, mu_sims, mutrue_nd, len(apost), chain)
+        # plot_simulated_mus(x, times, mu_sims, mutrue_nd, len(apost), chain)
 
     save_figs(out_folder)
 
