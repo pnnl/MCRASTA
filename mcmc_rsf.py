@@ -493,13 +493,13 @@ def get_constants(vlps):
 
 # MCMC priors
 def get_priors(vref, times):
-    mus = [-3, -3, 2, 0]
-    sigmas = [1, 1, 1, 3]
+    mus = [-2, -2, 2, -1]
+    sigmas = [0.5, 0.5, 1, 0.2]
 
-    a = pm.LogNormal('a', mu=mus[0], sigma=0.5, transform=None)
-    b = pm.LogNormal('b', mu=mus[1], sigma=0.5, transform=None)
-    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=1, transform=None)
-    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=0.1, transform=None)
+    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0], transform=None)
+    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1], transform=None)
+    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2], transform=None)
+    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3], transform=None)
 
     check_priors(a, b, Dc, mu0, mus, sigmas)
 
@@ -659,7 +659,7 @@ def main():
         # mutrue_nd = mutrue / (k * vref)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
-        loglike = Loglike(t0, vlps0, k0, vref, mutrue)
+        loglike = Loglike(t0, vlps0, k0, vref0, mutrue)
 
         # convert parameters to be estimated to tensor vector
         theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
