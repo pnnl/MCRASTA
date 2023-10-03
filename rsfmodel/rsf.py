@@ -55,6 +55,7 @@ class LoadingSystem(object):
             print('vref = ', self.vref)
             print('mu = ', self.mu)
             print('mu0 = ', self.mu0)
+            print(f'velocity component = {state.velocity_component(self)}')
             print('v_contribution = ', v_contribution)
 
     def friction_evolution(self, loadpoint_vel):

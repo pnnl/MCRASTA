@@ -493,7 +493,7 @@ def get_constants(vlps):
 
 # MCMC priors
 def get_priors(vref, times):
-    mus = [-2, -2, 2, -1]
+    mus = [-1, -1, 2, -1]
     sigmas = [0.5, 0.5, 1, 0.2]
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0], transform=None)
@@ -525,10 +525,10 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
 
 # forward RSF model - from Leeman (2016) and uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
 # returns simulated mu value for use in pymc
-def mcmc_rsf_sim(theta, t, v, k, vref):
+def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     # unpack parameters
     a, b, Dc, mu0, sigma = theta
-    vmax, l0 = get_vmax_l0(v)
+    l0 = get_vmax_l0(v)
 
     # initialize rsf model
     model = rsf.Model()
@@ -569,27 +569,25 @@ def mcmc_rsf_sim(theta, t, v, k, vref):
 
 
 def get_vmax_l0(vlps):
-    vmax = np.max(vlps)
-    l0 = 100000
+    l0 = 125
 
-    return vmax, l0
+    return l0
 
 
-def nondimensionalize_parameters(vlps, vref, k, times):
+def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     times_nd = times * k * vref
     # Dc_nd = pm.Deterministic('Dc_nd', Dc / (time_total * vref))
     # vlps_nd = vlps / vref
     # vref_nd = vref / np.mean(vlps)
 
-    l0 = 100000 # characteristic length = length of sample = 100 mm (estimated) = 100000 micrometers
-    vmax = np.max(vlps)  # characteristic velocity = max loading velocity = 300 micrometers/s
+    l0 = get_vmax_l0(vlps)  # characteristic length = length of sample = 100 mm (estimated) = 100000 micrometers
 
     k0 = k * l0
-    vlps0 = vlps / vmax
-    vref0 = vref / vmax
+    vlps0 = vmax / vlps
+    vref0 = vmax / vref
     # state0 = state * vmax / l0
     # Dc0 = Dc / l0
-    t0 = times * vmax / l0
+    t0 = times / times[0]
 
     # test = np.argwhere(vlps < 0)
 
@@ -599,7 +597,7 @@ def nondimensionalize_parameters(vlps, vref, k, times):
 
 
 # LogLikelihood
-def log_likelihood(theta, times, vlps, k, vref, data):
+def log_likelihood(theta, times, vlps, k, vref, data, vmax):
     if type(theta) == list:
         theta = theta[0]
     (
@@ -610,7 +608,7 @@ def log_likelihood(theta, times, vlps, k, vref, data):
         sigma,
     ) = theta
 
-    y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref)
+    y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref, vmax)
     resids = (data - y_pred)
     # print('resid = ', resids)
     logp = -1 / 2 * np.sum(resids ** 2)
@@ -624,15 +622,16 @@ class Loglike(tt.Op):
     itypes = [tt.dvector]
     otypes = [tt.dscalar]
 
-    def __init__(self, times, vlps, k, vref, data):
+    def __init__(self, times, vlps, k, vref, data, vmax):
         self.data = data
         self.times = times
         self.vlps = vlps
         self.k = k
         self.vref = vref
+        self.vmax = vmax
 
     def perform(self, node, inputs, outputs):
-        logp = log_likelihood(inputs, self.times, self.vlps, self.k, self.vref, self.data)
+        logp = log_likelihood(inputs, self.times, self.vlps, self.k, self.vref, self.data, self.vmax)
         outputs[0][0] = np.array(logp)
 
 
@@ -644,6 +643,7 @@ def main():
 
     # observed data
     mutrue, times, vlps, x, sample_name = get_obs_data()
+    vmax = np.max(vlps)
 
     k, vref = get_constants(vlps)
     print(f'k = {k}; vref = {vref}')
@@ -655,11 +655,11 @@ def main():
         a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
         # a, b, Dc_nd, mu0 = priors
 
-        k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times)
+        k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
         # mutrue_nd = mutrue / (k * vref)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
-        loglike = Loglike(t0, vlps0, k0, vref0, mutrue)
+        loglike = Loglike(t0, vlps0, k0, vref0, mutrue, vmax)
 
         # convert parameters to be estimated to tensor vector
         theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])

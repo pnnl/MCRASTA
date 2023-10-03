@@ -36,6 +36,16 @@ class StateRelation(object):
         # print(f'vref = {system.vref}')
         # print(f'state = {self.state}')
         # print(f'Dc = {self.Dc}')
+        try:
+            vcomp = self.b * np.log(system.vref * self.state / self.Dc)
+        except RuntimeWarning as exc:
+            print(exc)
+            print('log error, here are the vars that caused it')
+            print('b = ', self.b)
+            print('vref = ', system.vref)
+            print('state = ', self.state)
+            print('Dc = ', self.Dc)
+        # print(f'vcomp = {vcomp}')
         return self.b * np.log(system.vref * self.state / self.Dc)
 
 
