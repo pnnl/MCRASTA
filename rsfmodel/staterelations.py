@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 from math import log
 
@@ -36,15 +38,17 @@ class StateRelation(object):
         # print(f'vref = {system.vref}')
         # print(f'state = {self.state}')
         # print(f'Dc = {self.Dc}')
-        try:
-            vcomp = self.b * np.log(system.vref * self.state / self.Dc)
-        except RuntimeWarning as exc:
-            print(exc)
-            print('log error, here are the vars that caused it')
-            print('b = ', self.b)
-            print('vref = ', system.vref)
-            print('state = ', self.state)
-            print('Dc = ', self.Dc)
+        with np.errstate(invalid='raise'):
+            try:
+                vcomp = self.b * np.log(system.vref * self.state / self.Dc)
+            except FloatingPointError as exc:
+                print(exc)
+                print('log error, here are the vars that caused it')
+                print('b = ', self.b)
+                print('vref = ', system.vref)
+                print('state = ', self.state)
+                print('Dc = ', self.Dc)
+                print(f'system.v={system.v}')
         # print(f'vcomp = {vcomp}')
         return self.b * np.log(system.vref * self.state / self.Dc)
 
@@ -69,10 +73,21 @@ class DieterichState(StateRelation):
         return s
 
     def set_steady_state(self, system):
+        # print(f'SETTING STEADY STATE STATE')
         state_dim = self.Dc/system.vref
         self.state = state_dim * self.vmax / self.l0
 
     def evolve_state(self, system):
+        # print(f'SOLVING FOR STATE EVOLUTION')
+        evolve_state = 1. - system.v * self.state / self.Dc
+        # if self.state + evolve_state < 0:
+        #     print('ERROR ERROR ERROR')
+        #     ssee = self.state + evolve_state
+        #     print(f'state + dstate/dt = {ssee}')
+        #     print(f'system.v={system.v}')
+        #     print(f'self.state={self.state}')
+        #     print(f'evolve_state = {evolve_state}')
+        #     print(f'self.Dc={self.Dc}')
         return 1. - system.v * self.state / self.Dc
 
 

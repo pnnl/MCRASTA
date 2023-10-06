@@ -57,6 +57,7 @@ class LoadingSystem(object):
             print('mu0 = ', self.mu0)
             print(f'velocity component = {state.velocity_component(self)}')
             print('v_contribution = ', v_contribution)
+            print('end')
 
     def friction_evolution(self, loadpoint_vel):
         return self.k * (loadpoint_vel - self.v)

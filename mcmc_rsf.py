@@ -493,8 +493,8 @@ def get_constants(vlps):
 
 # MCMC priors
 def get_priors(vref, times):
-    mus = [-1, -1, 2, -1]
-    sigmas = [0.5, 0.5, 1, 0.2]
+    mus = [-1, -1, 4, -1]
+    sigmas = [0.5, 0.5, 0.1, 0.2]
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0], transform=None)
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1], transform=None)
@@ -583,11 +583,11 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     l0 = get_vmax_l0(vlps)  # characteristic length = length of sample = 100 mm (estimated) = 100000 micrometers
 
     k0 = k * l0
-    vlps0 = vmax / vlps
-    vref0 = vmax / vref
+    vlps0 = vlps / vmax
+    vref0 = vref / vmax
     # state0 = state * vmax / l0
     # Dc0 = Dc / l0
-    t0 = times / times[0]
+    t0 = times - times[0]
 
     # test = np.argwhere(vlps < 0)
 
