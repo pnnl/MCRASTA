@@ -17,10 +17,10 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 50004
+nr = 100004
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
-idataname = f'{dirname}_idata_a'
+idataname = f'{dirname}_idata'
 
 um_to_mm = 0.001
 
@@ -255,6 +255,9 @@ def get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci):
 
 def original_trace_all_chains(modelvals, times, vref):
     a, b, Dc, mu0 = get_trace_variables_allchains(modelvals)
+
+    plt.plot(a)
+    plt.show()
     # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
     # datadict = {'a': a, 'b': b, 'Dc': Dc_nd, 'mu0': mu0}
     datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}

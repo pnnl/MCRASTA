@@ -493,7 +493,7 @@ def get_constants(vlps):
 
 # MCMC priors
 def get_priors(vref, times):
-    mus = [-1, -1, 4, -1]
+    mus = [-4, -4, 4, -1]
     sigmas = [0.5, 0.5, 0.1, 0.2]
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0], transform=None)
