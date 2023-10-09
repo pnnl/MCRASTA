@@ -17,7 +17,7 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 100004
+nr = 100006
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
 idataname = f'{dirname}_idata'
@@ -67,13 +67,13 @@ def plot_trace(idata):
     ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], combined=False)
     ax[0][0].set_xlim(0, 0.08)
     ax[1][0].set_xlim(0, 0.12)
-    ax[2][0].set_xlim(0, 50)
+    ax[2][0].set_xlim(30, 70)
 
     ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
     print(ax2)
     ax2[0].set_xlim(0, 0.08)
     ax2[1].set_xlim(0, 0.12)
-    ax2[2].set_xlim(0, 50)
+    ax2[2].set_xlim(30, 80)
 
 
 def plot_pairs(idata):
@@ -98,9 +98,9 @@ def plot_pairs(idata):
     # sys.exit()
     ax[0][0].set_xlim(0, 0.08)
     ax[1][0].set_xlim(0, 0.12)
-    ax[2][0].set_ylim(0, 50)
+    ax[2][0].set_ylim(30, 80)
     ax[1][1].set_xlim(0, 0.12)
-    ax[2][2].set_xlim(0, 50)
+    ax[2][2].set_xlim(30, 80)
 
 
 def get_model_vals(idata):
@@ -148,6 +148,7 @@ def generate_rsf_data(nr, vars, mutrue_nd):
 
     times, mutrue, vlps, x = load_section_data(dirpath)
     k, vref = get_constants(vlps)
+    l0 = get_vmax_l0(vlps)
 
     nobs = len(times)
 
@@ -162,11 +163,12 @@ def generate_rsf_data(nr, vars, mutrue_nd):
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
+    state1.vmax = np.max(vlps)
+    state1.l0 = l0
+
     model.state_relations = [state1]  # Which state relation we want to use
 
     times_nd = times * k * vref
-
-    model.tc = 1 / (k * vref)   # nondimensionalizing parameter to multiply things by.
 
     model.time = times_nd
 
@@ -205,6 +207,11 @@ def generate_rsf_data(nr, vars, mutrue_nd):
     return mu_sims, logps, map_vars, map_mu_sim
 
 
+def get_vmax_l0(vlps):
+    l0 = 125
+
+    return l0
+
 def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain):
     plt.figure(chain)
     plt.plot(x * um_to_mm, mu_sims, alpha=0.1)
@@ -239,25 +246,9 @@ def get_credible_int_bounds(idata, chain):
     return [aci, bci, Dc_ndci, mu0ci]
 
 
-def get_credible_intervals(a, b, Dc, mu0, aci, bci, Dcci, mu0ci):
-    # a.sort()
-    # b.sort()
-    # Dc.sort()
-    # mu0.sort()
-
-    a95 = a[np.where((a >= aci[0]) & (a <= aci[1]))]
-    b95 = b[np.where((b >= bci[0]) & (b <= bci[1]))]
-    Dc95 = Dc[np.where((Dc >= Dcci[0]) & (Dc <= Dcci[1]))]
-    mu095 = mu0[np.where((mu0 >= mu0ci[0]) & (mu0 <= mu0ci[1]))]
-
-    return a95, b95, Dc95, mu095
-
 
 def original_trace_all_chains(modelvals, times, vref):
     a, b, Dc, mu0 = get_trace_variables_allchains(modelvals)
-
-    plt.plot(a)
-    plt.show()
     # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
     # datadict = {'a': a, 'b': b, 'Dc': Dc_nd, 'mu0': mu0}
     datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
@@ -438,28 +429,25 @@ def main():
     numchains = 2
     for chain in np.arange(numchains):
         # get posteriors and plot them
-        # constant for redimensionalizing variables
-        tc = 1 / (k * vref)
-
         # get posteriors from model trace
         apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, chain)
-
-        # redimensionalize parameters
-        # ard, brd, Dcrd, mu0rd = redimensionalize_parameters(apost, bpost, Dcpost, mu0post, tc)
 
         # plot the dimensionalized priors and posteriors for comparison when necessary
         # plot_priors_posteriors(ard, brd, Dcrd, mu0rd)
 
         vars_all = apost, bpost, Dcpost, mu0post
         # vars_all = ard, brd, Dcrd, mu0rd
-        #
-        mutrue_nd = mutrue * tc
 
-        mu_sims, logps, map_vars, map_mu_sim = generate_rsf_data(nr, vars_all, mutrue_nd)
+        plot_flag = 'no'
 
-        plt.figure(70)
-        plt.plot(times, mutrue_nd, '.', alpha=0.2, label='observed')
-        plt.plot(times, map_mu_sim, label='max logp solution')
+        if plot_flag == 'yes':
+            mu_sims, logps, map_vars, map_mu_sim = generate_rsf_data(nr, vars_all, mutrue)
+
+            plt.figure(70)
+            plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
+            plt.plot(times, map_mu_sim, label='max logp solution')
+        elif plot_flag == 'no':
+            print('skipping plotting observed data with realizations')
 
         # plot_simulated_mus(x, times, mu_sims, mutrue_nd, len(apost), chain)
 
