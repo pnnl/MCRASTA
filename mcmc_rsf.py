@@ -493,8 +493,8 @@ def get_constants(vlps):
 
 # MCMC priors
 def get_priors(vref, times):
-    mus = [-5, -5, 4, -1]
-    sigmas = [0.8, 0.8, 0.1, 0.2]
+    mus = [-5, -5, 3, -1]
+    sigmas = [0.8, 0.8, 0.3, 0.2]
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0], transform=None)
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1], transform=None)
@@ -507,7 +507,7 @@ def get_priors(vref, times):
 
 
 def check_priors(a, b, Dc, mu0, mus, sigmas):
-    vpriors = pm.draw([a, b, Dc, mu0], draws=60000)
+    vpriors = pm.draw([a, b, Dc, mu0], draws=100000)
     names = ['a', 'b', 'Dc', 'mu0']
 
     for i, name in enumerate(names):
@@ -519,8 +519,8 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
         plt.xlim(-0.1, 100)
         plt.title('prior distributions')
         plt.legend()
-    # plt.show()
-    # sys.exit()
+    plt.show()
+    sys.exit()
 
 
 # forward RSF model - from Leeman (2016) and uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
