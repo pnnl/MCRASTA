@@ -17,7 +17,7 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 100006
+nr = 500000
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
 idataname = f'{dirname}_idata'
@@ -134,6 +134,52 @@ def get_constants(vlps):
     return k, vref
 
 
+def generate_one_realization(modelvars):
+    a, b, Dc, mu0 = modelvars
+
+    times, mutrue, vlps, x = load_section_data(dirpath)
+    k, vref = get_constants(vlps)
+    l0, vmax = get_vmax_l0(vlps)
+
+    # k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
+
+    # set up rsf model
+    model = rsf.Model()
+    model.k = k  # Normalized System stiffness (friction/micron)
+    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref  # Reference velocity, generally vlp(t=0)
+
+    state1 = staterelations.DieterichState()
+    state1.vmax = 1
+    state1.l0 = 1
+
+    model.state_relations = [state1]  # Which state relation we want to use
+
+    model.time = times - times[0]
+
+    # Set the model load point velocity, must be same shape as model.model_time
+    model.loadpoint_velocity = vlps
+
+    print(f'solving for single realization')
+    # Set model initial conditions
+    model.mu0 = mu0  # Friction initial (at the reference velocity)
+    # print('model mu0 = ', model.mu0)
+    model.a = a  # Empirical coefficient for the direct effect
+    state1.b = b  # Empirical coefficient for the evolution effect
+    state1.Dc = Dc  # Critical slip distance
+
+    # Run the model!
+    model.solve()
+
+    mu_sim = model.results.friction
+    state_sim = model.results.states
+
+    resids = mutrue - mu_sim
+    logp = -1/2 * np.sum(resids ** 2)
+
+    return mu_sim, logp
+
+
 def generate_rsf_data(nr, modelvars):
     a, b, Dc, mu0 = modelvars
 
@@ -226,7 +272,6 @@ def load_section_data(dirpath):
     return times, mutrue, vlps, x
 
 
-
 def original_trace_all_chains(modelvals, times, vref):
     a, b, Dc, mu0 = get_trace_variables_allchains(modelvals)
     # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
@@ -256,27 +301,27 @@ def plot_priors_posteriors(*posts):
     # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
 
     # define priors same as in mcmc_rsf.py - get this info from out file
-    mus = [0, 0, 0, 1.5]
-    sigmas = [0.7, 0.7, 1, 0.2]
+    mus = [-4, -4, 4, -1]
+    sigmas = [0.5, 0.5, 0.1, 0.2]
 
-    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
-    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
-    Dc_nd = pm.LogNormal('Dc_nd', mu=mus[2], sigma=sigmas[2])
-    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
+    a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
+    b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
+    Dc_nd = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
+    mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
 
     # take same number of draws as in mcmc_rsf.py
-    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=60000)
+    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=100000)
 
     # Dc_redim = redimensionalize_Dc_nd(vpriors[2], times, vref)
     # vpriors_scaled = (vpriors[0]/1000, vpriors[1]/1000, Dc_redim/1000, vpriors[3]/100)
 
     # plot priors with posteriors
-    xlims = [5, 5, 400, 10]
+    # xlims = [5, 5, 400, 10]
 
-    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc', 'mu0'), xlims)):
+    for i, (prior, post, label) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc', 'mu0'))):
         plt.figure(10+i)
         # sns.histplot(prior, kde=True)
-        # sns.kdeplot(prior, color='b', label=f'{label} prior', common_norm=False, bw_method=0.1)
+        sns.kdeplot(prior, color='b', label=f'{label} prior', common_norm=False, bw_method=0.1)
         sns.kdeplot(post, color='g', label=f'{label} post', common_norm=False)
         # plt.gca().set_xlim(0, xmax)
         plt.legend()
@@ -402,19 +447,37 @@ def main():
         apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, chain)
 
         # plot the dimensionalized priors and posteriors for comparison when necessary
-        # plot_priors_posteriors(ard, brd, Dcrd, mu0rd)
+        plot_priors_posteriors(apost, bpost, Dcpost, mu0post)
 
         vars_all = apost, bpost, Dcpost, mu0post
-        # vars_all = ard, brd, Dcrd, mu0rd
+        names = ['a', 'b', 'Dc', 'mu0']
+
+        for modelvar, name in zip(vars_all, names):
+            mi = np.min(modelvar)
+            mx = np.max(modelvar)
+            print(f'model parameter = {name}')
+            print(f'min = {mi}')
+            print(f'max = {mx}')
+
+        modes = [0.013, 0.016, 54, 0.43]
+        mu_sim, logp = generate_one_realization(modes)
+        print(f'logp = {logp}')
+        plt.figure(80)
+        plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
+        plt.plot(times, mu_sim, label='best solution?')
+        plt.legend()
 
         plot_flag = 'no'
-
         if plot_flag == 'yes':
             mu_sims, logps, map_vars, map_mu_sim = generate_rsf_data(nr, vars_all)
 
             plt.figure(70)
-            plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
-            plt.plot(times, map_mu_sim, label='max logp solution')
+            # plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
+            # plt.plot(times, map_mu_sim, label='max logp solution')
+            plt.plot(logps, '.')
+            plt.ylabel('logp values')
+            plt.xlabel('realization no.')
+            plt.title('logp vals')
         elif plot_flag == 'no':
             print('skipping plotting observed data with realizations')
 
