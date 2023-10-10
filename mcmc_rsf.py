@@ -575,11 +575,6 @@ def get_vmax_l0(vlps):
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
-    times_nd = times * k * vref
-    # Dc_nd = pm.Deterministic('Dc_nd', Dc / (time_total * vref))
-    # vlps_nd = vlps / vref
-    # vref_nd = vref / np.mean(vlps)
-
     l0 = get_vmax_l0(vlps)  # characteristic length = length of sample = 100 mm (estimated) = 100000 micrometers
 
     k0 = k * l0

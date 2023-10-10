@@ -134,23 +134,16 @@ def get_constants(vlps):
     return k, vref
 
 
-def redimensionalize_Dc_nd(Dc_nd, times, vref):
-    time_total = times[-1] - times[0]
-    Dc = Dc_nd * (time_total * vref)
-
-    return Dc
-
-
-def generate_rsf_data(nr, vars, mutrue_nd):
-    a, b, Dc, mu0 = vars
-
-    print(mu0)
+def generate_rsf_data(nr, modelvars):
+    a, b, Dc, mu0 = modelvars
 
     times, mutrue, vlps, x = load_section_data(dirpath)
     k, vref = get_constants(vlps)
-    l0 = get_vmax_l0(vlps)
+    l0, vmax = get_vmax_l0(vlps)
 
-    nobs = len(times)
+    k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
+
+    nobs = len(t0)
 
     # pre-allocate array
     mu_sims = np.ones((nobs, nr))
@@ -158,22 +151,20 @@ def generate_rsf_data(nr, vars, mutrue_nd):
 
     # set up rsf model
     model = rsf.Model()
-    model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref  # Reference velocity, generally vlp(t=0)
+    model.k = k0  # Normalized System stiffness (friction/micron)
+    model.v = vlps0[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref0  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
-    state1.vmax = np.max(vlps)
+    state1.vmax = vmax
     state1.l0 = l0
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    times_nd = times * k * vref
-
-    model.time = times_nd
+    model.time = t0
 
     # Set the model load point velocity, must be same shape as model.model_time
-    model.loadpoint_velocity = vlps
+    model.loadpoint_velocity = vlps0
 
     logps = []
     # need to iterate over nr rows, that's it
@@ -192,9 +183,8 @@ def generate_rsf_data(nr, vars, mutrue_nd):
 
         mu_sim = model.results.friction
         state_sim = model.results.states
-        print(f'state sim = {state_sim}')
 
-        resids = mutrue_nd - mu_sim
+        resids = mutrue - mu_sim
         logp = -1/2 * np.sum(resids ** 2)
         logps.append(logp)
 
@@ -209,8 +199,9 @@ def generate_rsf_data(nr, vars, mutrue_nd):
 
 def get_vmax_l0(vlps):
     l0 = 125
+    vmax = np.max(vlps)
 
-    return l0
+    return l0, vmax
 
 def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain):
     plt.figure(chain)
@@ -268,18 +259,6 @@ def save_figs(out_folder):
     for i in plt.get_fignums():
         print('i = ', i)
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300)
-
-
-# Create a custom lognormal mode function to estimate the parameters needed for lognormal distr
-def lognormal_mode_to_parameters(desired_modes):
-    sigmas = []
-    mus = []
-    for desired_mode in desired_modes:
-        sigma = np.sqrt(np.log(1 + (desired_mode ** 2)))
-        mu = np.log(desired_mode) - (sigma ** 2) / 2
-        sigmas.append(sigma)
-        mus.append(mu)
-    return mus, sigmas
 
 
 def plot_priors_posteriors(*posts):
@@ -390,14 +369,15 @@ def get_modes(modelvals, chain):
     return amode, bmode, Dcndmode, mu0mode
 
 
-def redimensionalize_parameters(a, b, Dc, mu0, tc):
-    ard = a / tc
-    brd = b / tc
-    # Dcrd = Dc / tc
-    Dcrd = Dc
-    mu0rd = mu0 / tc
+def nondimensionalize_parameters(vlps, vref, k, times, vmax):
+    l0, vmax = get_vmax_l0(vlps)
 
-    return ard, brd, Dcrd, mu0rd
+    k0 = k * l0
+    vlps0 = vlps / vmax
+    vref0 = vref / vmax
+    t0 = times - times[0]
+
+    return k0, vlps0, vref0, t0
 
 
 def calc_logp(mutrue, mu_sims, nr):
@@ -441,7 +421,7 @@ def main():
         plot_flag = 'no'
 
         if plot_flag == 'yes':
-            mu_sims, logps, map_vars, map_mu_sim = generate_rsf_data(nr, vars_all, mutrue)
+            mu_sims, logps, map_vars, map_mu_sim = generate_rsf_data(nr, vars_all)
 
             plt.figure(70)
             plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
