@@ -606,7 +606,7 @@ def log_likelihood(theta, times, vlps, k, vref, data, vmax):
     y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref, vmax)
     resids = (data - y_pred)
     # print('resid = ', resids)
-    logp = -1 / 2 * np.sum(resids ** 2)
+    logp = -1 / 2 * (np.sum(resids ** 2))
     # print(f'logp = {logp}')
 
     return logp
@@ -663,8 +663,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # mcmc sampler parameterss
-        tune = 5000
-        draws = 50003
+        tune = 10000
+        draws = 100003
         chains = 2
         cores = 4
 
