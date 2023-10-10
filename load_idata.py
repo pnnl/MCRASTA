@@ -226,17 +226,6 @@ def load_section_data(dirpath):
     return times, mutrue, vlps, x
 
 
-def get_credible_int_bounds(idata, chain):
-    hdi_data = az.hdi(idata, hdi_prob=0.95, coords={'chain': [chain]})
-
-    aci = hdi_data.a.data / 1000
-    bci = hdi_data.b.data / 1000
-    Dc_ndci = hdi_data.Dc_nd.data / 1000
-    mu0ci = hdi_data.mu0.data
-
-    return [aci, bci, Dc_ndci, mu0ci]
-
-
 
 def original_trace_all_chains(modelvals, times, vref):
     a, b, Dc, mu0 = get_trace_variables_allchains(modelvals)
