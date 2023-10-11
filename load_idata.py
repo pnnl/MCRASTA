@@ -17,7 +17,7 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 100003
+nr = 500003
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
 idataname = f'{dirname}_idata'
@@ -54,29 +54,37 @@ def save_trace(idata, dirpath, idataname):
     idata.to_netcdf(os.path.join(dirpath, f'{idataname}_pp'))
 
 
-def sample_posterior_predcheck(idata):
-    print('sampling posterior predictive')
-    pm.sample_posterior_predictive(idata, extend_inferencedata=True)
-
-
-def plot_posterior_predictive(idata):
-    az.plot_ppc(idata)
-
-
-def plot_trace(idata):
+def plot_trace(idata, chain):
     ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], combined=False)
     ax[0][0].set_xlim(0, 0.08)
     ax[1][0].set_xlim(0, 0.12)
-    ax[2][0].set_xlim(30, 70)
+    ax[2][0].set_xlim(0, 100)
 
-    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
-    print(ax2)
-    ax2[0].set_xlim(0, 0.08)
-    ax2[1].set_xlim(0, 0.12)
-    ax2[2].set_xlim(30, 80)
+    # ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
+    # print(ax2)
+    # ax2[0].set_xlim(0, 0.08)
+    # ax2[1].set_xlim(0, 0.12)
+    # ax2[2].set_xlim(0, 100)
 
 
-def plot_pairs(idata):
+def plot_posterior_distributions(modelvals, chain):
+    tracevals = get_trace_variables(modelvals, chain)
+    names = ['a', 'b', 'Dc', 'mu0']
+    if chain == 0:
+        c = 'b'
+    elif chain == 1:
+        c = 'g'
+
+    i=200
+    for traceval, name in zip(tracevals, names):
+        counts, bins = np.histogram(traceval, bins='doane', density=True)
+        plt.figure(i)
+        plt.hist(bins[:-1], bins, weights=counts, alpha=0.5, color=c, label=f'chain {chain}')
+        plt.title(f'probability density, {name}')
+        i += 1
+
+
+def plot_pairs(idata, chain=None):
     # plot_kwargs = {'linewidths': 0.2}
     marginal_kwargs = {'color': 'teal'}
     # kde_kwargs = {'hdi_probs': [0.95]}
@@ -89,7 +97,6 @@ def plot_pairs(idata):
         # kde_kwargs=kde_kwargs,
         marginal_kwargs=marginal_kwargs
     )
-    #xlims = [50, 50, 25, 1]
 
     #1plt.gca().set_xlim(0, xmax)
     # ax[0][0].set_xlim(0, 100)  # set the x limits for the first row first col e.g upper left
@@ -98,9 +105,9 @@ def plot_pairs(idata):
     # sys.exit()
     ax[0][0].set_xlim(0, 0.08)
     ax[1][0].set_xlim(0, 0.12)
-    ax[2][0].set_ylim(30, 80)
+    ax[2][0].set_ylim(0, 100)
     ax[1][1].set_xlim(0, 0.12)
-    ax[2][2].set_xlim(30, 80)
+    ax[2][2].set_xlim(0, 100)
 
 
 def get_model_vals(idata):
@@ -279,8 +286,19 @@ def original_trace_all_chains(modelvals, times, vref):
     datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
 
-    plot_pairs(new_idata)
-    plot_trace(new_idata)
+    plot_pairs(new_idata, chain=None)
+    plot_trace(new_idata, chain=None)
+
+
+def plot_chain_trace(modelvals, chain):
+    a, b, Dc, mu0 = get_trace_variables(modelvals, chain)
+    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
+    # datadict = {'a': a, 'b': b, 'Dc': Dc_nd, 'mu0': mu0}
+    datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
+    new_idata = az.convert_to_inference_data(datadict)
+
+    plot_pairs(new_idata, chain)
+    plot_trace(new_idata, chain)
 
 
 
@@ -296,10 +314,6 @@ def save_figs(out_folder):
 
 
 def plot_priors_posteriors(*posts):
-    # get info for priors
-    # desired_modes = (8, 4, 5.2, 0.3)
-    # mus, sigmas = lognormal_mode_to_parameters(desired_modes)
-
     # define priors same as in mcmc_rsf.py - get this info from out file
     mus = [-4, -4, 4, -1]
     sigmas = [0.5, 0.5, 0.1, 0.2]
@@ -312,12 +326,6 @@ def plot_priors_posteriors(*posts):
     # take same number of draws as in mcmc_rsf.py
     vpriors = pm.draw([a, b, Dc_nd, mu0], draws=100000)
 
-    # Dc_redim = redimensionalize_Dc_nd(vpriors[2], times, vref)
-    # vpriors_scaled = (vpriors[0]/1000, vpriors[1]/1000, Dc_redim/1000, vpriors[3]/100)
-
-    # plot priors with posteriors
-    # xlims = [5, 5, 400, 10]
-
     for i, (prior, post, label) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc', 'mu0'))):
         plt.figure(10+i)
         # sns.histplot(prior, kde=True)
@@ -327,69 +335,10 @@ def plot_priors_posteriors(*posts):
         plt.legend()
 
 
-def plot_priors(a, b, Dc, mu0, mus, sigmas, desired_modes):
-    datas = a, b, Dc, mu0
-    dataname = ['a', 'b', 'Dc', 'mu0']
-    num_bins = 100
-
-    i = 10
-    for data, name in zip(datas[0:2], dataname[0:2]):
-        plt.figure(i+1)
-        kde = sns.kdeplot(data, color='b', label=f'{name} prior', common_norm=False, bw_method=0.1)
-        plt.xlim(-0.02, 0.05)
-        y_max = kde.get_lines()[0].get_ydata().max()
-        kde.get_lines()[0].set_ydata(kde.get_lines()[0].get_ydata() / y_max)
-        i += 1
-        plt.legend()
-
-    i = 20
-    for data, name in zip(datas[2:], dataname[2:]):
-        # hist, bins = np.histogram(data, bins=num_bins, density=True)
-        plt.figure(i+1)
-        kde = sns.kdeplot(data, color='b', label=f'{name} prior', common_norm=False, bw_method=0.1)
-        y_max = kde.get_lines()[0].get_ydata().max()
-        kde.get_lines()[0].set_ydata(kde.get_lines()[0].get_ydata() / y_max)
-        # plt.ylim(0, 1)
-        plt.legend()
-        # plt.hist(data, bins=num_bins, density=True, alpha=0.6, color='blue')
-        # plt.plot(bins, pdf_vals, 'r', label=f'{name} prior PDF')
-        i += 1
-
-
 def get_posteriors(modelvals, chain):
     a, b, Dc, mu0 = get_trace_variables(modelvals, chain)
 
     return a, b, Dc, mu0
-
-
-def plot_posteriors(a, b, Dc, mu0):
-    datas = a, b, Dc, mu0
-    dataname = ['a', 'b', 'Dc', 'mu0']
-
-    i = 10
-    for data, name in zip(datas[0:2], dataname[0:2]):
-        plt.figure(i+1)
-        kde = sns.kdeplot(data, color='g', label=f'{name} posterior', common_norm=False, bw_method=0.1)
-        y_max = kde.get_lines()[0].get_ydata().max()
-        kde.get_lines()[0].set_ydata(kde.get_lines()[0].get_ydata() / y_max)
-        plt.xlim(-0.02, 0.05)
-        i += 1
-        plt.legend()
-
-    i = 20
-    for data, name in zip(datas[2:], dataname[2:]):
-        plt.figure(i+1)
-        kde = sns.kdeplot(data, color='g', label=f'{name} posterior', common_norm=False, bw_method=0.1)
-        y_max = kde.get_lines()[0].get_ydata().max()
-        kde.get_lines()[0].set_ydata(kde.get_lines()[0].get_ydata() / y_max)
-        # plt.ylim(0, 1)
-        # hist, bins = np.histogram(data, bins=num_bins, density=True)
-        # pdf_vals = lognorm.pdf(bins, s=sigma, scale=np.exp(mu / 1000))
-        # plt.hist(data, bins=num_bins, density=True, alpha=0.6, color='blue')
-        # plt.plot(bins, pdf_vals, 'r', label=f'{name} posterior PDF')
-        i += 1
-        plt.legend()
-    # plt.show()
 
 
 def get_modes(modelvals, chain):
@@ -445,11 +394,19 @@ def main():
         # get posteriors and plot them
         # get posteriors from model trace
         apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, chain)
+        amode, bmode, Dcmode, mu0mode = get_modes(modelvals, chain)
+
+        print(f'MODES calcd by scipy, chain = {chain}')
+        print(f'a: {amode[0]}')
+        print(f'b: {bmode[0]}')
+        print(f'Dc: {Dcmode[0]}')
+        print(f'mu0: {mu0mode[0]}')
 
         # plot the dimensionalized priors and posteriors for comparison when necessary
         plot_priors_posteriors(apost, bpost, Dcpost, mu0post)
 
         vars_all = apost, bpost, Dcpost, mu0post
+        plot_posterior_distributions(modelvals, chain)
         names = ['a', 'b', 'Dc', 'mu0']
 
         for modelvar, name in zip(vars_all, names):
@@ -459,7 +416,7 @@ def main():
             print(f'min = {mi}')
             print(f'max = {mx}')
 
-        modes = [0.0042, 0.0038, 18, 0.42]
+        modes = [amode[0], bmode[0], Dcmode[0], mu0mode[0]]
         mu_sim, logp = generate_one_realization(modes)
         print(f'logp = {logp}')
         plt.figure(80)

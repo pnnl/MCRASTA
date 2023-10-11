@@ -663,14 +663,14 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # mcmc sampler parameterss
-        tune = 10000
-        draws = 500003
+        tune = 20000
+        draws = 1000000
         chains = 2
         cores = 4
 
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')
-        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(), discard_tuned_samples=False)
+        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(), discard_tuned_samples=True)
         print(f'inference data = {idata}')
 
         # create storage directory
