@@ -494,7 +494,7 @@ def get_constants(vlps):
 # MCMC priors
 def get_priors(vref, times):
     mus = [-5, -5, 3, -1]
-    sigmas = [0.8, 0.8, 0.3, 0.2]
+    sigmas = [0.8, 0.8, 0.3, 0.3]
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0], transform=None)
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1], transform=None)
@@ -664,7 +664,7 @@ def main():
 
         # mcmc sampler parameterss
         tune = 10000
-        draws = 100003
+        draws = 500003
         chains = 2
         cores = 4
 

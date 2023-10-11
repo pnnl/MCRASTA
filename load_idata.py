@@ -17,7 +17,7 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 50003
+nr = 100003
 dirname = f'out_{nr}d2ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
 idataname = f'{dirname}_idata'
@@ -459,7 +459,7 @@ def main():
             print(f'min = {mi}')
             print(f'max = {mx}')
 
-        modes = [0.004, 0.0038, 17, 0.42]
+        modes = [0.0042, 0.0038, 18, 0.42]
         mu_sim, logp = generate_one_realization(modes)
         print(f'logp = {logp}')
         plt.figure(80)
