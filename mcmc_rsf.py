@@ -527,7 +527,7 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
 # returns simulated mu value for use in pymc
 def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     # unpack parameters
-    a, b, Dc, mu0, sigma = theta
+    a, b, Dc, mu0 = theta
     l0 = get_vmax_l0(v)
 
     # initialize rsf model
