@@ -17,8 +17,9 @@ import seaborn as sns
 
 
 home = os.path.expanduser('~')
-nr = 500003
-dirname = f'out_{nr}d2ch'
+nr = 500000
+nch = 4
+dirname = f'out_{nr}d{nch}ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
 idataname = f'{dirname}_idata'
 
@@ -60,42 +61,40 @@ def plot_trace(idata, chain):
     ax[1][0].set_xlim(0, 0.12)
     ax[2][0].set_xlim(0, 100)
 
-    # ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
-    # print(ax2)
-    # ax2[0].set_xlim(0, 0.08)
-    # ax2[1].set_xlim(0, 0.12)
-    # ax2[2].set_xlim(0, 100)
+    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
+    print(ax2)
+    ax2[0].set_xlim(0, 0.08)
+    ax2[1].set_xlim(0, 0.12)
+    ax2[2].set_xlim(0, 100)
 
 
-def plot_posterior_distributions(modelvals, chain):
+def plot_posterior_distributions(modelvals, chain, modes):
     tracevals = get_trace_variables(modelvals, chain)
     names = ['a', 'b', 'Dc', 'mu0']
-    if chain == 0:
-        c = 'b'
-    elif chain == 1:
-        c = 'g'
+    colors = ['b', 'g', 'k', 'm']
 
     i=200
-    for traceval, name in zip(tracevals, names):
+    for traceval, name, c, m in zip(tracevals, names, colors, modes):
         counts, bins = np.histogram(traceval, bins='doane', density=True)
         plt.figure(i)
-        plt.hist(bins[:-1], bins, weights=counts, alpha=0.5, color=c, label=f'chain {chain}')
+        plt.hist(bins[:-1], bins, weights=counts, alpha=0.5, color=c, label=f'chain {chain}, mode={m}')
         plt.title(f'probability density, {name}')
+        plt.legend()
         i += 1
 
 
 def plot_pairs(idata, chain=None):
     # plot_kwargs = {'linewidths': 0.2}
     marginal_kwargs = {'color': 'teal'}
-    # kde_kwargs = {'hdi_probs': [0.95]}
+    kde_kwargs = {'hdi_probs': [0.50, 0.70, 0.90, 0.95]}
     ax = az.plot_pair(
         idata,
         var_names=['a', 'b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
-        scatter_kwargs={'color': 'teal', 'alpha': 0.2},
-        # kde_kwargs=kde_kwargs,
-        marginal_kwargs=marginal_kwargs
+        scatter_kwargs={'color': 'teal', 'alpha': 0.6},
+        kde_kwargs=kde_kwargs,
+        marginal_kwargs=marginal_kwargs,
     )
 
     #1plt.gca().set_xlim(0, xmax)
@@ -117,10 +116,10 @@ def get_model_vals(idata):
 
 
 def get_trace_variables_allchains(modelvals):
-    a = modelvals.a.values
-    b = modelvals.b.values
-    Dc = modelvals.Dc.values
-    mu0 = modelvals.mu0.values
+    a = modelvals.a.values[:, 0::1000]
+    b = modelvals.b.values[:, 0::1000]
+    Dc = modelvals.Dc.values[:, 0::1000]
+    mu0 = modelvals.mu0.values[:, 0::1000]
 
     return a, b, Dc, mu0
 
@@ -198,32 +197,38 @@ def generate_rsf_data(nr, modelvars):
 
     nobs = len(t0)
 
-    # pre-allocate array
-    mu_sims = np.ones((nobs, nr))
-    print(f'mu_sims.shape = {mu_sims.shape}')
-
     # set up rsf model
     model = rsf.Model()
-    model.k = k0  # Normalized System stiffness (friction/micron)
-    model.v = vlps0[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref0  # Reference velocity, generally vlp(t=0)
+    model.k = k  # Normalized System stiffness (friction/micron)
+    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
-    state1.vmax = vmax
-    state1.l0 = l0
+    state1.vmax = 1
+    state1.l0 = 1
 
     model.state_relations = [state1]  # Which state relation we want to use
 
     model.time = t0
 
     # Set the model load point velocity, must be same shape as model.model_time
-    model.loadpoint_velocity = vlps0
+    model.loadpoint_velocity = vlps
+
+    # number of realizations we want to look at
+    nrplot = 500
+    nrstep = 1000
+
+    # pre-allocate array
+    mu_sims = np.ones((nobs, nrplot))
+    print(f'mu_sims.shape = {mu_sims.shape}')
 
     logps = []
     # need to iterate over nr rows, that's it
     print('this takes a long time for large number of realizations')
-    for i in np.arange(nr):
-        print(f'solving for realization')
+    print(f'only plotting every {nrstep}th realization')
+    j = 0
+    for i in range(0, nr, nrstep):
+        print(f'solving for realization {i}')
         # Set model initial conditions
         model.mu0 = mu0[i]  # Friction initial (at the reference velocity)
         # print('model mu0 = ', model.mu0)
@@ -241,13 +246,16 @@ def generate_rsf_data(nr, modelvars):
         logp = -1/2 * np.sum(resids ** 2)
         logps.append(logp)
 
-        mu_sims[:, i] = mu_sim
+        mu_sims[:, j] = mu_sim
 
-        if logp == np.max(logps):
+        if logp == np.nanmax(logps):
             map_vars = a[i], b[i], Dc[i], mu0[i]
             map_mu_sim = mu_sim
+            maxlogp = logp
 
-    return mu_sims, logps, map_vars, map_mu_sim
+        j += 1
+
+    return mu_sims, logps, map_vars, map_mu_sim, maxlogp
 
 
 def get_vmax_l0(vlps):
@@ -281,8 +289,7 @@ def load_section_data(dirpath):
 
 def original_trace_all_chains(modelvals, times, vref):
     a, b, Dc, mu0 = get_trace_variables_allchains(modelvals)
-    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
-    # datadict = {'a': a, 'b': b, 'Dc': Dc_nd, 'mu0': mu0}
+
     datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
 
@@ -376,6 +383,14 @@ def calc_logp(mutrue, mu_sims, nr):
     return logps
 
 
+def calc_expected_vals(modelvar):
+    n = len(modelvar)
+    muhat = np.sum(np.log(modelvar))/n
+    sigmahat = np.sqrt((np.sum((modelvar - muhat)**2))/(n-1))
+
+    return muhat, sigmahat
+
+
 def main():
     out_folder = get_storage_folder(dirname)
     times, mutrue, vlps, x = load_section_data(dirpath)
@@ -389,12 +404,18 @@ def main():
     # plots trace pairs and samples
     original_trace_all_chains(modelvals, times, vref)
 
-    numchains = 2
+    # plot observed data on this figure before chains are plotted to avoid plotting it 4 times
+    plt.figure(70)
+    plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
+
+    numchains = nch
+
     for chain in np.arange(numchains):
         # get posteriors and plot them
         # get posteriors from model trace
         apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, chain)
-        amode, bmode, Dcmode, mu0mode = get_modes(modelvals, chain)
+        modes = get_modes(modelvals, chain)
+        amode, bmode, Dcmode, mu0mode = modes
 
         print(f'MODES calcd by scipy, chain = {chain}')
         print(f'a: {amode[0]}')
@@ -404,15 +425,15 @@ def main():
 
         # plot the dimensionalized priors and posteriors for comparison when necessary
         plot_priors_posteriors(apost, bpost, Dcpost, mu0post)
+        plot_posterior_distributions(modelvals, chain, modes)
 
         vars_all = apost, bpost, Dcpost, mu0post
-        plot_posterior_distributions(modelvals, chain)
         names = ['a', 'b', 'Dc', 'mu0']
 
         for modelvar, name in zip(vars_all, names):
+            print(f'model parameter = {name}')
             mi = np.min(modelvar)
             mx = np.max(modelvar)
-            print(f'model parameter = {name}')
             print(f'min = {mi}')
             print(f'max = {mx}')
 
@@ -421,16 +442,24 @@ def main():
         print(f'logp = {logp}')
         plt.figure(80)
         plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
-        plt.plot(times, mu_sim, label='best solution?')
+        plt.plot(times, mu_sim, label=f'chain={chain}; logp={logp}')
         plt.legend()
 
-        plot_flag = 'no'
+        plot_flag = 'yes'
         if plot_flag == 'yes':
-            mu_sims, logps, map_vars, map_mu_sim = generate_rsf_data(nr, vars_all)
+            mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(nr, vars_all)
 
+            ahat, bhat, Dchat, mu0hat = map_vars
             plt.figure(70)
             # plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
-            # plt.plot(times, map_mu_sim, label='max logp solution')
+            plt.plot(times, map_mu_sim, label=f'chain={chain}; max logp = {maxlogp} \n a={ahat}; b={bhat}; '
+                                              f'Dc={Dchat}; mu0={mu0hat}')
+            plt.xlabel('time (s)')
+            plt.ylabel('mu')
+            plt.title('best-fit solutions')
+            plt.legend(fontsize='small')
+
+            plt.figure(71)
             plt.plot(logps, '.')
             plt.ylabel('logp values')
             plt.xlabel('realization no.')
@@ -438,7 +467,7 @@ def main():
         elif plot_flag == 'no':
             print('skipping plotting observed data with realizations')
 
-        # plot_simulated_mus(x, times, mu_sims, mutrue_nd, len(apost), chain)
+
 
     save_figs(out_folder)
 

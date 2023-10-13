@@ -600,7 +600,6 @@ def log_likelihood(theta, times, vlps, k, vref, data, vmax):
         b,
         Dc,
         mu0,
-        sigma,
     ) = theta
 
     y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref, vmax)
@@ -642,22 +641,18 @@ def main():
 
     k, vref = get_constants(vlps)
     print(f'k = {k}; vref = {vref}')
-    sigma = 0.001  # standard deviation of measurements - change to actual eventually
 
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
-        # priors on stochastic parameters, constants
+        # priors on stochastic parameters and non-dimensionalized constants
         a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
-        # a, b, Dc_nd, mu0 = priors
-
         k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
-        # mutrue_nd = mutrue / (k * vref)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
         loglike = Loglike(t0, vlps0, k0, vref0, mutrue, vmax)
 
         # convert parameters to be estimated to tensor vector
-        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, sigma])
+        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0])
 
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
