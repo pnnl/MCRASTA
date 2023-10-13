@@ -496,10 +496,10 @@ def get_priors(vref, times):
     mus = [-5, -5, 3, -1]
     sigmas = [0.8, 0.8, 0.3, 0.3]
 
-    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0], transform=None)
-    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1], transform=None)
-    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2], transform=None)
-    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3], transform=None)
+    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
+    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
+    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2])
+    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
     check_priors(a, b, Dc, mu0, mus, sigmas)
 
@@ -507,7 +507,7 @@ def get_priors(vref, times):
 
 
 def check_priors(a, b, Dc, mu0, mus, sigmas):
-    vpriors = pm.draw([a, b, Dc, mu0], draws=100000)
+    vpriors = pm.draw([a, b, Dc, mu0], draws=500000)
     names = ['a', 'b', 'Dc', 'mu0']
 
     for i, name in enumerate(names):
@@ -665,7 +665,7 @@ def main():
 
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')
-        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(), discard_tuned_samples=True)
+        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(), discard_tuned_samples=False)
         print(f'inference data = {idata}')
 
         # create storage directory
