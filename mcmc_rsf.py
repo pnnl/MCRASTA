@@ -70,11 +70,11 @@ def check_file_exist(dirpath, filename):
         return newname
 
 
-def get_storage_folder(dirname):
+def get_storage_folder(dirname, samplename):
     global dirpath
     print('checking if storage directory exists')
     homefolder = os.path.expanduser('~')
-    outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
+    outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', f'{samplename}')
     # name = sim_name
 
     dirpath = os.path.join(homefolder, outfolder, dirname)
@@ -187,7 +187,7 @@ def save_figs(out_folder):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300)
 
 
-def write_model_info(draws, chains, tune, prior_mus, prior_sigmas, time_elapsed, k, vref, vsummary, ppsummary, sample_name, times):
+def write_model_info(draws, chains, tune, prior_mus, prior_sigmas, time_elapsed, k, vref, vsummary, ppsummary, file_name, times):
     fname = os.path.join(dirpath, 'out.txt')
 
     samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'tune', 'prior mus', 'prior sigmas', 'runtime (s)']
@@ -201,7 +201,7 @@ def write_model_info(draws, chains, tune, prior_mus, prior_sigmas, time_elapsed,
     vallist = [samplervals, modelvals, summaryvals]
 
     with open(fname, mode='w') as f:
-        f.write(f'SAMPLE: {sample_name}\n')
+        f.write(f'SAMPLE: {file_name}\n')
         f.write(f'from t = {times[0]} to t= {times[-1]} seconds\n')
         for strings, vals in zip(strlist, vallist):
             # f.writelines(f'{strings}: {vals}')
@@ -255,11 +255,11 @@ def calc_derivative(y, x, window_len=100):
 
 
 # imports observed data, sends it through series of processing steps
-def get_obs_data():
+def get_obs_data(samplename):
     # global sample_name, mutrue, vlps, times, x
     homefolder = os.path.expanduser('~')
-    path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', 'p5894')
-    name = 'p5894_proc.hdf5'
+    path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', f'{samplename}')
+    name = f'{samplename}_proc.hdf5'
     sample_name = name
     fullpath = os.path.join(homefolder, path, name)
     print(f'getting data from: {fullpath}')
@@ -270,11 +270,11 @@ def get_obs_data():
     df, names = read_hdf(fullpath)
     # print(names)
 
+    # comment this in when deciding which displacement sections to use
     # preplot(df, names)
 
-    # first remove any mu < 0 data from end of experiment
-    idx = np.argmax(df['mu'] < 0)
-    df = df.iloc[0:idx]
+    # first remove any mu < 0 data from experiment
+    df = df[(df['mu'] > 0)]
 
     # convert to numpy arrays
     t = df['time_s'].to_numpy()
@@ -389,13 +389,15 @@ def downsample_dataset(mu, t, vlps, x):
     x_ds = f_ds[:, 3]
 
     # plot series as sanity check
-    # plt.plot(x, mu, '.-', label='original data')
-    # plt.plot(x, mu_f, '.-', label='filtered data')
-    # plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
-    # plt.xlabel('disp (mm)')
-    # plt.ylabel('mu')
-    # plt.legend()
-    # # plt.show()
+    plt.plot(x, mu, '.-', label='original data')
+    plt.plot(x, mu_f, '.-', label='filtered data')
+    plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
+    plt.xlabel('disp (mm)')
+    plt.ylabel('mu')
+    plt.title('def downsample_dataset')
+    plt.legend()
+    plt.show()
+    sys.exit()
 
     return f_ds, mu_f
 
@@ -407,8 +409,8 @@ def section_data(data):
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
     # print(f'new dataframe col names = {list(df)}')
 
-    start_idx = np.argmax(df['x'] > 18 / um_to_mm)
-    end_idx = np.argmax(df['x'] > 20 / um_to_mm)
+    start_idx = np.argmax(df['x'] > 6.092 / um_to_mm)
+    end_idx = np.argmax(df['x'] > 7.975 / um_to_mm)
 
     df_section = df.iloc[start_idx:end_idx]
 
@@ -634,9 +636,10 @@ def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
+    samplename = 'p5791'
 
     # observed data
-    mutrue, times, vlps, x, sample_name = get_obs_data()
+    mutrue, times, vlps, x, file_name = get_obs_data(samplename)
     vmax = np.max(vlps)
 
     k, vref = get_constants(vlps)
@@ -670,7 +673,7 @@ def main():
 
         # create storage directory
         get_sim_name(draws, chains)
-        get_storage_folder(sim_name)
+        get_storage_folder(sim_name, samplename)
 
         # save model parameter stats
         vsummary = save_stats(idata, dirpath)
@@ -703,7 +706,7 @@ def main():
                      vref=vref,
                      vsummary=vsummary,
                      ppsummary=None,
-                     sample_name=sample_name,
+                     file_name=file_name,
                      times=times)
 
     plt.show()
