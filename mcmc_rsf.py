@@ -312,8 +312,9 @@ def get_obs_data(samplename):
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
     plt.title('Observed data section (def get_obs_data)')
+    plt.ylim([np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
     plt.legend()
-    # plt.show()
+    plt.show()
 
     return mutrue, times, vlps, x, sample_name
 
