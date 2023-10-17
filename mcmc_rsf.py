@@ -290,11 +290,9 @@ def get_obs_data(samplename):
     # sections data
     sectioned_data, start_idx, end_idx = section_data(f_ds)
 
-    # print(f'sectioned data shape = {sectioned_data.shape}')
-
     # need to check that time vals are monotonically increasing after being processed
     t = sectioned_data[:, 1]
-    print('is time series monotonic after processing??')
+    print('checking that time series is monotonic after processing')
     print(isMonotonic(t))
 
     # remove non-monotonically increasing time indices if necessary
@@ -305,6 +303,17 @@ def get_obs_data(samplename):
     times = cleaned_data[:, 1]
     vlps = cleaned_data[:, 2]
     x = cleaned_data[:, 3]
+
+    df_raw = df[(df['vdcdt_um'] > 6.092 / um_to_mm) & (df['vdcdt_um'] < 7.975 / um_to_mm)]
+
+    plt.figure(1)
+    plt.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.2, label='raw data')
+    plt.plot(x * um_to_mm, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
+    plt.xlabel('displacement (mm)')
+    plt.ylabel('mu')
+    plt.title('Observed data section (def get_obs_data)')
+    plt.legend()
+    # plt.show()
 
     return mutrue, times, vlps, x, sample_name
 
@@ -389,15 +398,15 @@ def downsample_dataset(mu, t, vlps, x):
     x_ds = f_ds[:, 3]
 
     # plot series as sanity check
-    plt.plot(x, mu, '.-', label='original data')
-    plt.plot(x, mu_f, '.-', label='filtered data')
-    plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
-    plt.xlabel('disp (mm)')
-    plt.ylabel('mu')
-    plt.title('def downsample_dataset')
-    plt.legend()
-    plt.show()
-    sys.exit()
+    # plt.plot(x, mu, '.-', label='original data')
+    # plt.plot(x, mu_f, '.-', label='filtered data')
+    # plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
+    # plt.xlabel('disp (mm)')
+    # plt.ylabel('mu')
+    # plt.title('def downsample_dataset')
+    # plt.legend()
+    # plt.show()
+    # sys.exit()
 
     return f_ds, mu_f
 
@@ -405,17 +414,13 @@ def downsample_dataset(mu, t, vlps, x):
 # section_data(...) slices friction data into model-able sections
 def section_data(data):
     df0 = pd.DataFrame(data)
-    # print(f'dataframe col names = {list(df0)}')
+    # changing column names to match something
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
-    # print(f'new dataframe col names = {list(df)}')
 
     start_idx = np.argmax(df['x'] > 6.092 / um_to_mm)
     end_idx = np.argmax(df['x'] > 7.975 / um_to_mm)
 
     df_section = df.iloc[start_idx:end_idx]
-
-    # print(f'original shape = {df.shape}')
-    # print(f'section shape = {df_section.shape}')
 
     return df_section.to_numpy(), start_idx, end_idx
 
@@ -487,7 +492,7 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
 # MCMC MODEL SETUP FUNCTIONS
 # constants used in rsf model
 def get_constants(vlps):
-    k = 0.0015
+    k = 0.00144
     vref = vlps[0]
 
     return k, vref
@@ -680,13 +685,6 @@ def main():
 
         # save the trace
         save_trace(idata)
-
-        # sample the posterior for validation (can only use if using gradient-based solver)
-        # sample_posterior_predcheck(idata)
-
-        # print and save new idata stats that includes posterior predictive check
-        # summary_pp = save_stats(idata, dirpath)
-        # print(f'idata summary: {summary_pp}')
 
         # post-processing takes results and makes plots, save figs saves figures
         post_processing(idata, times, vlps, mutrue, x)
