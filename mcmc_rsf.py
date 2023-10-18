@@ -15,7 +15,6 @@ from datetime import datetime
 import time
 import seaborn as sns
 
-
 um_to_mm = 0.001
 
 pt.config.optimizer = 'fast_compile'
@@ -37,6 +36,7 @@ def get_time(name):
     return codetime
 
 
+# this only runs when starting new sample
 def preplot(df, colnames):
     t = df['time_s']
     x = df['vdcdt_um']
@@ -44,15 +44,6 @@ def preplot(df, colnames):
     plt.plot(x * um_to_mm, df['mu'])
     plt.title('mu')
     plt.xlabel('displacement (mm)')
-    # for i, col in enumerate(colnames):
-    #     plt.figure(i)
-    #     plt.plot(t, df[f'{col}'])
-    #     plt.title(f'{col}')
-    #     plt.xlabel('time (s)')
-    #
-    # lpdisp = df['vdcdt_um']*um_to_mm
-    # plt.figure(i+1)
-    # plt.plot(lpdisp, df['mu'])
     plt.show()
 
     sys.exit()
@@ -64,10 +55,8 @@ def check_file_exist(dirpath, filename):
         print(f'file does not exist, returning file name --> {filename}')
         return filename
     elif isExisting is True:
-        print(f'file does exist, rename new output for now, eventually delete previous --> {filename}')
-        oldname = filename
-        newname = f'{oldname}_a'
-        return newname
+        print(f'file does exist, overwriting --> {filename}')
+        return filename
 
 
 def get_storage_folder(dirname, samplename):
@@ -75,7 +64,6 @@ def get_storage_folder(dirname, samplename):
     print('checking if storage directory exists')
     homefolder = os.path.expanduser('~')
     outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', f'{samplename}')
-    # name = sim_name
 
     dirpath = os.path.join(homefolder, outfolder, dirname)
     isExisting = os.path.exists(dirpath)
@@ -96,23 +84,15 @@ def get_sim_name(draws, chains):
 
 
 # POST MODEL-RUN OPERATIONS AND PLOTTING FUNCTIONS
-def sample_posterior_predcheck(idata):
-    pm.sample_posterior_predictive(idata, extend_inferencedata=True)
-
-
 def save_trace(idata):
-    # save trace for easier debugging if needed
+    # saves trace for post-processing
     out_name = f'{sim_name}_idata'
     name = check_file_exist(dirpath, out_name)
     idata.to_netcdf(os.path.join(dirpath, f'{name}'))
 
 
 def plot_trace(idata):
-    ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
-
-
-def plot_posterior_predictive(idata):
-    az.plot_ppc(idata)
+    az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
 
 
 def save_stats(idata, root):
@@ -128,50 +108,8 @@ def post_processing(idata, times, vlps, mutrue, x):
     df_data = pd.DataFrame(np.column_stack((times, x, vlps, mutrue)), columns=['times', 'x', 'vlps', 'mutrue'])
     df_data.to_csv(os.path.join(dirpath, 'section_data.csv'))
 
-    # to extract simulated mu values for realizations
-    # stacked_pp = az.extract(idata.posterior_predictive)
-    # print(f'stacked = {stacked_pp}')
-    # musims = stacked_pp.simulator.values
-
-    # df_musims = pd.DataFrame(musims)
-    # df_musims['t'] = times
-    #
-    # # now save them
-    # df_musims.to_csv(os.path.join(dirpath, 'musims.csv'))
-    # print(f'simulated mu values = {musims}')
-    # print(f'shape of posterior predictive dataset = {musims.shape}')
-
-    # plot trace and then posterior predictive plot
+    # plot pymc posterior trace
     plot_trace(idata)
-    # plot_posterior_predictive(idata)
-
-    # modelvals = az.extract(idata.posterior)
-    # # print('modelvals = ', modelvals)
-    #
-    # a = modelvals.a.values
-    # b = modelvals.b.values
-    # Dc = modelvals.Dc.values
-    # mu0 = modelvals.mu0.values
-
-    # mu_sims = []
-    # for i in np.arange(0, len(a), 1):
-    #     mu_sim, bs = generate_rsf_data(times, vlps, a[i], b[i], Dc[i], mu0[i])
-    #     mu_sims.append(mu_sim)
-    #
-    # musims = np.array(mu_sims)
-    # musims = np.transpose(musims)
-    #
-    #
-    # # now plot simulated mus with true mu
-    # t = times
-    # plt.figure(500)
-    # plt.plot(t, mutrue, 'k.', label='observed', alpha=0.7)
-    # plt.plot(t, musims, 'b-', alpha=0.3)
-    # plt.xlabel('time (s)')
-    # plt.ylabel('mu')
-    # plt.title('Observed and simulated friction values')
-    # plt.legend()
-    # plt.show()
 
     print('post processing complete')
 
@@ -264,11 +202,9 @@ def get_obs_data(samplename):
     fullpath = os.path.join(homefolder, path, name)
     print(f'getting data from: {fullpath}')
     f = h5py.File(os.path.join(homefolder, path, name), 'r')
-    # print(list(f.keys()))
 
     # read in data from hdf file, print column names
     df, names = read_hdf(fullpath)
-    # print(names)
 
     # comment this in when deciding which displacement sections to use
     # preplot(df, names)
@@ -304,8 +240,8 @@ def get_obs_data(samplename):
     vlps = cleaned_data[:, 2]
     x = cleaned_data[:, 3]
 
-    df_raw = df[(df['vdcdt_um'] > 6.092 / um_to_mm) & (df['vdcdt_um'] < 7.975 / um_to_mm)]
-
+    # plot raw data section with filtered/downsampled for reference
+    df_raw = df[(df['vdcdt_um'] > 18 / um_to_mm) & (df['vdcdt_um'] < 20 / um_to_mm)]
     plt.figure(1)
     plt.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.2, label='raw data')
     plt.plot(x * um_to_mm, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
@@ -325,6 +261,7 @@ def isMonotonic(A):
 
 
 def remove_non_monotonic(times, data, axis=0):
+    # this may have only been an issue before removing mu values < 0 from the dataset, keeping it in just in case
     if not np.all(np.diff(times) >= 0):
         print('time series can become non-monotonic after downsampling which is an issue for the sampler')
         print('now removing non-monotonic t and mu values from dataset')
@@ -353,7 +290,6 @@ def read_hdf(fullpath):
     with h5py.File(filename, 'r') as f:
         # Print all root level object names (aka keys)
         # these can be group or dataset names
-        # print("Keys: %s" % f.keys())
         # get first object name/key; may or may NOT be a group
         a_group_key = list(f.keys())[0]
 
@@ -366,17 +302,11 @@ def read_hdf(fullpath):
             if isinstance(h5obj, h5py.Group):
                 print(f'{name} is a Group')
             elif isinstance(h5obj, h5py.Dataset):
-                # print(f'{name} is a Dataset')
                 # return a np.array using dataset object:
                 arr1 = h5obj[:]
-                # print(type(arr1))
                 # return a np.array using dataset name:
                 arr2 = f[name][:]
-                # compare arr1 to arr2 (should always return True):
-                # print(np.array_equal(arr1, arr2))
                 df[f'{name}'] = arr1
-
-    # print('df = ', df)
 
     return df, names
 
@@ -384,16 +314,13 @@ def read_hdf(fullpath):
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter
     mu_f = savgol_filter(mu, 50, 2, mode='mirror')
-    # print(f'mu_f.shape = {mu_f.shape}')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
-    # print(f't_muf.shape = {f_data.shape}')
 
     # downsamples to every qth sample after applying low-pass filter along columns
     q = 11
     f_ds = sp.signal.decimate(f_data, q, ftype='fir', axis=0)
-    # print(f'number samples in downsampled series = {f_ds.shape}')
     t_ds = f_ds[:, 1]
     mu_ds = f_ds[:, 0]
     x_ds = f_ds[:, 3]
@@ -415,11 +342,11 @@ def downsample_dataset(mu, t, vlps, x):
 # section_data(...) slices friction data into model-able sections
 def section_data(data):
     df0 = pd.DataFrame(data)
-    # changing column names to match something
+    # changing column names
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
 
-    start_idx = np.argmax(df['x'] > 6.092 / um_to_mm)
-    end_idx = np.argmax(df['x'] > 7.975 / um_to_mm)
+    start_idx = np.argmax(df['x'] > 18 / um_to_mm)
+    end_idx = np.argmax(df['x'] > 20 / um_to_mm)
 
     df_section = df.iloc[start_idx:end_idx]
 
@@ -470,24 +397,9 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
     print(model.results)
 
     # plus noise
-    # mutrue = mu + (1 / 100) * np.random.normal(np.mean(mu), 0.1, (len(mu),))
-    #
-    # # change model results to noisy result, so I can still use the plots easily
-    # model.results.friction = mutrue
-    #
-    # thetatrue = theta
+    mutrue = mu + (1 / 100) * np.random.normal(np.mean(mu), 0.1, (len(mu),))
 
-    # plt.figure(100)
-    # plot.dispPlot(model)
-    #
-    # plt.figure(101)
-    # plot.timePlot(model)
-    # 
-    # plt.figure(102)
-    # plt.hist(mutrue_mincon)
-    # plt.show()
-
-    # return mutrue, size
+    return mutrue, size
 
 
 # MCMC MODEL SETUP FUNCTIONS
@@ -531,12 +443,12 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
     # sys.exit()
 
 
-# forward RSF model - from Leeman (2016) and uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
+# forward RSF model - from Leeman (2016), uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
 # returns simulated mu value for use in pymc
 def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     # unpack parameters
     a, b, Dc, mu0 = theta
-    l0 = get_vmax_l0(v)
+    l0, vmax = get_vmax_l0(v)
 
     # initialize rsf model
     model = rsf.Model()
@@ -551,12 +463,11 @@ def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     model.v = v[0]  # Initial slider velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
-    # model.tc = 1 / (k * vref)   # nondimensionalizing parameter to multiply things by.
-
     state1 = staterelations.DieterichState()
     state1.b = b  # Empirical coefficient for the evolution effect
     state1.Dc = Dc  # Critical slip distance
-    # all other parameters are already nondimensionalized, but the state parameter is nd'd in the staterelations.py
+    # all other parameters are already nondimensionalized, but the state parameter is nd'd in staterelations.py,
+    # so we need to pass characteristic velocity (vmax) and length (l0) into the fwd model
     state1.vmax = vmax
     state1.l0 = l0
 
@@ -577,29 +488,31 @@ def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
 
 
 def get_vmax_l0(vlps):
+    # define characteristic length and velocity
+    # characteristic length = max grain size in gouge = 125 micrometers for most
+    # characteristic velocity = max loading velocity
     l0 = 125
+    vmax = np.max(vlps)
 
-    return l0
+    return l0, vmax
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
-    l0 = get_vmax_l0(vlps)  # characteristic length = length of sample = 100 mm (estimated) = 100000 micrometers
+    # define characteristic length and velocity for nondimensionalizing
+    l0, vmax = get_vmax_l0(vlps)
 
+    # then remove dimensions
     k0 = k * l0
     vlps0 = vlps / vmax
     vref0 = vref / vmax
-    # state0 = state * vmax / l0
-    # Dc0 = Dc / l0
     t0 = times - times[0]
 
     # test = np.argwhere(vlps < 0)
 
-    # return times_nd
     return k0, vlps0, vref0, t0
 
 
-
-# LogLikelihood
+# Custom LogLikelihood function for use in pymc - runs forward model with sample draws
 def log_likelihood(theta, times, vlps, k, vref, data, vmax):
     if type(theta) == list:
         theta = theta[0]
@@ -642,7 +555,7 @@ def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
-    samplename = 'p5791'
+    samplename = 'p5894'
 
     # observed data
     mutrue, times, vlps, x, file_name = get_obs_data(samplename)
@@ -667,8 +580,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # mcmc sampler parameterss
-        tune = 10000
-        draws = 50000
+        tune = 50000
+        draws = 5000000
         chains = 4
         cores = 4
 
@@ -687,7 +600,7 @@ def main():
         # save the trace
         save_trace(idata)
 
-        # post-processing takes results and makes plots, save figs saves figures
+        # post-processing plots bare minimum results, save figs saves figures
         post_processing(idata, times, vlps, mutrue, x)
         save_figs(dirpath)
 
