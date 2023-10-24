@@ -194,7 +194,6 @@ def calc_derivative(y, x, window_len=100):
 
 # imports observed data, sends it through series of processing steps
 def get_obs_data(samplename):
-    # global sample_name, mutrue, vlps, times, x
     homefolder = os.path.expanduser('~')
     path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', f'{samplename}')
     name = f'{samplename}_proc.hdf5'
@@ -345,8 +344,8 @@ def section_data(data):
     # changing column names
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
 
-    start_idx = np.argmax(df['x'] > 18 / um_to_mm)
-    end_idx = np.argmax(df['x'] > 20 / um_to_mm)
+    start_idx = np.argmax(df['x'] > 5.5 / um_to_mm)
+    end_idx = np.argmax(df['x'] > 6.78 / um_to_mm)
 
     df_section = df.iloc[start_idx:end_idx]
 
@@ -405,7 +404,7 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
 # MCMC MODEL SETUP FUNCTIONS
 # constants used in rsf model
 def get_constants(vlps):
-    k = 0.00144
+    k = 0.00194
     vref = vlps[0]
 
     return k, vref
@@ -555,7 +554,7 @@ def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
-    samplename = 'p5894'
+    samplename = 'p5760'
 
     # observed data
     mutrue, times, vlps, x, file_name = get_obs_data(samplename)
@@ -580,8 +579,8 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # mcmc sampler parameterss
-        tune = 50000
-        draws = 5000000
+        tune = 10000
+        draws = 500000
         chains = 4
         cores = 4
 
