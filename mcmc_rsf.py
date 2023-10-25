@@ -240,7 +240,7 @@ def get_obs_data(samplename):
     x = cleaned_data[:, 3]
 
     # plot raw data section with filtered/downsampled for reference
-    df_raw = df[(df['vdcdt_um'] > 18 / um_to_mm) & (df['vdcdt_um'] < 20 / um_to_mm)]
+    df_raw = df[(df['vdcdt_um'] > 5.5 / um_to_mm) & (df['vdcdt_um'] < 6.78 / um_to_mm)]
     plt.figure(1)
     plt.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.2, label='raw data')
     plt.plot(x * um_to_mm, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
@@ -312,19 +312,23 @@ def read_hdf(fullpath):
 
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter
-    mu_f = savgol_filter(mu, 50, 2, mode='mirror')
+    mu_f = savgol_filter(mu, 3, 2, mode='mirror')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
 
     # downsamples to every qth sample after applying low-pass filter along columns
-    q = 11
+    q = 2
     f_ds = sp.signal.decimate(f_data, q, ftype='fir', axis=0)
+
+    # FOR P5760 ONLY - no downsampling
+    f_ds = f_data
+
     t_ds = f_ds[:, 1]
     mu_ds = f_ds[:, 0]
     x_ds = f_ds[:, 3]
 
-    # plot series as sanity check
+    # # plot series as sanity check
     # plt.plot(x, mu, '.-', label='original data')
     # plt.plot(x, mu_f, '.-', label='filtered data')
     # plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
