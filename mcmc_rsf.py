@@ -294,7 +294,7 @@ def read_hdf(fullpath):
 
         # loop on names:
         for name in f.keys():
-            # print(name)
+            print(name)
             names.append(name)
         # loop on names and H5 objects:
         for name, h5obj in f.items():
@@ -508,9 +508,9 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     k0 = k * l0
     vlps0 = vlps / vmax
     vref0 = vref / vmax
-    t0 = times - times[0]
+    t0 = times * vmax / l0
 
-    # test = np.argwhere(vlps < 0)
+    t0 = t0 - t0[0]
 
     return k0, vlps0, vref0, t0
 
@@ -583,7 +583,7 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # mcmc sampler parameterss
-        tune = 10000
+        tune = 20000
         draws = 500000
         chains = 4
         cores = 4
