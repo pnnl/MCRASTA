@@ -166,7 +166,7 @@ def plot_obs_data_processing(x, mu1, mu2, mu3, xog):
 
 # DATA PROCESSING
 # from Jeff - calculate derivative dx/dt (=dy/dx)
-def calc_derivative(y, x, window_len=100):
+def calc_derivative(y, x, window_len=10):
     # returns dydx
     if window_len is not None:
         # smooth
@@ -218,6 +218,11 @@ def get_obs_data(samplename):
 
     # calculate loading velocities = dx/dt
     vlps = calc_derivative(x, t)
+
+    plt.figure(10)
+    plt.plot(x, vlps)
+    plt.show()
+    sys.exit()
 
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
@@ -312,7 +317,7 @@ def read_hdf(fullpath):
 
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter
-    mu_f = savgol_filter(mu, 3, 2, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=3, polyorder=2, mode='mirror')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
@@ -442,8 +447,8 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
         plt.xlim(-0.1, 100)
         plt.title('prior distributions')
         plt.legend()
-    # plt.show()
-    # sys.exit()
+    plt.show()
+    sys.exit()
 
 
 # forward RSF model - from Leeman (2016), uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
@@ -451,7 +456,7 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
 def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     # unpack parameters
     a, b, Dc, mu0 = theta
-    l0, vmax = get_vmax_l0(v)
+    l0, vwrong = get_vmax_l0(v)
 
     # initialize rsf model
     model = rsf.Model()
@@ -476,7 +481,7 @@ def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t   # nondimensionalized time now (nondim'd in separate function)
+    model.time = t   # nondimensionalized time
     lp_velocity = v
 
     # Set the model load point velocity, must be same shape as model.model_time
@@ -508,8 +513,8 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     k0 = k * l0
     vlps0 = vlps / vmax
     vref0 = vref / vmax
-    t0 = times * vmax / l0
 
+    t0 = times * vmax / l0
     t0 = t0 - t0[0]
 
     return k0, vlps0, vref0, t0
