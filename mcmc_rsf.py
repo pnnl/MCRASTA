@@ -442,8 +442,8 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
         plt.xlim(-0.1, 100)
         plt.title('prior distributions')
         plt.legend()
-    plt.show()
-    sys.exit()
+    # plt.show()
+    # sys.exit()
 
 
 # forward RSF model - from Leeman (2016), uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
