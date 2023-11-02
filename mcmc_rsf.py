@@ -219,11 +219,6 @@ def get_obs_data(samplename):
     # calculate loading velocities = dx/dt
     vlps = calc_derivative(x, t)
 
-    plt.figure(10)
-    plt.plot(x, vlps)
-    plt.show()
-    sys.exit()
-
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
 
