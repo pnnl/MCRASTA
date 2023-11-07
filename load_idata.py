@@ -6,22 +6,25 @@ import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
 from rsfmodel import staterelations, rsf, plot
-import mcmc_rsf
-import pytensor
 import sys
-import h5py
-import scipy as sp
-from scipy.signal import savgol_filter
 from scipy.stats import lognorm, mode, skew, kurtosis
+from scipy import signal
 import seaborn as sns
 
+az.style.use("arviz-darkgrid")
 
 home = os.path.expanduser('~')
 nr = 500000
 nch = 4
+samplename = 'p5760'
 dirname = f'out_{nr}d{nch}ch'
-dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', 'mcmc_out', dirname)
+dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', samplename, dirname)
 idataname = f'{dirname}_idata'
+
+# nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it more interpretable)
+nrstep = 500
+# nrplot = number of total realizations we'll look at
+nrplot = 1000
 
 um_to_mm = 0.001
 
@@ -29,7 +32,7 @@ um_to_mm = 0.001
 def get_storage_folder(dirname):
     print('checking if storage directory exists')
     homefolder = os.path.expanduser('~')
-    outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'postprocess_out')
+    outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'postprocess_out', samplename)
     # name = sim_name
 
     dirpath = os.path.join(homefolder, outfolder, dirname)
@@ -61,7 +64,7 @@ def plot_trace(idata, chain):
     ax[1][0].set_xlim(0, 0.12)
     ax[2][0].set_xlim(0, 100)
 
-    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode')
+    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode', round_to=3)
     print(ax2)
     ax2[0].set_xlim(0, 0.08)
     ax2[1].set_xlim(0, 0.12)
@@ -77,19 +80,19 @@ def plot_posterior_distributions(modelvals, chain, modes):
     for traceval, name, c, m in zip(tracevals, names, colors, modes):
         counts, bins = np.histogram(traceval, bins='doane', density=True)
         plt.figure(i)
-        plt.hist(bins[:-1], bins, weights=counts, alpha=0.5, color=c, label=f'chain {chain}, mode={m}')
+        plt.hist(bins[:-1], bins, density=True, stacked=True, weights=counts, alpha=0.5, color=c, label=f'chain {chain}, mode={round(m, 4)}')
         plt.title(f'probability density, {name}')
-        plt.legend()
+        plt.legend(fontsize='small')
         i += 1
 
 
 def plot_pairs(idata, chain=None):
     # plot_kwargs = {'linewidths': 0.2}
     marginal_kwargs = {'color': 'teal'}
-    kde_kwargs = {'hdi_probs': [0.50, 0.70, 0.90, 0.95]}
+    kde_kwargs = {'hdi_probs': [0.89, 0.94]}
     ax = az.plot_pair(
         idata,
-        var_names=['a', 'b', 'Dc', 'mu0'],
+        var_names=['a_min_b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
         scatter_kwargs={'color': 'teal', 'alpha': 0.6},
@@ -99,14 +102,14 @@ def plot_pairs(idata, chain=None):
 
     #1plt.gca().set_xlim(0, xmax)
     # ax[0][0].set_xlim(0, 100)  # set the x limits for the first row first col e.g upper left
-    print('pairs ax = ', ax)
-
-    # sys.exit()
-    ax[0][0].set_xlim(0, 0.08)
-    ax[1][0].set_xlim(0, 0.12)
-    ax[2][0].set_ylim(0, 100)
-    ax[1][1].set_xlim(0, 0.12)
-    ax[2][2].set_xlim(0, 100)
+    # print('pairs ax = ', ax)
+    #
+    # # sys.exit()
+    # ax[0][0].set_xlim(0, 0.08)
+    # ax[1][0].set_xlim(0, 0.12)
+    # ax[2][0].set_ylim(0, 100)
+    # ax[1][1].set_xlim(0, 0.12)
+    # ax[2][2].set_xlim(0, 100)
 
 
 def get_model_vals(idata):
@@ -116,25 +119,26 @@ def get_model_vals(idata):
 
 
 def get_trace_variables_allchains(modelvals):
-    a = modelvals.a.values[:, 0::1000]
-    b = modelvals.b.values[:, 0::1000]
-    Dc = modelvals.Dc.values[:, 0::1000]
-    mu0 = modelvals.mu0.values[:, 0::1000]
+    a_min_b = modelvals.a_min_b.values[:, 0::nrstep]
+    a = modelvals.a.values[:, 0::nrstep]
+    b = modelvals.b.values[:, 0::nrstep]
+    Dc = modelvals.Dc.values[:, 0::nrstep]
+    mu0 = modelvals.mu0.values[:, 0::nrstep]
 
-    return a, b, Dc, mu0
+    return a_min_b, a, b, Dc, mu0
 
 
 def get_trace_variables(modelvals, chain):
-    a = modelvals.a.values[chain, :]
-    b = modelvals.b.values[chain, :]
-    Dc = modelvals.Dc.values[chain, :]
-    mu0 = modelvals.mu0.values[chain, :]
+    a = modelvals.a.values[chain, 0::nrstep]
+    b = modelvals.b.values[chain, 0::nrstep]
+    Dc = modelvals.Dc.values[chain, 0::nrstep]
+    mu0 = modelvals.mu0.values[chain, 0::nrstep]
 
     return a, b, Dc, mu0
 
 
 def get_constants(vlps):
-    k = 0.0015
+    k = 0.00194
     vref = vlps[0]
 
     return k, vref
@@ -204,8 +208,8 @@ def generate_rsf_data(nr, modelvars):
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
-    state1.vmax = 1
-    state1.l0 = 1
+    state1.vmax = vmax
+    state1.l0 = l0
 
     model.state_relations = [state1]  # Which state relation we want to use
 
@@ -213,10 +217,6 @@ def generate_rsf_data(nr, modelvars):
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = vlps
-
-    # number of realizations we want to look at
-    nrplot = 500
-    nrstep = 1000
 
     # pre-allocate array
     mu_sims = np.ones((nobs, nrplot))
@@ -227,7 +227,7 @@ def generate_rsf_data(nr, modelvars):
     print('this takes a long time for large number of realizations')
     print(f'only plotting every {nrstep}th realization')
     j = 0
-    for i in range(0, nr, nrstep):
+    for i in np.arange(nrplot):
         print(f'solving for realization {i}')
         # Set model initial conditions
         model.mu0 = mu0[i]  # Friction initial (at the reference velocity)
@@ -288,9 +288,9 @@ def load_section_data(dirpath):
 
 
 def original_trace_all_chains(modelvals, times, vref):
-    a, b, Dc, mu0 = get_trace_variables_allchains(modelvals)
+    a_min_b, a, b, Dc, mu0 = get_trace_variables_allchains(modelvals)
 
-    datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
+    datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
 
     plot_pairs(new_idata, chain=None)
@@ -299,8 +299,6 @@ def original_trace_all_chains(modelvals, times, vref):
 
 def plot_chain_trace(modelvals, chain):
     a, b, Dc, mu0 = get_trace_variables(modelvals, chain)
-    # Dc = redimensionalize_Dc_nd(Dc_nd, times, vref)
-    # datadict = {'a': a, 'b': b, 'Dc': Dc_nd, 'mu0': mu0}
     datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
 
@@ -322,8 +320,8 @@ def save_figs(out_folder):
 
 def plot_priors_posteriors(*posts):
     # define priors same as in mcmc_rsf.py - get this info from out file
-    mus = [-4, -4, 4, -1]
-    sigmas = [0.5, 0.5, 0.1, 0.2]
+    mus = [-5, -5, 3, -1]
+    sigmas = [1, 1, 1, 0.3]
 
     a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
@@ -331,15 +329,17 @@ def plot_priors_posteriors(*posts):
     mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
 
     # take same number of draws as in mcmc_rsf.py
-    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=100000)
+    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=500000)
 
-    for i, (prior, post, label) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc', 'mu0'))):
+    xmaxs = [0.05, 0.05, 60, 1.25]
+
+    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc', 'mu0'), xmaxs)):
         plt.figure(10+i)
         # sns.histplot(prior, kde=True)
-        sns.kdeplot(prior, color='b', label=f'{label} prior', common_norm=False, bw_method=0.1)
-        sns.kdeplot(post, color='g', label=f'{label} post', common_norm=False)
-        # plt.gca().set_xlim(0, xmax)
-        plt.legend()
+        line1 = sns.kdeplot(prior, color='b', common_norm=False, bw_method=0.1)
+        line2 = sns.kdeplot(post, color='g', common_norm=False)
+        plt.gca().set_xlim(0, xmax)
+        # plt.gca().set_legend([line1, line2], ['priors', 'posteriors'])
 
 
 def get_posteriors(modelvals, chain):
@@ -351,10 +351,10 @@ def get_posteriors(modelvals, chain):
 def get_modes(modelvals, chain):
     a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
 
-    amode = mode(a, axis=None, keepdims=False)
-    bmode = mode(b, axis=None, keepdims=False)
-    Dcndmode = mode(Dc_nd, axis=None, keepdims=False)
-    mu0mode = mode(mu0, axis=None, keepdims=False)
+    amode = az.plots.plot_utils.calculate_point_estimate('mode', a)
+    bmode = az.plots.plot_utils.calculate_point_estimate('mode', b,)
+    Dcndmode = az.plots.plot_utils.calculate_point_estimate('mode', Dc_nd)
+    mu0mode = az.plots.plot_utils.calculate_point_estimate('mode', mu0)
 
     return amode, bmode, Dcndmode, mu0mode
 
@@ -365,7 +365,8 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     k0 = k * l0
     vlps0 = vlps / vmax
     vref0 = vref / vmax
-    t0 = times - times[0]
+    t0 = times * vmax / l0
+    t0 = t0 - t0[0]
 
     return k0, vlps0, vref0, t0
 
@@ -391,16 +392,153 @@ def calc_expected_vals(modelvar):
     return muhat, sigmahat
 
 
+def autocorr(x, step):
+    corr = signal.correlate(x, x, mode='full')
+    corr = corr[np.argmax(corr):]
+    corr /= np.max(corr)
+    laglen = len(corr)
+    lags = np.arange(laglen)
+
+    return lags, corr
+
+
+def plot_model_autocorrelations(warmupvals, modelvals):
+    aw, bw, Dcw, mu0w = warmupvals
+
+    steptry = 150
+
+    a = modelvals.a.values
+    b = modelvals.b.values
+    Dc = modelvals.Dc.values
+    mu0 = modelvals.mu0.values
+
+    afull = np.concatenate((aw, a), axis=1)
+    bfull = np.concatenate((bw, b), axis=1)
+    Dcfull = np.concatenate((Dcw, Dc), axis=1)
+    mu0full = np.concatenate((mu0w, mu0), axis=1)
+
+    parameters = afull[:, 0::steptry], bfull[:, 0::steptry], Dcfull[:, 0::steptry], mu0full[:, 0::steptry]
+    names = ['a', 'b', 'Dc', 'mu0']
+
+    i = 500
+    for j, (p, name) in enumerate(zip(parameters, names)):
+        lags, corr = autocorr(p[j, :], steptry)
+        plt.figure(i)
+        plt.plot(lags, corr, '.')
+        # plt.ylim(-0.5, 1)
+        plt.xlabel('lag')
+        plt.title(f'autocorrelated posterior draws: {name}')
+        i += 1
+    plt.show()
+    sys.exit()
+
+
+def get_warmup_vals(idata):
+    warmupvals = az.extract(idata.warmup_posterior, combined=False)
+
+    aw = warmupvals.a.values
+    bw = warmupvals.b.values
+    Dcw = warmupvals.Dc.values
+    mu0w = warmupvals.mu0.values
+
+    return aw, bw, Dcw, mu0w
+
+
+def plot_a_minus_b(idata, vlps, vref, nrstep):
+    modelvals = az.extract(idata.posterior, combined=True)
+    a = modelvals.a.values
+    b = modelvals.b.values
+    Dc = modelvals.Dc.values
+    mu0 = modelvals.mu0.values
+
+    vratio = vlps/vref
+
+    x = np.log(vratio)
+
+    a_min_b = a-b
+    datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
+    ab_idata = az.convert_to_inference_data(datadict, group='posterior')
+    hdi_prob = 0.89
+
+    plt.figure(300)
+    ax = az.plot_posterior(ab_idata, var_names=['a_min_b'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
+    ax.set_xlim(-0.05, 0.05)
+    ax.set_title(f'(a-b) posterior distribution, {samplename}')
+    mab = az.plots.plot_utils.calculate_point_estimate('mode', a_min_b)
+
+    plt.figure(301)
+    ax1 = az.plot_posterior(idata, var_names=['a'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
+    ax1.set_title(f'a posterior distribution, {samplename}')
+    ax1.set_xlim(0, 0.04)
+
+    plt.figure(302)
+    ax2 = az.plot_posterior(idata, var_names=['b'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
+    ax2.set_title(f'b posterior distribution, {samplename}')
+    ax2.set_xlim(0, 0.05)
+
+    plt.figure(303)
+    ax3 = az.plot_posterior(idata, var_names=['Dc'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
+    ax3.set_title(f'Dc posterior distribution, {samplename}')
+    ax3.set_xlim(0, 60)
+
+    plt.figure(304)
+    ax4 = az.plot_posterior(idata, var_names=['mu0'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
+    ax4.set_title(f'mu0 posterior distribution, {samplename}')
+
+    marginal_kwargs = {'color': 'purple'}
+    kde_kwargs = {'hdi_probs': [0.89, 0.94]}
+    ax = az.plot_pair(
+        ab_idata,
+        var_names=['a_min_b', 'Dc', 'mu0'],
+        kind=["scatter", "kde"],
+        marginals=True,
+        scatter_kwargs={'color': 'purple', 'alpha': 0.6},
+        kde_kwargs=kde_kwargs,
+        marginal_kwargs=marginal_kwargs,
+    )
+
+    # plt.figure(300)
+    # plt.plot(a_min_b, '.', alpha=0.2)
+    #
+    # colors = ['k--', 'g--']
+    # for prob, color in zip(hdi_probs, colors):
+    #     hdi = az.hdi(ab_idata, hdi_prob=prob)
+    #     y0 = hdi.a_min_b.data[0]*np.ones_like(x)
+    #     y1 = hdi.a_min_b.data[1]*np.ones_like(x)
+    #     y2 = mab*np.ones_like(x)
+    #     plt.plot(x, y0, color, label=f'ci={prob*100}%, [{hdi.a_min_b.data[0]}, {hdi.a_min_b.data[1]}]')
+    #     plt.plot(x, y1, color)
+    #     plt.plot(x, y2, 'r', label=f'mode={mab}')
+    #     plt.title('(a-b) ')
+    #     plt.legend()
+    # plt.show()
+    # sys.exit()
+
+    # plt.show()
+
+    return ab_idata
+
+
+def plot_hdi_mu_sims(mu_sims):
+    az.plot_hdi(mu_sims, mu_sims)
+
+
 def main():
     out_folder = get_storage_folder(dirname)
     times, mutrue, vlps, x = load_section_data(dirpath)
     k, vref = get_constants(vlps)
 
     idata = load_inference_data(dirpath, idataname)
-    # az.plot_trace(idata, var_names=['a', 'b', 'Dc_nd', 'mu0'])
 
+    ab_idata = plot_a_minus_b(idata, vlps, vref, nrstep)
+
+    warmup_posterior_vals = get_warmup_vals(idata)
+    aw, bw, Dcw, mu0w = warmup_posterior_vals
     modelvals = get_model_vals(idata)
+    modelvals = get_model_vals(ab_idata)
 
+    # plot_model_autocorrelations(warmup_posterior_vals, modelvals)
+    # sys.exit()
     # plots trace pairs and samples
     original_trace_all_chains(modelvals, times, vref)
 
@@ -417,19 +555,14 @@ def main():
         modes = get_modes(modelvals, chain)
         amode, bmode, Dcmode, mu0mode = modes
 
-        print(f'MODES calcd by scipy, chain = {chain}')
-        print(f'a: {amode[0]}')
-        print(f'b: {bmode[0]}')
-        print(f'Dc: {Dcmode[0]}')
-        print(f'mu0: {mu0mode[0]}')
-
-        # plot the dimensionalized priors and posteriors for comparison when necessary
+        # plot the priors and posteriors for comparison when necessary
         plot_priors_posteriors(apost, bpost, Dcpost, mu0post)
         plot_posterior_distributions(modelvals, chain, modes)
 
         vars_all = apost, bpost, Dcpost, mu0post
         names = ['a', 'b', 'Dc', 'mu0']
 
+        # this is to double-check sampler is sampling appropriate range
         for modelvar, name in zip(vars_all, names):
             print(f'model parameter = {name}')
             mi = np.min(modelvar)
@@ -437,28 +570,26 @@ def main():
             print(f'min = {mi}')
             print(f'max = {mx}')
 
-        modes = [amode[0], bmode[0], Dcmode[0], mu0mode[0]]
-        mu_sim, logp = generate_one_realization(modes)
-        print(f'logp = {logp}')
-        plt.figure(80)
-        plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
-        plt.plot(times, mu_sim, label=f'chain={chain}; logp={logp}')
-        plt.legend()
-
+        # this generates the rsf data using parameter draws, calc logp vals, and plots the best fit with observed
+        # data for each chain
         plot_flag = 'yes'
         if plot_flag == 'yes':
-            mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(nr, vars_all)
+            # variables are nondimensionalized in this function for comparison to observed data
+            mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(nr, vars_all) # generates rsf sim
 
-            ahat, bhat, Dchat, mu0hat = map_vars
-            plt.figure(70)
-            # plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
-            plt.plot(times, map_mu_sim, label=f'chain={chain}; max logp = {maxlogp} \n a={ahat}; b={bhat}; '
-                                              f'Dc={Dchat}; mu0={mu0hat}')
+            # plot_hdi_mu_sims(mu_sims)
+
+            ahat, bhat, Dchat, mu0hat = map_vars    # parameter vals which resulted in highest logp val
+
+            plt.figure(70)  # plot best fits with observed data
+            plt.plot(times, map_mu_sim, label=f'chain {chain}; max logp = {round(maxlogp, 4)} \n a={round(ahat, 4)}; '
+                                              f'b={round(bhat, 4)}; Dc={round(Dchat, 2)}; mu0={round(mu0hat, 3)}')
             plt.xlabel('time (s)')
             plt.ylabel('mu')
             plt.title('best-fit solutions')
-            plt.legend(fontsize='small')
+            plt.legend(fontsize='x-small')
 
+            # plot logp vals as sanity check
             plt.figure(71)
             plt.plot(logps, '.')
             plt.ylabel('logp values')
@@ -466,8 +597,6 @@ def main():
             plt.title('logp vals')
         elif plot_flag == 'no':
             print('skipping plotting observed data with realizations')
-
-
 
     save_figs(out_folder)
 
