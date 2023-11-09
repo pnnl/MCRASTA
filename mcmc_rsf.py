@@ -14,6 +14,10 @@ from scipy.signal import savgol_filter
 from datetime import datetime
 import time
 import seaborn as sns
+import globals
+
+myglobals = globals.Globals()
+p = myglobals.get_output_storage_folder()
 
 um_to_mm = 0.001
 
@@ -37,20 +41,19 @@ def get_time(name):
 
 
 # this only runs when starting new sample
-def preplot(df, colnames):
+def preplot(df):
     t = df['time_s']
     x = df['vdcdt_um']
 
     plt.plot(x * um_to_mm, df['mu'])
     plt.title('mu')
     plt.xlabel('displacement (mm)')
-    plt.show()
 
     sys.exit()
 
 
-def check_file_exist(dirpath, filename):
-    isExisting = os.path.exists(os.path.join(dirpath, filename))
+def check_file_exist(p, filename):
+    isExisting = os.path.exists(os.path.join(p, filename))
     if isExisting is False:
         print(f'file does not exist, returning file name --> {filename}')
         return filename
@@ -59,46 +62,37 @@ def check_file_exist(dirpath, filename):
         return filename
 
 
-def get_storage_folder(dirname, samplename):
-    global dirpath
-    print('checking if storage directory exists')
-    homefolder = os.path.expanduser('~')
-    outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', f'{samplename}')
-
-    dirpath = os.path.join(homefolder, outfolder, dirname)
-    isExisting = os.path.exists(dirpath)
-    if isExisting is False:
-        print(f'directory does not exist, creating new directory --> {dirpath}')
-        os.makedirs(dirpath)
-        return dirpath
-    elif isExisting is True:
-        print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
-              f'overwritten --> {dirpath}')
-        return dirpath
-
-
-def get_sim_name(draws, chains):
-    global sim_name
-    sim_name = f'out_{draws}d{chains}ch'
-    return sim_name
+# def get_storage_folder():
+#     print('checking if storage directory exists')
+#     outpath = myglobals.make_path('mcmc_out', f'{myglobals.samplename}', myglobals.get_sim_name())
+#     isExisting = os.path.exists(outpath)
+#     if isExisting is False:
+#         print(f'directory does not exist, creating new directory --> {outpath}')
+#         os.makedirs(outpath)
+#         return outpath
+#     elif isExisting is True:
+#         print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
+#               f'overwritten --> {outpath}')
+#         return outpath
 
 
 # POST MODEL-RUN OPERATIONS AND PLOTTING FUNCTIONS
 def save_trace(idata):
     # saves trace for post-processing
-    out_name = f'{sim_name}_idata'
-    name = check_file_exist(dirpath, out_name)
-    idata.to_netcdf(os.path.join(dirpath, f'{name}'))
+    out_name = f'{myglobals.sim_name}_idata'
+    p = myglobals.get_output_storage_folder()
+    name = check_file_exist(p, out_name)
+    idata.to_netcdf(os.path.join(p, f'{name}'))
 
 
 def plot_trace(idata):
     az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'])
 
 
-def save_stats(idata, root):
+def save_stats(idata):
     summary = az.summary(idata, kind='stats')
     print(f'summary: {summary}')
-    summary.to_csv(os.path.join(root, 'idata.csv'))
+    summary.to_csv(os.path.join(p, 'idata.csv'))
 
     return summary
 
@@ -106,7 +100,8 @@ def save_stats(idata, root):
 def post_processing(idata, times, vlps, mutrue, x):
     # save dataset in case needed later
     df_data = pd.DataFrame(np.column_stack((times, x, vlps, mutrue)), columns=['times', 'x', 'vlps', 'mutrue'])
-    df_data.to_csv(os.path.join(dirpath, 'section_data.csv'))
+    p = myglobals.get_output_storage_folder()
+    df_data.to_csv(os.path.join(p, 'section_data.csv'))
 
     # plot pymc posterior trace
     plot_trace(idata)
@@ -125,22 +120,25 @@ def save_figs(out_folder):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300)
 
 
-def write_model_info(draws, chains, tune, prior_mus, prior_sigmas, time_elapsed, k, vref, vsummary, ppsummary, file_name, times):
-    fname = os.path.join(dirpath, 'out.txt')
+def write_model_info(time_elapsed, vref, vsummary, file_name, times):
+    fname = os.path.join(p, 'out.txt')
 
-    samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'tune', 'prior mus', 'prior sigmas', 'runtime (s)']
-    modelstrs = ['MODEL INFO', 'constants', 'k', 'vref']
-    summarystr = ['SAMPLE VARS SUMMARY', 'POST PRED SAMPLE SUMMARY']
+    samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'tune', 'prior mus and sigmas', 'runtime (s)']
+    modelstrs = ['MODEL INFO', 'constants', 'k', 'vref', 'section min displacement', 'section max displacement',
+                 'characteristic length', 'velocity calc window length', 'filter window length', 'downsampling rate']
+    summarystr = ['SAMPLE VARS SUMMARY']
     strlist = [samplerstrs, modelstrs, summarystr]
 
-    samplervals = ['', draws, chains, tune, prior_mus, prior_sigmas, time_elapsed]
-    modelvals = ['', '', k, vref]
-    summaryvals = [vsummary, 'none']
+    samplervals = ['', myglobals.ndr, myglobals.nch, myglobals.ntune, myglobals.get_prior_parameters(), time_elapsed]
+    modelvals = ['', '', myglobals.k, vref, myglobals.mindisp, myglobals.maxdisp, myglobals.lc, myglobals.vel_windowlen, myglobals.filter_windowlen, myglobals.q]
+    summaryvals = [vsummary]
     vallist = [samplervals, modelvals, summaryvals]
 
     with open(fname, mode='w') as f:
         f.write(f'SAMPLE: {file_name}\n')
+        f.write(f'section_ID: {myglobals.section_id}\n')
         f.write(f'from t = {times[0]} to t= {times[-1]} seconds\n')
+        f.write(f'from x = {myglobals.mindisp} to x = {myglobals.maxdisp} mm\n')
         for strings, vals in zip(strlist, vallist):
             # f.writelines(f'{strings}: {vals}')
             for string, val in zip(strings, vals):
@@ -166,7 +164,7 @@ def plot_obs_data_processing(x, mu1, mu2, mu3, xog):
 
 # DATA PROCESSING
 # from Jeff - calculate derivative dx/dt (=dy/dx)
-def calc_derivative(y, x, window_len=10):
+def calc_derivative(y, x, window_len=myglobals.vel_windowlen):
     # returns dydx
     if window_len is not None:
         # smooth
@@ -193,17 +191,14 @@ def calc_derivative(y, x, window_len=10):
 
 
 # imports observed data, sends it through series of processing steps
-def get_obs_data(samplename):
-    homefolder = os.path.expanduser('~')
-    path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', f'{samplename}')
-    name = f'{samplename}_proc.hdf5'
-    sample_name = name
-    fullpath = os.path.join(homefolder, path, name)
-    print(f'getting data from: {fullpath}')
-    f = h5py.File(os.path.join(homefolder, path, name), 'r')
+def get_obs_data():
+    data_path = myglobals.make_path('data', 'FORGE_DataShare', f'{myglobals.samplename}',
+                                    f'{myglobals.samplename}_proc.hdf5')
+    print(f'getting data from: {data_path}')
+    f = h5py.File(data_path, 'r')
 
     # read in data from hdf file, print column names
-    df, names = read_hdf(fullpath)
+    df, names = read_hdf(data_path)
 
     # comment this in when deciding which displacement sections to use
     # preplot(df, names)
@@ -222,7 +217,7 @@ def get_obs_data(samplename):
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
 
-    # sections data
+    # sections data - make this into a loop to run multiple sections one after another
     sectioned_data, start_idx, end_idx = section_data(f_ds)
 
     # need to check that time vals are monotonically increasing after being processed
@@ -240,7 +235,7 @@ def get_obs_data(samplename):
     x = cleaned_data[:, 3]
 
     # plot raw data section with filtered/downsampled for reference
-    df_raw = df[(df['vdcdt_um'] > 5.5 / um_to_mm) & (df['vdcdt_um'] < 6.78 / um_to_mm)]
+    df_raw = df[(df['vdcdt_um'] > myglobals.mindisp / um_to_mm) & (df['vdcdt_um'] < myglobals.maxdisp / um_to_mm)]
     plt.figure(1)
     plt.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.2, label='raw data')
     plt.plot(x * um_to_mm, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
@@ -251,7 +246,7 @@ def get_obs_data(samplename):
     plt.legend()
     plt.show()
 
-    return mutrue, times, vlps, x, sample_name
+    return mutrue, times, vlps, x
 
 
 def isMonotonic(A):
@@ -312,13 +307,13 @@ def read_hdf(fullpath):
 
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter
-    mu_f = savgol_filter(mu, window_length=3, polyorder=2, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=2, mode='mirror')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
 
     # downsamples to every qth sample after applying low-pass filter along columns
-    q = 2
+    q = myglobals.q
     f_ds = sp.signal.decimate(f_data, q, ftype='fir', axis=0)
 
     # FOR P5760 ONLY - no downsampling
@@ -348,8 +343,8 @@ def section_data(data):
     # changing column names
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
 
-    start_idx = np.argmax(df['x'] > 5.5 / um_to_mm)
-    end_idx = np.argmax(df['x'] > 6.78 / um_to_mm)
+    start_idx = np.argmax(df['x'] > myglobals.mindisp / um_to_mm)
+    end_idx = np.argmax(df['x'] > myglobals.maxdisp / um_to_mm)
 
     df_section = df.iloc[start_idx:end_idx]
 
@@ -375,7 +370,7 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
     # Set model initial conditions
     model.mu0 = mu0  # Friction initial (at the reference velocity)
     model.a = a  # Empirical coefficient for the direct effect
-    model.k = k  # Normalized System stiffness (friction/micron)
+    model.k = myglobals.k  # Normalized System stiffness (friction/micron)
     model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
@@ -408,42 +403,41 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
 # MCMC MODEL SETUP FUNCTIONS
 # constants used in rsf model
 def get_constants(vlps):
-    k = 0.00194
+    k = myglobals.k
     vref = vlps[0]
 
     return k, vref
 
 
 # MCMC priors
-def get_priors(vref, times):
-    mus = [-5, -5, 3, -1]
-    sigmas = [0.8, 0.8, 0.3, 0.3]
+def get_priors():
+    mus, sigmas = myglobals.get_prior_parameters()
 
     a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
     Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
-    check_priors(a, b, Dc, mu0, mus, sigmas)
+    # check_priors(a, b, Dc, mu0, mus, sigmas)
 
     return a, b, Dc, mu0, mus, sigmas
 
 
-def check_priors(a, b, Dc, mu0, mus, sigmas):
-    vpriors = pm.draw([a, b, Dc, mu0], draws=500000)
-    names = ['a', 'b', 'Dc', 'mu0']
-
-    for i, name in enumerate(names):
-        print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
-        print(f'{name} prior min,max = {np.min(vpriors[i])}, {np.max(vpriors[i])}')
-        print(f'{name} prior mode = {(sp.stats.mode(vpriors[i])).mode}')
-        plt.figure(1000)
-        sns.kdeplot(vpriors[i], label=f'{name}', common_norm=False, bw_method=0.1)
-        plt.xlim(-0.1, 100)
-        plt.title('prior distributions')
-        plt.legend()
-    # plt.show()
-    # sys.exit()
+# def check_priors(a, b, Dc, mu0, mus, sigmas):
+#     vpriors = pm.draw([a, b, Dc, mu0], draws=500000)
+#     names = ['a', 'b', 'Dc', 'mu0']
+#
+#     for i, name in enumerate(names):
+#         print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
+#         print(f'{name} prior min,max = {np.min(vpriors[i])}, {np.max(vpriors[i])}')
+#         print(f'{name} prior mode = {(sp.stats.mode(vpriors[i])).mode}')
+#         plt.figure(1000)
+#         sns.kdeplot(vpriors[i], label=f'{name}', common_norm=False, bw_method=0.1)
+#         plt.xlim(-0.1, 100)
+#         plt.title('prior distributions')
+#         plt.legend()
+#     # plt.show()
+#     # sys.exit()
 
 
 # forward RSF model - from Leeman (2016), uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
@@ -451,7 +445,6 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
 def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     # unpack parameters
     a, b, Dc, mu0 = theta
-    l0, vwrong = get_vmax_l0(v)
 
     # initialize rsf model
     model = rsf.Model()
@@ -462,7 +455,7 @@ def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     # Set initial conditions
     model.mu0 = mu0  # Friction initial (at the reference velocity)
     model.a = a  # Empirical coefficient for the direct effect
-    model.k = k  # Normalized System stiffness (friction/micron)
+    model.k = myglobals.k  # Normalized System stiffness (friction/micron)
     model.v = v[0]  # Initial slider velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
@@ -470,13 +463,13 @@ def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     state1.b = b  # Empirical coefficient for the evolution effect
     state1.Dc = Dc  # Critical slip distance
     # all other parameters are already nondimensionalized, but the state parameter is nd'd in staterelations.py,
-    # so we need to pass characteristic velocity (vmax) and length (l0) into the fwd model
+    # so we need to pass characteristic velocity (vmax) and length (lc) into the fwd model
     state1.vmax = vmax
-    state1.l0 = l0
+    state1.lc = myglobals.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t   # nondimensionalized time
+    model.time = t  # nondimensionalized time
     lp_velocity = v
 
     # Set the model load point velocity, must be same shape as model.model_time
@@ -490,26 +483,26 @@ def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     return mu_sim
 
 
-def get_vmax_l0(vlps):
+def get_vmax_lc(vlps):
     # define characteristic length and velocity
     # characteristic length = max grain size in gouge = 125 micrometers for most
     # characteristic velocity = max loading velocity
-    l0 = 125
+    lc = myglobals.lc
     vmax = np.max(vlps)
 
-    return l0, vmax
+    return lc, vmax
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     # define characteristic length and velocity for nondimensionalizing
-    l0, vmax = get_vmax_l0(vlps)
+    lc, vmax = get_vmax_lc(vlps)
 
     # then remove dimensions
-    k0 = k * l0
+    k0 = k * lc
     vlps0 = vlps / vmax
     vref0 = vref / vmax
 
-    t0 = times * vmax / l0
+    t0 = times * vmax / lc
     t0 = t0 - t0[0]
 
     return k0, vlps0, vref0, t0
@@ -544,7 +537,7 @@ class Loglike(tt.Op):
         self.data = data
         self.times = times
         self.vlps = vlps
-        self.k = k
+        self.k = myglobals.k
         self.vref = vref
         self.vmax = vmax
 
@@ -558,10 +551,9 @@ def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
-    samplename = 'p5760'
 
     # observed data
-    mutrue, times, vlps, x, file_name = get_obs_data(samplename)
+    mutrue, times, vlps, x = get_obs_data()
     vmax = np.max(vlps)
 
     k, vref = get_constants(vlps)
@@ -570,7 +562,7 @@ def main():
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters and non-dimensionalized constants
-        a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors(vref, times)
+        a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors()
         k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
@@ -582,30 +574,30 @@ def main():
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
 
-        # mcmc sampler parameterss
-        tune = 20000
-        draws = 500000
-        chains = 4
-        cores = 4
+        # mcmc sampler parameters
+        tune = myglobals.ntune
+        draws = myglobals.ndr
+        chains = myglobals.nch
+        cores = myglobals.ncores
 
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')
-        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(), discard_tuned_samples=False)
+        idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(),
+                          discard_tuned_samples=False)
         print(f'inference data = {idata}')
 
         # create storage directory
-        get_sim_name(draws, chains)
-        get_storage_folder(sim_name, samplename)
+        myglobals.get_output_storage_folder()
 
         # save model parameter stats
-        vsummary = save_stats(idata, dirpath)
+        vsummary = save_stats(idata)
 
         # save the trace
         save_trace(idata)
 
         # post-processing plots bare minimum results, save figs saves figures
         post_processing(idata, times, vlps, mutrue, x)
-        save_figs(dirpath)
+        save_figs(p)
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
@@ -621,7 +613,7 @@ def main():
                      vref=vref,
                      vsummary=vsummary,
                      ppsummary=None,
-                     file_name=file_name,
+                     file_name=f'{myglobals.samplename}_proc.hdf5',
                      times=times)
 
     plt.show()

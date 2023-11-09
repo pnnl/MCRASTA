@@ -1,0 +1,240 @@
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import sys
+import h5py
+import scipy as sp
+from scipy.signal import savgol_filter
+from datetime import datetime
+import time
+import seaborn as sns
+from globals import myglobals
+
+um_to_mm = 0.001
+
+
+def downsample_dataset(mu, t, vlps, x):
+    # low pass filter
+    mu_f = savgol_filter(mu, window_length=3, polyorder=2, mode='mirror')
+
+    # stack time and mu arrays to sample together
+    f_data = np.column_stack((mu_f, t, vlps, x))
+
+    # downsamples to every qth sample after applying low-pass filter along columns
+    q = 2
+    f_ds = sp.signal.decimate(f_data, q, ftype='fir', axis=0)
+
+    # FOR P5760 ONLY - no downsampling
+    f_ds = f_data
+
+    t_ds = f_ds[:, 1]
+    mu_ds = f_ds[:, 0]
+    x_ds = f_ds[:, 3]
+
+    # # plot series as sanity check
+    # plt.plot(x, mu, '.-', label='original data')
+    # plt.plot(x, mu_f, '.-', label='filtered data')
+    # plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
+    # plt.xlabel('disp (mm)')
+    # plt.ylabel('mu')
+    # plt.title('def downsample_dataset')
+    # plt.legend()
+    # plt.show()
+    # sys.exit()
+
+    return f_ds, mu_f
+
+
+# section_data(...) slices friction data into model-able sections
+def section_data(data, mindisp, maxdisp):
+    df0 = pd.DataFrame(data)
+    # changing column names
+    df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
+
+    start_idx = np.argmax(df['x'] > mindisp / um_to_mm)
+    end_idx = np.argmax(df['x'] > maxdisp / um_to_mm)
+
+    df_section = df.iloc[start_idx:end_idx]
+
+    return df_section.to_numpy(), start_idx, end_idx
+
+def preplot(df, colnames):
+    t = df['time_s']
+    x = df['vdcdt_um']
+
+    fig, ax = plt.subplots()
+    ax.plot(x, df['mu'])
+    ax2 = ax.twiny()
+    ax2.plot(t, df['mu'], 'r')
+    ax.set_title('mu')
+    ax.set_xlabel('displacement (mm)')
+    plt.show()
+
+    plt.plot(t, df['mu'])
+    plt.xlabel('time (s)')
+    plt.show()
+
+
+def read_hdf(fullpath):
+    filename = fullpath
+    print(f'reading file: {filename}')
+    names = []
+    df = pd.DataFrame()
+    with h5py.File(filename, 'r') as f:
+        # Print all root level object names (aka keys)
+        # these can be group or dataset names
+        # get first object name/key; may or may NOT be a group
+        a_group_key = list(f.keys())[0]
+
+        # loop on names:
+        for name in f.keys():
+            print(name)
+            names.append(name)
+        # loop on names and H5 objects:
+        for name, h5obj in f.items():
+            if isinstance(h5obj, h5py.Group):
+                print(f'{name} is a Group')
+            elif isinstance(h5obj, h5py.Dataset):
+                # return a np.array using dataset object:
+                arr1 = h5obj[:]
+                # return a np.array using dataset name:
+                arr2 = f[name][:]
+                df[f'{name}'] = arr1
+
+    return df, names
+
+
+def isMonotonic(A):
+    return (all(A[i] <= A[i + 1] for i in range(len(A) - 1)) or
+            all(A[i] >= A[i + 1] for i in range(len(A) - 1)))
+
+
+def remove_non_monotonic(times, data, axis=0):
+    # this may have only been an issue before removing mu values < 0 from the dataset, keeping it in just in case
+    if not np.all(np.diff(times) >= 0):
+        print('time series can become non-monotonic after downsampling which is an issue for the sampler')
+        print('now removing non-monotonic t and mu values from dataset')
+        print(f'input downsampled data shape = {data.shape}')
+        # Find the indices where the array is not monotonically increasing
+        non_monotonic_indices = np.where(np.diff(times) < 0)[0]
+        # print(f'non monotonic time indices = {non_monotonic_indices}')
+
+        # Remove the non-monotonic data points
+        cleaned_data = np.delete(data, non_monotonic_indices, axis)
+        print('removed bad data? should be True')
+        print(isMonotonic(cleaned_data[:, 1]))
+        return cleaned_data
+
+    # Array is already monotonically increasing, return it as is
+    print('Array is already monotonically increasing, returning as is')
+    return data
+
+
+def calc_derivative(y, x, window_len=100):
+    # returns dydx
+    if window_len is not None:
+        # smooth
+        # x_smooth = smooth(x,window_len=params['window_len'],window='flat')
+        # y_smooth = smooth(y,window_len=params['window_len'],window='flat')
+        # dydx = np.gradient(y_smooth,x_smooth)
+        dxdN = savgol_filter(x,
+                             window_length=window_len,
+                             polyorder=3,
+                             deriv=1)
+        dydN = savgol_filter(y,
+                             window_length=window_len,
+                             polyorder=3,
+                             deriv=1)
+        dydx = dydN / dxdN
+
+        dydx_smooth = savgol_filter(dydx,
+                                    window_length=window_len,
+                                    polyorder=1)
+        return dydx_smooth
+    else:
+        dydx = np.gradient(y, x)
+        return dydx
+
+
+def get_obs_data(samplename):
+    homefolder = os.path.expanduser('~')
+    path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', f'{samplename}')
+    name = f'{samplename}_proc.hdf5'
+    sample_name = name
+    fullpath = os.path.join(homefolder, path, name)
+    print(f'getting data from: {fullpath}')
+    f = h5py.File(os.path.join(homefolder, path, name), 'r')
+
+    # read in data from hdf file, print column names
+    df, names = read_hdf(fullpath)
+
+    # comment this in when deciding which displacement sections to use
+    preplot(df, names)
+
+    # first remove any mu < 0 data from experiment
+    df = df[(df['mu'] > 0)]
+
+    # convert to numpy arrays
+    t = df['time_s'].to_numpy()
+    mu = df['mu'].to_numpy()
+    x = df['vdcdt_um'].to_numpy()
+
+    # calculate loading velocities = dx/dt
+    vlps = calc_derivative(x, t)
+
+    plt.plot(t, vlps)
+    plt.xlabel('time (s)')
+    plt.ylabel('velocity (um/s)')
+    plt.show()
+
+    # filters and downsamples data
+    f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
+
+    # sections data - make this into a loop to run multiple sections one after another
+    mindisp = 6.894
+    maxdisp = 8.874
+    sectioned_data, start_idx, end_idx = section_data(f_ds, mindisp, maxdisp)
+
+    # need to check that time vals are monotonically increasing after being processed
+    t = sectioned_data[:, 1]
+    print('checking that time series is monotonic after processing')
+    print(isMonotonic(t))
+
+    # remove non-monotonically increasing time indices if necessary
+    cleaned_data = remove_non_monotonic(t, sectioned_data, axis=0)
+
+    # data for pymc
+    mutrue = cleaned_data[:, 0]
+    times = cleaned_data[:, 1]
+    vlps = cleaned_data[:, 2]
+    x = cleaned_data[:, 3]
+
+    # plot raw data section with filtered/downsampled for reference
+    df_raw = df[(df['vdcdt_um'] > mindisp / um_to_mm) & (df['vdcdt_um'] < maxdisp / um_to_mm)]
+    plt.figure(1)
+    fig, ax = plt.subplots()
+    ax.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.2, label='raw data')
+    ax.plot(x * um_to_mm, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
+    plt.xlabel('displacement (mm)')
+    plt.ylabel('mu')
+    plt.title('Observed data section (def get_obs_data)')
+    plt.ylim([np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
+
+    ax2 = ax.twinx()
+    ax2.plot(x * um_to_mm, vlps, 'r', label='velocity')
+    plt.legend()
+    plt.show()
+
+    return mutrue, times, vlps, x, sample_name
+
+def main():
+    print('MCMC RATE AND STATE FRICTION MODEL')
+    samplename = 'p5760'
+
+    # observed data
+    mutrue, times, vlps, x, file_name = get_obs_data(samplename)
+
+
+if __name__ == '__main__':
+    main()
