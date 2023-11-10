@@ -603,16 +603,9 @@ def main():
     time_elapsed = comptime_end - comptime_start
     print(f'time elapsed = {time_elapsed}')
 
-    write_model_info(draws=draws,
-                     chains=chains,
-                     tune=tune,
-                     prior_mus=prior_mus,
-                     prior_sigmas=prior_sigmas,
-                     time_elapsed=time_elapsed,
-                     k=k,
+    write_model_info(time_elapsed=time_elapsed,
                      vref=vref,
                      vsummary=vsummary,
-                     ppsummary=None,
                      file_name=f'{myglobals.samplename}_proc.hdf5',
                      times=times)
 
