@@ -413,14 +413,17 @@ def get_constants(vlps):
 def get_priors():
     mus, sigmas = myglobals.get_prior_parameters()
 
-    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
-    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
-    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2])
-    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
+    labels = ['a', 'b', 'Dc', 'mu0']
+    return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)]
+
+    # a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
+    # b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
+    # Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2])
+    # mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
 
     # check_priors(a, b, Dc, mu0, mus, sigmas)
 
-    return a, b, Dc, mu0, mus, sigmas
+    # return a, b, Dc, mu0, mus, sigmas
 
 
 # def check_priors(a, b, Dc, mu0, mus, sigmas):
@@ -442,7 +445,7 @@ def get_priors():
 
 # forward RSF model - from Leeman (2016), uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
 # returns simulated mu value for use in pymc
-def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
+def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
     # unpack parameters
     a, b, Dc, mu0 = theta
 
@@ -450,14 +453,14 @@ def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
     model = rsf.Model()
 
     # Size of dataset
-    model.datalen = len(t)
+    model.datalen = len(t0)
 
     # Set initial conditions
     model.mu0 = mu0  # Friction initial (at the reference velocity)
     model.a = a  # Empirical coefficient for the direct effect
-    model.k = myglobals.k  # Normalized System stiffness (friction/micron)
-    model.v = v[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref  # Reference velocity, generally vlp(t=0)
+    model.k = k0  # Normalized System stiffness (friction/micron)
+    model.v = v0[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref0  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
     state1.b = b  # Empirical coefficient for the evolution effect
@@ -469,8 +472,8 @@ def mcmc_rsf_sim(theta, t, v, k, vref, vmax):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t  # nondimensionalized time
-    lp_velocity = v
+    model.time = t0  # nondimensionalized time
+    lp_velocity = v0
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = lp_velocity
@@ -533,12 +536,12 @@ class Loglike(tt.Op):
     itypes = [tt.dvector]
     otypes = [tt.dscalar]
 
-    def __init__(self, times, vlps, k, vref, data, vmax):
+    def __init__(self, times0, vlps0, k0, vref0, data, vmax):
         self.data = data
-        self.times = times
-        self.vlps = vlps
-        self.k = myglobals.k
-        self.vref = vref
+        self.times = times0
+        self.vlps = vlps0
+        self.k = k0
+        self.vref = vref0
         self.vmax = vmax
 
     def perform(self, node, inputs, outputs):
@@ -562,7 +565,7 @@ def main():
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters and non-dimensionalized constants
-        a, b, Dc, mu0, prior_mus, prior_sigmas = get_priors()
+        a, b, Dc, mu0 = get_priors()
         k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
