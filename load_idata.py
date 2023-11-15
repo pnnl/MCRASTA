@@ -17,7 +17,7 @@ myglobals = globals.Globals()
 # az.style.use("arviz-darkgrid")
 
 home = os.path.expanduser('~')
-nr = 100000
+nr = myglobals.ndr
 nch = myglobals.nch
 samplename = 'p5760'
 section = '002'
@@ -624,7 +624,6 @@ def main():
             plt.ylabel('logp values')
             plt.xlabel('realization no.')
             plt.title('logp vals')
-            plt.show()
         elif plot_flag == 'no':
             print('skipping plotting observed data with realizations')
 
