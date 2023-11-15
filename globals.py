@@ -1,10 +1,11 @@
 import os
+import numpy as np
 
 
 class Globals:
     def __init__(self):
         self.samplename = 'p5760'
-        self.mindisp = 6.894
+        self.mindisp = 7.694
         self.maxdisp = 8.874
         self.section_id = 5760002
         self.k = 0.00194
@@ -18,7 +19,6 @@ class Globals:
         self.ntune = 20000
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
-
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
@@ -43,6 +43,6 @@ class Globals:
 
         return mus, sigmas
 
-
-
-
+    def set_vch(self, vlps):
+        vch = np.max(vlps)
+        return vch

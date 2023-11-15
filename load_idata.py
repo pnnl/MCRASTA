@@ -10,19 +10,24 @@ import sys
 from scipy.stats import lognorm, mode, skew, kurtosis
 from scipy import signal
 import seaborn as sns
+import globals
 
-az.style.use("arviz-darkgrid")
+myglobals = globals.Globals()
+
+# az.style.use("arviz-darkgrid")
 
 home = os.path.expanduser('~')
-nr = 500000
-nch = 4
+nr = 100000
+nch = myglobals.nch
 samplename = 'p5760'
-dirname = f'out_{nr}d{nch}ch'
+section = '002'
+sampleid = f'5760{section}'
+dirname = f'out_{nr}d{nch}ch_{sampleid}'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', samplename, dirname)
 idataname = f'{dirname}_idata'
 
 # nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it more interpretable)
-nrstep = 500
+nrstep = 100
 # nrplot = number of total realizations we'll look at
 nrplot = 1000
 
@@ -128,6 +133,18 @@ def get_trace_variables_allchains(modelvals):
     return a_min_b, a, b, Dc, mu0
 
 
+def get_thinned_idata(modelvals):
+    a = modelvals.a.values[:, 0::nrstep]
+    b = modelvals.b.values[:, 0::nrstep]
+    Dc = modelvals.Dc.values[:, 0::nrstep]
+    mu0 = modelvals.mu0.values[:, 0::nrstep]
+
+    datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
+    new_idata = az.convert_to_inference_data(datadict)
+
+    return new_idata
+
+
 def get_trace_variables(modelvals, chain):
     a = modelvals.a.values[chain, 0::nrstep]
     b = modelvals.b.values[chain, 0::nrstep]
@@ -138,7 +155,7 @@ def get_trace_variables(modelvals, chain):
 
 
 def get_constants(vlps):
-    k = 0.00194
+    k = myglobals.k
     vref = vlps[0]
 
     return k, vref
@@ -193,9 +210,10 @@ def generate_one_realization(modelvars):
 def generate_rsf_data(nr, modelvars):
     a, b, Dc, mu0 = modelvars
 
+    # dimensional variables output from mcmc_rsf.py
     times, mutrue, vlps, x = load_section_data(dirpath)
     k, vref = get_constants(vlps)
-    l0, vmax = get_vmax_l0(vlps)
+    lc, vmax = get_vmax_l0(vlps)
 
     k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
@@ -209,7 +227,7 @@ def generate_rsf_data(nr, modelvars):
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax
-    state1.l0 = l0
+    state1.lc = myglobals.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
@@ -259,7 +277,7 @@ def generate_rsf_data(nr, modelvars):
 
 
 def get_vmax_l0(vlps):
-    l0 = 125
+    l0 = myglobals.lc
     vmax = np.max(vlps)
 
     return l0, vmax
@@ -294,7 +312,7 @@ def original_trace_all_chains(modelvals, times, vref):
     new_idata = az.convert_to_inference_data(datadict)
 
     plot_pairs(new_idata, chain=None)
-    plot_trace(new_idata, chain=None)
+    # plot_trace(new_idata, chain=None)
 
 
 def plot_chain_trace(modelvals, chain):
@@ -320,8 +338,7 @@ def save_figs(out_folder):
 
 def plot_priors_posteriors(*posts):
     # define priors same as in mcmc_rsf.py - get this info from out file
-    mus = [-5, -5, 3, -1]
-    sigmas = [1, 1, 1, 0.3]
+    mus, sigmas = myglobals.get_prior_parameters()
 
     a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
@@ -360,12 +377,10 @@ def get_modes(modelvals, chain):
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
-    l0, vmax = get_vmax_l0(vlps)
-
-    k0 = k * l0
+    k0 = myglobals.k * myglobals.lc
     vlps0 = vlps / vmax
     vref0 = vref / vmax
-    t0 = times * vmax / l0
+    t0 = times * vmax / myglobals.lc
     t0 = t0 - t0[0]
 
     return k0, vlps0, vref0, t0
@@ -451,10 +466,6 @@ def plot_a_minus_b(idata, vlps, vref, nrstep):
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
 
-    vratio = vlps/vref
-
-    x = np.log(vratio)
-
     a_min_b = a-b
     datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     ab_idata = az.convert_to_inference_data(datadict, group='posterior')
@@ -532,20 +543,26 @@ def main():
 
     ab_idata = plot_a_minus_b(idata, vlps, vref, nrstep)
 
-    warmup_posterior_vals = get_warmup_vals(idata)
-    aw, bw, Dcw, mu0w = warmup_posterior_vals
+    # warmup_posterior_vals = get_warmup_vals(idata)
+    # aw, bw, Dcw, mu0w = warmup_posterior_vals
     modelvals = get_model_vals(idata)
-    modelvals = get_model_vals(ab_idata)
+    modelvals_ab = get_model_vals(ab_idata)
 
     # plot_model_autocorrelations(warmup_posterior_vals, modelvals)
     # sys.exit()
-    # plots trace pairs and samples
-    original_trace_all_chains(modelvals, times, vref)
+
+    # plots pairs for a-b, Dc, mu0
+    original_trace_all_chains(modelvals_ab, times, vref)
+
+    # plots original trace
+    thinned_idata = get_thinned_idata(modelvals)
+    plot_trace(thinned_idata, chain=None)
 
     # plot observed data on this figure before chains are plotted to avoid plotting it 4 times
+    # fig, ax = plt.subplots(num=70)
+    # p1, = ax.plot(times, mutrue, '.', alpha=0.2, label='observed')
     plt.figure(70)
     plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
-
     numchains = nch
 
     for chain in np.arange(numchains):
@@ -581,13 +598,25 @@ def main():
 
             ahat, bhat, Dchat, mu0hat = map_vars    # parameter vals which resulted in highest logp val
 
-            plt.figure(70)  # plot best fits with observed data
-            plt.plot(times, map_mu_sim, label=f'chain {chain}; max logp = {round(maxlogp, 4)} \n a={round(ahat, 4)}; '
-                                              f'b={round(bhat, 4)}; Dc={round(Dchat, 2)}; mu0={round(mu0hat, 3)}')
-            plt.xlabel('time (s)')
-            plt.ylabel('mu')
-            plt.title('best-fit solutions')
-            plt.legend(fontsize='x-small')
+            aminb_hat = ahat - bhat
+
+            # plot all the stuff
+            plt.figure(70)
+            plt.plot(times, map_mu_sim, label=f'chain {chain}; max logp = {round(maxlogp, 4)} \n '
+                                                          f'a-b={round(aminb_hat, 4)} \n '
+                                                          f'a={round(ahat, 4)}; '
+                                                          f'b={round(bhat, 4)}; '
+                                                          f'Dc={round(Dchat, 2)}; '
+                                                          f'mu0={round(mu0hat, 3)}')
+            plt.figure(72)
+            plt.plot(x * um_to_mm, vlps, 'r--', label='velocity (um/s)')
+            plt.xlabel('loadpoint displacement (mm)')
+            # twin3 = ax.twinx()
+            # p3, = twin3.plot(x * um_to_mm, vlps * um_to_mm, 'r--', label='velocity (mm/s)')
+            # twin3.set(ylabel='velocity (mm/s)')
+
+            # ax.set_title('best-fit solutions')
+            # ax.legend(handles=[p1, p2], fontsize='x-small')
 
             # plot logp vals as sanity check
             plt.figure(71)
@@ -595,6 +624,7 @@ def main():
             plt.ylabel('logp values')
             plt.xlabel('realization no.')
             plt.title('logp vals')
+            plt.show()
         elif plot_flag == 'no':
             print('skipping plotting observed data with realizations')
 

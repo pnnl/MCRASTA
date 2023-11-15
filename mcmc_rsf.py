@@ -501,7 +501,7 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     lc, vmax = get_vmax_lc(vlps)
 
     # then remove dimensions
-    k0 = k * lc
+    k0 = myglobals.k * myglobals.lc
     vlps0 = vlps / vmax
     vref0 = vref / vmax
 
@@ -557,7 +557,7 @@ def main():
 
     # observed data
     mutrue, times, vlps, x = get_obs_data()
-    vmax = np.max(vlps)
+    vmax = myglobals.set_vch(vlps)
 
     k, vref = get_constants(vlps)
     print(f'k = {k}; vref = {vref}')

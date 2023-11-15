@@ -9,7 +9,6 @@ from scipy.signal import savgol_filter
 from datetime import datetime
 import time
 import seaborn as sns
-from globals import myglobals
 
 um_to_mm = 0.001
 
@@ -63,17 +62,24 @@ def preplot(df, colnames):
     t = df['time_s']
     x = df['vdcdt_um']
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(num=1)
     ax.plot(x, df['mu'])
-    ax2 = ax.twiny()
-    ax2.plot(t, df['mu'], 'r')
+    # ax2 = ax.twiny()
+    # ax2.plot(t, df['mu'], 'r')
+    # ax2.set_xlabel('time (s)')
     ax.set_title('mu')
     ax.set_xlabel('displacement (mm)')
-    plt.show()
+    ax.set_ylabel('mu')
 
+    plt.figure(2)
     plt.plot(t, df['mu'])
     plt.xlabel('time (s)')
+    plt.ylabel('mu')
     plt.show()
+    #
+    plt.plot(x, t)
+    plt.show()
+
 
 
 def read_hdf(fullpath):
