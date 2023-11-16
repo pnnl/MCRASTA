@@ -212,7 +212,7 @@ def get_obs_data():
     x = df['vdcdt_um'].to_numpy()
 
     # calculate loading velocities = dx/dt
-    vlps = calc_derivative(x, t)
+    vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
 
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
@@ -234,11 +234,13 @@ def get_obs_data():
     vlps = cleaned_data[:, 2]
     x = cleaned_data[:, 3]
 
+    myglobals.set_disp_bounds(x)
+    plotx = x * um_to_mm
     # plot raw data section with filtered/downsampled for reference
-    df_raw = df[(df['vdcdt_um'] > myglobals.mindisp / um_to_mm) & (df['vdcdt_um'] < myglobals.maxdisp / um_to_mm)]
+    df_raw = df[(df['vdcdt_um'] > myglobals.mindisp) & (df['vdcdt_um'] < myglobals.maxdisp)]
     plt.figure(1)
     plt.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.2, label='raw data')
-    plt.plot(x * um_to_mm, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
+    plt.plot(plotx, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
     plt.title('Observed data section (def get_obs_data)')
@@ -313,26 +315,10 @@ def downsample_dataset(mu, t, vlps, x):
     f_data = np.column_stack((mu_f, t, vlps, x))
 
     # downsamples to every qth sample after applying low-pass filter along columns
-    q = myglobals.q
-    f_ds = sp.signal.decimate(f_data, q, ftype='fir', axis=0)
+    f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
 
     # FOR P5760 ONLY - no downsampling
     f_ds = f_data
-
-    t_ds = f_ds[:, 1]
-    mu_ds = f_ds[:, 0]
-    x_ds = f_ds[:, 3]
-
-    # # plot series as sanity check
-    # plt.plot(x, mu, '.-', label='original data')
-    # plt.plot(x, mu_f, '.-', label='filtered data')
-    # plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
-    # plt.xlabel('disp (mm)')
-    # plt.ylabel('mu')
-    # plt.title('def downsample_dataset')
-    # plt.legend()
-    # plt.show()
-    # sys.exit()
 
     return f_ds, mu_f
 
@@ -343,8 +329,8 @@ def section_data(data):
     # changing column names
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
 
-    start_idx = np.argmax(df['x'] > myglobals.mindisp / um_to_mm)
-    end_idx = np.argmax(df['x'] > myglobals.maxdisp / um_to_mm)
+    start_idx = np.argmax(df['t'] > myglobals.mintime)
+    end_idx = np.argmax(df['t'] > myglobals.maxtime)
 
     df_section = df.iloc[start_idx:end_idx]
 

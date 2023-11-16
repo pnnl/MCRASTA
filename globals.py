@@ -5,14 +5,16 @@ import numpy as np
 class Globals:
     def __init__(self):
         self.samplename = 'p5760'
-        self.mindisp = 7.694
-        self.maxdisp = 8.874
-        self.section_id = 5760002
+        self.mintime = 4983.22
+        self.maxtime = 5125.89
+        self.mindisp = None
+        self.maxdisp = None
+        self.section_id = 5760003
         self.k = 0.00194
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = 100
-        self.filter_windowlen = 3
+        self.filter_windowlen = 20
         self.q = 2
         self.ndr = 500000
         self.nch = 4
@@ -46,3 +48,7 @@ class Globals:
     def set_vch(self, vlps):
         vch = np.max(vlps)
         return vch
+
+    def set_disp_bounds(self, x):
+        self.mindisp = x[0]
+        self.maxdisp = x[-1]

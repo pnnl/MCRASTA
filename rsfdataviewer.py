@@ -9,50 +9,37 @@ from scipy.signal import savgol_filter
 from datetime import datetime
 import time
 import seaborn as sns
+import globals
+
+myglobals = globals.Globals()
 
 um_to_mm = 0.001
 
 
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter
-    mu_f = savgol_filter(mu, window_length=3, polyorder=2, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=2, mode='mirror')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
 
     # downsamples to every qth sample after applying low-pass filter along columns
-    q = 2
-    f_ds = sp.signal.decimate(f_data, q, ftype='fir', axis=0)
+    f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
 
     # FOR P5760 ONLY - no downsampling
     f_ds = f_data
-
-    t_ds = f_ds[:, 1]
-    mu_ds = f_ds[:, 0]
-    x_ds = f_ds[:, 3]
-
-    # # plot series as sanity check
-    # plt.plot(x, mu, '.-', label='original data')
-    # plt.plot(x, mu_f, '.-', label='filtered data')
-    # plt.plot(x_ds, mu_ds, '.-', label='downsampled data')
-    # plt.xlabel('disp (mm)')
-    # plt.ylabel('mu')
-    # plt.title('def downsample_dataset')
-    # plt.legend()
-    # plt.show()
-    # sys.exit()
 
     return f_ds, mu_f
 
 
 # section_data(...) slices friction data into model-able sections
-def section_data(data, mindisp, maxdisp):
+def section_data(data):
     df0 = pd.DataFrame(data)
     # changing column names
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
 
-    start_idx = np.argmax(df['x'] > mindisp / um_to_mm)
-    end_idx = np.argmax(df['x'] > maxdisp / um_to_mm)
+    start_idx = np.argmax(df['t'] > myglobals.mintime)
+    end_idx = np.argmax(df['t'] > myglobals.maxtime)
 
     df_section = df.iloc[start_idx:end_idx]
 
@@ -137,7 +124,7 @@ def remove_non_monotonic(times, data, axis=0):
     return data
 
 
-def calc_derivative(y, x, window_len=100):
+def calc_derivative(y, x, window_len=None):
     # returns dydx
     if window_len is not None:
         # smooth
@@ -187,7 +174,7 @@ def get_obs_data(samplename):
     x = df['vdcdt_um'].to_numpy()
 
     # calculate loading velocities = dx/dt
-    vlps = calc_derivative(x, t)
+    vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
 
     plt.plot(t, vlps)
     plt.xlabel('time (s)')
@@ -198,9 +185,7 @@ def get_obs_data(samplename):
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
 
     # sections data - make this into a loop to run multiple sections one after another
-    mindisp = 6.894
-    maxdisp = 8.874
-    sectioned_data, start_idx, end_idx = section_data(f_ds, mindisp, maxdisp)
+    sectioned_data, start_idx, end_idx = section_data(f_ds)
 
     # need to check that time vals are monotonically increasing after being processed
     t = sectioned_data[:, 1]
@@ -216,19 +201,24 @@ def get_obs_data(samplename):
     vlps = cleaned_data[:, 2]
     x = cleaned_data[:, 3]
 
+    myglobals.set_disp_bounds(x)
+
     # plot raw data section with filtered/downsampled for reference
-    df_raw = df[(df['vdcdt_um'] > mindisp / um_to_mm) & (df['vdcdt_um'] < maxdisp / um_to_mm)]
-    plt.figure(1)
+    df_raw = df[(df['vdcdt_um'] > myglobals.mindisp) & (df['vdcdt_um'] < myglobals.maxdisp)]
+
+    xax = x
+
     fig, ax = plt.subplots()
-    ax.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.2, label='raw data')
-    ax.plot(x * um_to_mm, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
+    ax.plot(df_raw['vdcdt_um'], df_raw['mu'], 'o', alpha=0.5, label='raw data')
+    ax.plot(xax, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
     plt.title('Observed data section (def get_obs_data)')
     plt.ylim([np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
+    plt.legend()
 
     ax2 = ax.twinx()
-    ax2.plot(x * um_to_mm, vlps, 'r', label='velocity')
+    ax2.plot(xax, vlps, 'r', label='velocity')
     plt.legend()
     plt.show()
 
