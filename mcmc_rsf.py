@@ -164,7 +164,7 @@ def plot_obs_data_processing(x, mu1, mu2, mu3, xog):
 
 # DATA PROCESSING
 # from Jeff - calculate derivative dx/dt (=dy/dx)
-def calc_derivative(y, x, window_len=myglobals.vel_windowlen):
+def calc_derivative(y, x, window_len=None):
     # returns dydx
     if window_len is not None:
         # smooth

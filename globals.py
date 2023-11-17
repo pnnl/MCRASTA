@@ -5,7 +5,7 @@ import numpy as np
 class Globals:
     def __init__(self):
         self.samplename = 'p5760'
-        self.mintime = 4960
+        self.mintime = 4975.22
         self.maxtime = 5125.89
         self.mindisp = None
         self.maxdisp = None
