@@ -181,6 +181,8 @@ def get_obs_data(samplename):
     plt.ylabel('velocity (um/s)')
     plt.show()
 
+    sys.exit()
+
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
 

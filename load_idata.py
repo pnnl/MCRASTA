@@ -20,14 +20,14 @@ home = os.path.expanduser('~')
 nr = myglobals.ndr
 nch = myglobals.nch
 samplename = 'p5760'
-section = '002'
+section = '003'
 sampleid = f'5760{section}'
 dirname = f'out_{nr}d{nch}ch_{sampleid}'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', samplename, dirname)
 idataname = f'{dirname}_idata'
 
 # nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it more interpretable)
-nrstep = 100
+nrstep = 500
 # nrplot = number of total realizations we'll look at
 nrplot = 1000
 
@@ -562,7 +562,8 @@ def main():
     # fig, ax = plt.subplots(num=70)
     # p1, = ax.plot(times, mutrue, '.', alpha=0.2, label='observed')
     plt.figure(70)
-    plt.plot(times, mutrue, '.', alpha=0.2, label='observed')
+    xax = x
+    plt.plot(xax, mutrue, '.', alpha=0.2, label='observed')
     numchains = nch
 
     for chain in np.arange(numchains):
@@ -602,12 +603,14 @@ def main():
 
             # plot all the stuff
             plt.figure(70)
-            plt.plot(times, map_mu_sim, label=f'chain {chain}; max logp = {round(maxlogp, 4)} \n '
+            plt.plot(xax, map_mu_sim, label=f'chain {chain}; max logp = {round(maxlogp, 4)} \n '
                                                           f'a-b={round(aminb_hat, 4)} \n '
                                                           f'a={round(ahat, 4)}; '
                                                           f'b={round(bhat, 4)}; '
                                                           f'Dc={round(Dchat, 2)}; '
                                                           f'mu0={round(mu0hat, 3)}')
+            plt.legend()
+
             plt.figure(72)
             plt.plot(x * um_to_mm, vlps, 'r--', label='velocity (um/s)')
             plt.xlabel('loadpoint displacement (mm)')
@@ -617,6 +620,8 @@ def main():
 
             # ax.set_title('best-fit solutions')
             # ax.legend(handles=[p1, p2], fontsize='x-small')
+            plt.legend()
+            plt.show()
 
             # plot logp vals as sanity check
             plt.figure(71)

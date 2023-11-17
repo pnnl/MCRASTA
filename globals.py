@@ -5,7 +5,7 @@ import numpy as np
 class Globals:
     def __init__(self):
         self.samplename = 'p5760'
-        self.mintime = 4983.22
+        self.mintime = 4960
         self.maxtime = 5125.89
         self.mindisp = None
         self.maxdisp = None
@@ -40,6 +40,7 @@ class Globals:
             return p
 
     def get_prior_parameters(self):
+        # prior parameters for a, b, Dc, mu0 (in that order)
         mus = [-5, -5, 3, -1]
         sigmas = [0.8, 0.8, 0.3, 0.3]
 
