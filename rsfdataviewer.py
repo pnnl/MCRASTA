@@ -27,7 +27,7 @@ def downsample_dataset(mu, t, vlps, x):
     f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
 
     # FOR P5760 ONLY - no downsampling
-    f_ds = f_data
+    # f_ds = f_data
 
     return f_ds, mu_f
 
@@ -181,8 +181,6 @@ def get_obs_data(samplename):
     plt.ylabel('velocity (um/s)')
     plt.show()
 
-    sys.exit()
-
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
 
@@ -228,7 +226,7 @@ def get_obs_data(samplename):
 
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
-    samplename = 'p5760'
+    samplename = 'p5756'
 
     # observed data
     mutrue, times, vlps, x, file_name = get_obs_data(samplename)

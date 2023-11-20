@@ -621,7 +621,6 @@ def main():
             # ax.set_title('best-fit solutions')
             # ax.legend(handles=[p1, p2], fontsize='x-small')
             plt.legend()
-            plt.show()
 
             # plot logp vals as sanity check
             plt.figure(71)
