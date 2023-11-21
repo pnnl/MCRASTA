@@ -1,3 +1,4 @@
+import json
 import os
 import numpy as np
 import pymc as pm
@@ -130,7 +131,8 @@ def write_model_info(time_elapsed, vref, vsummary, file_name, times):
     strlist = [samplerstrs, modelstrs, summarystr]
 
     samplervals = ['', myglobals.ndr, myglobals.nch, myglobals.ntune, myglobals.get_prior_parameters(), time_elapsed]
-    modelvals = ['', '', myglobals.k, vref, myglobals.mindisp, myglobals.maxdisp, myglobals.lc, myglobals.vel_windowlen, myglobals.filter_windowlen, myglobals.q]
+    modelvals = ['', '', myglobals.k, vref, myglobals.mindisp, myglobals.maxdisp, myglobals.lc, myglobals.vel_windowlen,
+                 myglobals.filter_windowlen, myglobals.q]
     summaryvals = [vsummary]
     vallist = [samplervals, modelvals, summaryvals]
 
@@ -143,6 +145,32 @@ def write_model_info(time_elapsed, vref, vsummary, file_name, times):
             # f.writelines(f'{strings}: {vals}')
             for string, val in zip(strings, vals):
                 f.write(f'{string}: {val}\n')
+
+    payload = {
+        'experiment_info',
+        [{'sample': file_name,
+            'section_ID': myglobals.section_id,
+            'time_start': myglobals.mintime,
+            'time_end': myglobals.maxtime,
+            'x_start': myglobals.mindisp,
+            'x_end': myglobals.maxdisp}],
+        'sampler_info',
+        [{'n_draws': myglobals.ndr,
+            'n_chains': myglobals.nch,
+            'n_tune': myglobals.ntune,
+            'prior_mus_sigmas': myglobals.get_prior_parameters(),
+            'runtime_s': time_elapsed}],
+        'model_info',
+        [{'k': myglobals.k,
+            'vref': vref,
+            'lc': myglobals.lc,
+            'dvdt_window_len': myglobals.vel_windowlen,
+            'filter_window_len': myglobals.filter_windowlen,
+            'q': myglobals.q}]
+    }
+
+    with open(os.path.join(p, 'out.json'), mode='w') as wfile:
+        json.dump(payload, wfile)
 
 
 # plot_obs_data_processing(...) only used for testing data processing

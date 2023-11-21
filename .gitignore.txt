@@ -3,3 +3,6 @@
 .nc
 .out
 testing.py
+export_json.py
+customdist_test.py
+.json
