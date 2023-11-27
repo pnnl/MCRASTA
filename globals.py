@@ -41,8 +41,8 @@ class Globals:
 
     def get_prior_parameters(self):
         # prior parameters for a, b, Dc, mu0 (in that order)
-        mus = [-5, -5, 3, -1]
-        sigmas = [0.8, 0.8, 0.3, 0.3]
+        mus = [-5, -5, 2, -1]
+        sigmas = [0.8, 0.8, 0.5, 0.3]
 
         return mus, sigmas
 

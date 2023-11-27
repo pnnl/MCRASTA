@@ -424,33 +424,34 @@ def get_priors():
     mus, sigmas = myglobals.get_prior_parameters()
 
     labels = ['a', 'b', 'Dc', 'mu0']
+
+    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
+    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
+    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2])
+    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
+
+    check_priors(a, b, Dc, mu0, mus, sigmas)
+
     return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)]
-
-    # a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
-    # b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
-    # Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2])
-    # mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
-
-    # check_priors(a, b, Dc, mu0, mus, sigmas)
 
     # return a, b, Dc, mu0, mus, sigmas
 
 
-# def check_priors(a, b, Dc, mu0, mus, sigmas):
-#     vpriors = pm.draw([a, b, Dc, mu0], draws=500000)
-#     names = ['a', 'b', 'Dc', 'mu0']
-#
-#     for i, name in enumerate(names):
-#         print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
-#         print(f'{name} prior min,max = {np.min(vpriors[i])}, {np.max(vpriors[i])}')
-#         print(f'{name} prior mode = {(sp.stats.mode(vpriors[i])).mode}')
-#         plt.figure(1000)
-#         sns.kdeplot(vpriors[i], label=f'{name}', common_norm=False, bw_method=0.1)
-#         plt.xlim(-0.1, 100)
-#         plt.title('prior distributions')
-#         plt.legend()
-#     # plt.show()
-#     # sys.exit()
+def check_priors(a, b, Dc, mu0, mus, sigmas):
+    vpriors = pm.draw([a, b, Dc, mu0], draws=500000)
+    names = ['a', 'b', 'Dc', 'mu0']
+
+    for i, name in enumerate(names):
+        print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
+        print(f'{name} prior min,max = {np.min(vpriors[i])}, {np.max(vpriors[i])}')
+        print(f'{name} prior mode = {(sp.stats.mode(vpriors[i])).mode}')
+        plt.figure(1000)
+        sns.kdeplot(vpriors[i], label=f'{name}', common_norm=False, bw_method=0.1)
+        plt.xlim(-0.1, 100)
+        plt.title('prior distributions')
+        plt.legend()
+    plt.show()
+    sys.exit()
 
 
 # forward RSF model - from Leeman (2016), uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
