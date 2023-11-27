@@ -146,28 +146,24 @@ def write_model_info(time_elapsed, vref, vsummary, file_name, times):
             for string, val in zip(strings, vals):
                 f.write(f'{string}: {val}\n')
 
-    payload = {
-        'experiment_info',
-        [{'sample': file_name,
-            'section_ID': myglobals.section_id,
-            'time_start': myglobals.mintime,
-            'time_end': myglobals.maxtime,
-            'x_start': myglobals.mindisp,
-            'x_end': myglobals.maxdisp}],
-        'sampler_info',
-        [{'n_draws': myglobals.ndr,
-            'n_chains': myglobals.nch,
-            'n_tune': myglobals.ntune,
-            'prior_mus_sigmas': myglobals.get_prior_parameters(),
-            'runtime_s': time_elapsed}],
-        'model_info',
-        [{'k': myglobals.k,
-            'vref': vref,
-            'lc': myglobals.lc,
-            'dvdt_window_len': myglobals.vel_windowlen,
-            'filter_window_len': myglobals.filter_windowlen,
-            'q': myglobals.q}]
-    }
+    payload = {'sample': file_name,
+               'section_ID': myglobals.section_id,
+               'time_start': myglobals.mintime,
+               'time_end': myglobals.maxtime,
+               'x_start': myglobals.mindisp,
+               'x_end': myglobals.maxdisp,
+               'n_draws': myglobals.ndr,
+               'n_chains': myglobals.nch,
+               'n_tune': myglobals.ntune,
+               'prior_mus_sigmas': myglobals.get_prior_parameters(),
+               'runtime_s': time_elapsed,
+               'k': myglobals.k,
+               'vref': vref,
+               'lc': myglobals.lc,
+               'dvdt_window_len': myglobals.vel_windowlen,
+               'filter_window_len': myglobals.filter_windowlen,
+               'q': myglobals.q
+               }
 
     with open(os.path.join(p, 'out.json'), mode='w') as wfile:
         json.dump(payload, wfile)
