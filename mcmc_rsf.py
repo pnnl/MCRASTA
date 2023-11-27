@@ -425,12 +425,12 @@ def get_priors():
 
     labels = ['a', 'b', 'Dc', 'mu0']
 
-    a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
-    b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
-    Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2])
-    mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
-
-    check_priors(a, b, Dc, mu0, mus, sigmas)
+    # a = pm.LogNormal('a', mu=mus[0], sigma=sigmas[0])
+    # b = pm.LogNormal('b', mu=mus[1], sigma=sigmas[1])
+    # Dc = pm.LogNormal('Dc', mu=mus[2], sigma=sigmas[2])
+    # mu0 = pm.LogNormal('mu0', mu=mus[3], sigma=sigmas[3])
+    #
+    # check_priors(a, b, Dc, mu0, mus, sigmas)
 
     return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)]
 
