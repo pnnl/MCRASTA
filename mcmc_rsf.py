@@ -342,7 +342,7 @@ def downsample_dataset(mu, t, vlps, x):
     f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
 
     # FOR P5760 ONLY - no downsampling
-    f_ds = f_data
+    # f_ds = f_data
 
     return f_ds, mu_f
 
