@@ -26,6 +26,7 @@ nch = 4
 section = '003'
 sampleid = f'5760{section}'
 dirname = f'out_{nr}d{nch}ch_{sampleid}'
+# dirname = f'~out_{nr}d{nch}ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', samplename, dirname)
 idataname = f'{dirname}_idata'
 
@@ -587,20 +588,49 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
     mu_sims = mu_sims.reshape(rdim, cdim)
     logps = logps.reshape(rdim,)
 
-    data = np.column_stack((logps, mu_sims))
-    df = pd.DataFrame(data)
-    dfsort = df.sort_values(by=0)
+    ensemble_modes = []
+    ensemble_means = []
+    hdi_lower = []
+    hdi_upper = []
+    # hdi_data = []
+    hdi_data = np.zeros((cdim, 2))
+    for i in np.arange(cdim):
+        r = mu_sims[:, i]
+        ensemble_mode = az.plots.plot_utils.calculate_point_estimate('mode', r, skipna=True)
+        ensemble_mean = az.plots.plot_utils.calculate_point_estimate('mean', r, skipna=True)
+        hdi = az.hdi(r, hdi_prob=0.5, skipna=True)
+        # hdi_data.append(hdi)
+        hdi_data[i, :] = hdi
+        ensemble_modes.append(ensemble_mode)
+        ensemble_means.append(ensemble_mean)
+        hdi_lower.append(hdi[0])
+        hdi_upper.append(hdi[1])
 
-    limit = round(0.11 * nrplot*myglobals.nch)
-    mu_sort = dfsort.iloc[:, 1:]
-    mu_sort = np.array(mu_sort)
+    # hdi_data = np.array(hdi_data)
+    plt.figure(601)
+    # plt.plot(x, hdi_lower, 'b-')
+    # plt.plot(x, hdi_upper, 'c-')
+    az.plot_hdi(x, y=None, hdi_data=hdi_data, color='cyan')
+    # plt.plot(x, ensemble_modes, 'k.')
+    plt.plot(x, mutrue, 'b.', alpha=0.2)
+    plt.ylim([np.min(hdi_data[:, 0]) - 0.01, np.max(hdi_data[:, 1]) + 0.01])
+    plt.show()
 
-    plt.figure(600)
-    for i in np.arange(limit):
-        plt.plot(x, mu_sort[i, :], 'b-', alpha=0.05)
 
-    plt.plot(x, mutrue, 'k.', alpha=0.2, label='observed')
-    plt.legend()
+    # data = np.column_stack((logps, mu_sims))
+    # df = pd.DataFrame(data)
+    # dfsort = df.sort_values(by=0)
+    #
+    # limit = round(0.11 * nrplot*myglobals.nch)
+    # mu_sort = dfsort.iloc[:, 1:]
+    # mu_sort = np.array(mu_sort)
+    #
+    # plt.figure(600)
+    # for i in np.arange(limit):
+    #     plt.plot(x, mu_sort[i, :], 'b-', alpha=0.05)
+    #
+    # plt.plot(x, mutrue, 'k.', alpha=0.2, label='observed')
+    # plt.legend()
 
 
 def main():
@@ -716,7 +746,7 @@ def main():
 
     plot_chisquare_interval(logps_all, mu_sims_all, mutrue, xax)
 
-    save_data(mu_sims_all, logps_all, map_vars_all, map_mu_sims, maxlogps, out_folder)
+    # save_data(mu_sims_all, logps_all, map_vars_all, map_mu_sims, maxlogps, out_folder)
     save_figs(out_folder)
 
 

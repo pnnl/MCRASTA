@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 
 
 class Globals:
@@ -16,11 +17,15 @@ class Globals:
         self.vel_windowlen = 100
         self.filter_windowlen = 20
         self.q = 5
-        self.ndr = 500000
+        self.ndr = 100
         self.nch = 4
-        self.ntune = 20000
+        self.ntune = 10
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
+        self.mu_sim = None
+        self.ms2 = None
+        self.ms3 = None
+        self. ms4 = None
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
@@ -53,3 +58,9 @@ class Globals:
     def set_disp_bounds(self, x):
         self.mindisp = x[0]
         self.maxdisp = x[-1]
+
+    def store_mu_sim(self, m):
+        if self.mu_sim is not None:
+            self.mu_sim.append(m)
+        else:
+            self.mu_sim = [m]

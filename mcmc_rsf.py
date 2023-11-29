@@ -534,7 +534,10 @@ def log_likelihood(theta, times, vlps, k, vref, data, vmax):
     ) = theta
 
     y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref, vmax)
+    # if myglobals.mu_sim is not None:
+    #     print(id(myglobals), len(myglobals.mu_sim))
     resids = (data - y_pred)
+    myglobals.store_mu_sim(y_pred)
     # print('resid = ', resids)
     logp = -1 / 2 * (np.sum(resids ** 2))
     # print(f'logp = {logp}')
@@ -600,8 +603,15 @@ def main():
                           discard_tuned_samples=False)
         print(f'inference data = {idata}')
 
+        # out_name = f'{myglobals.sim_name}_ypred'
+        # p = myglobals.get_output_storage_folder()
+        # az.to_netcdf('y_pred', os.path.join(p, out_name), group='predicted')
+
         # create storage directory
         myglobals.get_output_storage_folder()
+
+        # m = myglobals.mu_sim
+        # print(id(myglobals), m)
 
         # save model parameter stats
         vsummary = save_stats(idata)
