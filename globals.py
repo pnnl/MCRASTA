@@ -4,18 +4,18 @@ import numpy as np
 
 class Globals:
     def __init__(self):
-        self.samplename = 'p5894'
-        self.mintime = 21342.39
-        self.maxtime = 21754.89
+        self.samplename = 'p5756'
+        self.mintime = 2973
+        self.maxtime = 3120.65
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = 5894001
-        self.k = 0.00153
+        self.section_id = 5756001
+        self.k = 0.0021129
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
-        self.vel_windowlen = 10
-        self.filter_windowlen = 3
-        self.q = 2
+        self.vel_windowlen = 100
+        self.filter_windowlen = 20
+        self.q = 5
         self.ndr = 500000
         self.nch = 4
         self.ntune = 20000
@@ -41,8 +41,8 @@ class Globals:
 
     def get_prior_parameters(self):
         # prior parameters for a, b, Dc, mu0 (in that order)
-        mus = [-5, -5, 2, -1]
-        sigmas = [0.8, 0.8, 0.5, 0.3]
+        mus = [-5, -5, 3, -1]
+        sigmas = [0.8, 0.8, 0.3, 0.3]
 
         return mus, sigmas
 

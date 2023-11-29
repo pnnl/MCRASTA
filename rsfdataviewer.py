@@ -202,6 +202,9 @@ def get_obs_data(samplename):
     x = cleaned_data[:, 3]
 
     myglobals.set_disp_bounds(x)
+    print(myglobals.mindisp)
+    print(myglobals.maxdisp)
+
 
     # plot raw data section with filtered/downsampled for reference
     df_raw = df[(df['vdcdt_um'] > myglobals.mindisp) & (df['vdcdt_um'] < myglobals.maxdisp)]
@@ -226,7 +229,7 @@ def get_obs_data(samplename):
 
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
-    samplename = 'p5756'
+    samplename = 'p5760'
 
     # observed data
     mutrue, times, vlps, x, file_name = get_obs_data(samplename)
