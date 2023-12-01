@@ -86,7 +86,7 @@ class Loglike(tt.Op):
 
         y_pred = mcmc_rsf_sim(theta, self.times, self.vlps, self.k, self.vref, self.vmax)
         resids = (self.data - y_pred)
-        # myglobals.store_mu_sim(y_pred)
+        myglobals.store_mu_sim(y_pred)
         # YPREDS.append(y_pred)
         logp = -1 / 2 * (np.sum(resids ** 2))
 
