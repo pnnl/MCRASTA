@@ -13,18 +13,18 @@ from scipy import signal
 import seaborn as sns
 import globals
 import arviz.labels as azl
-
-myglobals = globals.Globals()
+from random import sample
+from gplot import gpl
 
 # az.style.use("arviz-darkgrid")
 
 home = os.path.expanduser('~')
 
-samplename = 'p5756'
-nr = 100
+samplename = 'p5760'
+nr = 500000
 nch = 4
-section = '001'
-sampleid = f'5756{section}'
+section = '003'
+sampleid = f'5760{section}'
 dirname = f'out_{nr}d{nch}ch_{sampleid}'
 # dirname = f'~out_{nr}d{nch}ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', samplename, dirname)
@@ -32,9 +32,9 @@ idataname = f'{dirname}_idata'
 
 # nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
 # more interpretable)
-nrstep = 1
+nrstep = 10000
 # nrplot = number of total realizations we'll look at
-nrplot = 100
+nrplot = 50
 
 um_to_mm = 0.001
 
@@ -130,7 +130,7 @@ def plot_pairs(idata, chain=None):
 
 
 def get_model_vals(idata):
-    modelvals = az.extract(idata.posterior, combined=False)
+    modelvals = az.extract(idata.posterior, combined=True)
 
     return modelvals
 
@@ -173,7 +173,7 @@ def get_constants(vlps):
     return k, vref
 
 
-def generate_rsf_data(nr, modelvars):
+def generate_rsf_data(nrplot, modelvars):
     a, b, Dc, mu0 = modelvars
 
     # dimensional variables output from mcmc_rsf.py
@@ -193,7 +193,7 @@ def generate_rsf_data(nr, modelvars):
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax
-    state1.lc = myglobals.lc
+    state1.lc = gpl.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
@@ -243,7 +243,7 @@ def generate_rsf_data(nr, modelvars):
 
 
 def get_vmax_l0(vlps):
-    l0 = myglobals.lc
+    l0 = gpl.lc
     vmax = np.max(vlps)
 
     return l0, vmax
@@ -305,7 +305,7 @@ def save_figs(out_folder):
 
 def plot_priors_posteriors(*posts):
     # define priors same as in mcmc_rsf.py - get this info from out file
-    mus, sigmas = myglobals.get_prior_parameters()
+    mus, sigmas = gpl.get_prior_parameters()
 
     a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
@@ -344,10 +344,10 @@ def get_modes(modelvals, chain):
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
-    k0 = myglobals.k * myglobals.lc
+    k0 = gpl.k * gpl.lc
     vlps0 = vlps / vmax
     vref0 = vref / vmax
-    t0 = times * vmax / myglobals.lc
+    t0 = times * vmax / gpl.lc
     t0 = t0 - t0[0]
 
     return k0, vlps0, vref0, t0
@@ -582,23 +582,23 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
     mu_sims = np.array(mu_sims)
     logps = np.abs(logps)
     logps = np.array(logps)
-    rdim = mu_sims.shape[0] * mu_sims.shape[2]
+    rdim = mu_sims.shape[0]
     cdim = mu_sims.shape[1]
 
-    mu_sims = mu_sims.reshape(rdim, cdim)
-    logps = logps.reshape(rdim,)
+    # mu_sims = mu_sims.reshape(rdim, cdim)
+    # logps = logps.reshape(rdim,)
 
     ensemble_modes = []
     ensemble_means = []
     hdi_lower = []
     hdi_upper = []
     # hdi_data = []
-    hdi_data = np.zeros((cdim, 2))
-    for i in np.arange(cdim):
-        r = mu_sims[:, i]
+    hdi_data = np.zeros((rdim, 2))
+    for i in np.arange(rdim):
+        r = mu_sims[i, :]
         ensemble_mode = az.plots.plot_utils.calculate_point_estimate('mode', r, skipna=True)
         ensemble_mean = az.plots.plot_utils.calculate_point_estimate('mean', r, skipna=True)
-        hdi = az.hdi(r, hdi_prob=0.5, skipna=True)
+        hdi = az.hdi(r, hdi_prob=0.89, skipna=True)
         # hdi_data.append(hdi)
         hdi_data[i, :] = hdi
         ensemble_modes.append(ensemble_mode)
@@ -606,14 +606,19 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
         hdi_lower.append(hdi[0])
         hdi_upper.append(hdi[1])
 
+
     # hdi_data = np.array(hdi_data)
     plt.figure(601)
     # plt.plot(x, hdi_lower, 'b-')
     # plt.plot(x, hdi_upper, 'c-')
-    az.plot_hdi(x, y=None, hdi_data=hdi_data, color='cyan')
+    az.plot_hdi(x, y=None, hdi_data=hdi_data, color='cyan', label='89% CI')
     # plt.plot(x, ensemble_modes, 'k.')
     plt.plot(x, mutrue, 'b.', alpha=0.2)
     plt.ylim([np.min(hdi_data[:, 0]) - 0.01, np.max(hdi_data[:, 1]) + 0.01])
+    plt.xlabel('loadpoint displacement ($\mu$m)')
+    plt.ylabel('$\mu$')
+    plt.title('Posterior Predictive Check')
+    plt.legend()
     plt.show()
 
 
@@ -621,7 +626,7 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
     # df = pd.DataFrame(data)
     # dfsort = df.sort_values(by=0)
     #
-    # limit = round(0.11 * nrplot*myglobals.nch)
+    # limit = round(0.11 * nrplot*gpl.nch)
     # mu_sort = dfsort.iloc[:, 1:]
     # mu_sort = np.array(mu_sort)
     #
@@ -633,6 +638,32 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
     # plt.legend()
 
 
+def draw_from_posteriors(idata, mutrue, x):
+    # draw values from the 89% credible interval for each parameter
+    # then generate rsf data for draws
+
+    modelvals = get_model_vals(idata)
+    a = modelvals.a.values
+    b = modelvals.b.values
+    Dc = modelvals.Dc.values
+    mu0 = modelvals.mu0.values
+
+    k = 100000
+
+    rsa = np.random.choice(a, k)
+    rsb = np.random.choice(b, k)
+    rsDc = np.random.choice(Dc, k)
+    rsmu0 = np.random.choice(mu0, k)
+
+    vars_all = rsa, rsb, rsDc, rsmu0
+    mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(k, vars_all)  # generates rsf sim
+    # plt.plot(mu_sims, 'b-', alpha=0.01)
+    # plt.plot(mutrue, '.')
+    # plt.show()
+
+    plot_chisquare_interval(logps, mu_sims, mutrue, x)
+
+
 def main():
     # k, lc, priors_info = read_from_json(dirpath)
     out_folder = get_storage_folder(dirname)
@@ -642,6 +673,7 @@ def main():
     idata = load_inference_data(dirpath, idataname)
     fig, ax = plt.subplots(num=100)
 
+    draw_from_posteriors(idata, mutrue, x)
     ab_idata = plot_a_minus_b(idata, vlps, vref, nrstep)
 
     # warmup_posterior_vals = get_warmup_vals(idata)
@@ -679,7 +711,6 @@ def main():
         # get posteriors from model trace
         apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, chain)
         modes = get_modes(modelvals, chain)
-        amode, bmode, Dcmode, mu0mode = modes
 
         # plot the priors and posteriors for comparison when necessary
         # plot_priors_posteriors(apost, bpost, Dcpost, mu0post)
@@ -699,7 +730,7 @@ def main():
         # this generates the rsf data using parameter draws, calc logp vals, and plots the best fit with observed
         # data for each chain
 
-        plot_flag = 'yes'
+        plot_flag = 'no'
         if plot_flag == 'yes':
             # necessary variables are nondimensionalized in this function for comparison to observed data
             mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(nr, vars_all) # generates rsf sim
@@ -737,14 +768,13 @@ def main():
 
             # plot logp vals as sanity check
             plt.figure(71)
+            logps = np.sort(logps)
             plt.plot(logps, '.')
             plt.ylabel('logp values')
             plt.xlabel('realization no.')
             plt.title('logp vals')
         elif plot_flag == 'no':
             print('skipping plotting observed data with realizations')
-
-    plot_chisquare_interval(logps_all, mu_sims_all, mutrue, xax)
 
     # save_data(mu_sims_all, logps_all, map_vars_all, map_mu_sims, maxlogps, out_folder)
     save_figs(out_folder)
