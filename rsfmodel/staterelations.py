@@ -42,13 +42,14 @@ class StateRelation(object):
             try:
                 vcomp = self.b * np.log(system.vref * self.state / self.Dc)
             except FloatingPointError as exc:
-                print(exc)
-                print('log error, here are the vars that caused it')
-                print('b = ', self.b)
-                print('vref = ', system.vref)
-                print('state = ', self.state)
-                print('Dc = ', self.Dc)
-                print(f'system.v={system.v}')
+                pass
+                # print(exc)
+                # print('log error, here are the vars that caused it')
+                # print('b = ', self.b)
+                # print('vref = ', system.vref)
+                # print('state = ', self.state)
+                # print('Dc = ', self.Dc)
+                # print(f'system.v={system.v}')
         # print(f'vcomp = {vcomp}')
         return self.b * np.log(system.vref * self.state / self.Dc)
 
