@@ -17,13 +17,12 @@ class Globals:
         self.vel_windowlen = 1000
         self.filter_windowlen = 20
         self.q = 5
-        self.ndr = 100000
+        self.ndr = 500000
         self.nch = 4
-        self.ntune = 10000
+        self.ntune = 20000
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
-
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
@@ -64,6 +63,7 @@ class Globals:
             self.mu_sim.append(m)
         else:
             self.mu_sim = [m]
+
     def save_mu_sim(self):
         print('saving', id(self))
         p = os.path.join(self.rootpath, f'{os.getpid()}.y_preds.npy')
