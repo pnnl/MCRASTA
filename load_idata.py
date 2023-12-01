@@ -611,7 +611,7 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
     plt.figure(601)
     # plt.plot(x, hdi_lower, 'b-')
     # plt.plot(x, hdi_upper, 'c-')
-    az.plot_hdi(x, y=None, hdi_data=hdi_data, color='cyan', label='89% CI')
+    az.plot_hdi(x, y=None, hdi_data=hdi_data, color='cyan')
     # plt.plot(x, ensemble_modes, 'k.')
     plt.plot(x, mutrue, 'b.', alpha=0.2)
     plt.ylim([np.min(hdi_data[:, 0]) - 0.01, np.max(hdi_data[:, 1]) + 0.01])
