@@ -316,7 +316,7 @@ def read_hdf(fullpath):
 
         # loop on names:
         for name in f.keys():
-            print(name)
+            # print(name)
             names.append(name)
         # loop on names and H5 objects:
         for name, h5obj in f.items():
