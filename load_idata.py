@@ -20,11 +20,11 @@ myglobals = globals.Globals()
 
 home = os.path.expanduser('~')
 
-samplename = 'p5760'
-nr = 500000
+samplename = 'p5756'
+nr = 100
 nch = 4
-section = '003'
-sampleid = f'5760{section}'
+section = '001'
+sampleid = f'5756{section}'
 dirname = f'out_{nr}d{nch}ch_{sampleid}'
 # dirname = f'~out_{nr}d{nch}ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', samplename, dirname)
@@ -32,9 +32,9 @@ idataname = f'{dirname}_idata'
 
 # nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
 # more interpretable)
-nrstep = 1000
+nrstep = 1
 # nrplot = number of total realizations we'll look at
-nrplot = 500
+nrplot = 100
 
 um_to_mm = 0.001
 

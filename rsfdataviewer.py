@@ -229,7 +229,7 @@ def get_obs_data(samplename):
 
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
-    samplename = 'p5760'
+    samplename = 'p5756'
 
     # observed data
     mutrue, times, vlps, x, file_name = get_obs_data(samplename)
