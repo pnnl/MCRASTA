@@ -49,15 +49,16 @@ class LoadingSystem(object):
         try:
             self.v = self.vref * exp((self.mu - self.mu0 - v_contribution) / self.a)
         except OverflowError as exc:
-            print(exc)
-            print('overflow error, here are the vars that caused it')
-            print('a = ', self.a)
-            print('vref = ', self.vref)
-            print('mu = ', self.mu)
-            print('mu0 = ', self.mu0)
-            print(f'velocity component = {state.velocity_component(self)}')
-            print('v_contribution = ', v_contribution)
-            print('end')
+            pass
+            # print(exc)
+            # print('overflow error, here are the vars that caused it')
+            # print('a = ', self.a)
+            # print('vref = ', self.vref)
+            # print('mu = ', self.mu)
+            # print('mu0 = ', self.mu0)
+            # print(f'velocity component = {state.velocity_component(self)}')
+            # print('v_contribution = ', v_contribution)
+            # print('end')
 
     def friction_evolution(self, loadpoint_vel):
         return self.k * (loadpoint_vel - self.v)
