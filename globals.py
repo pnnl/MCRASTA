@@ -14,7 +14,7 @@ class Globals:
         self.k = 0.0021129
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
-        self.vel_windowlen = 100
+        self.vel_windowlen = 1000
         self.filter_windowlen = 20
         self.q = 5
         self.ndr = 100
@@ -60,7 +60,16 @@ class Globals:
         self.maxdisp = x[-1]
 
     def store_mu_sim(self, m):
+        print('aslkdjgah', id(self))
+
         if self.mu_sim is not None:
             self.mu_sim.append(m)
         else:
             self.mu_sim = [m]
+    def save_mu_sim(self):
+        print('saving', id(self))
+        p = os.path.join(self.rootpath, f'{os.getpid()}.y_preds.npy')
+        np.save(p, np.array(self.mu_sim))
+
+
+myglobals = Globals()
