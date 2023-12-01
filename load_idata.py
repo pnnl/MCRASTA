@@ -32,9 +32,9 @@ idataname = f'{dirname}_idata'
 
 # nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
 # more interpretable)
-nrstep = 10000
+nrstep = 500
 # nrplot = number of total realizations we'll look at
-nrplot = 50
+nrplot = 1000
 
 um_to_mm = 0.001
 
@@ -136,20 +136,20 @@ def get_model_vals(idata):
 
 
 def get_trace_variables_allchains(modelvals):
-    a_min_b = modelvals.a_min_b.values[:, 0::nrstep]
-    a = modelvals.a.values[:, 0::nrstep]
-    b = modelvals.b.values[:, 0::nrstep]
-    Dc = modelvals.Dc.values[:, 0::nrstep]
-    mu0 = modelvals.mu0.values[:, 0::nrstep]
+    a_min_b = modelvals.a_min_b.values[0::nrstep]
+    a = modelvals.a.values[0::nrstep]
+    b = modelvals.b.values[0::nrstep]
+    Dc = modelvals.Dc.values[0::nrstep]
+    mu0 = modelvals.mu0.values[0::nrstep]
 
     return a_min_b, a, b, Dc, mu0
 
 
 def get_thinned_idata(modelvals):
-    a = modelvals.a.values[:, 0::nrstep]
-    b = modelvals.b.values[:, 0::nrstep]
-    Dc = modelvals.Dc.values[:, 0::nrstep]
-    mu0 = modelvals.mu0.values[:, 0::nrstep]
+    a = modelvals.a.values[0::nrstep]
+    b = modelvals.b.values[0::nrstep]
+    Dc = modelvals.Dc.values[0::nrstep]
+    mu0 = modelvals.mu0.values[0::nrstep]
 
     datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
@@ -648,7 +648,7 @@ def draw_from_posteriors(idata, mutrue, x):
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
 
-    k = 100000
+    k = 100
 
     rsa = np.random.choice(a, k)
     rsb = np.random.choice(b, k)
