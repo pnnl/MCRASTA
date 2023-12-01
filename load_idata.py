@@ -618,7 +618,6 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
     plt.xlabel('loadpoint displacement ($\mu$m)')
     plt.ylabel('$\mu$')
     plt.title('Posterior Predictive Check')
-    plt.legend()
     plt.show()
 
 
@@ -648,7 +647,7 @@ def draw_from_posteriors(idata, mutrue, x):
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
 
-    k = 100
+    k = 100000
 
     rsa = np.random.choice(a, k)
     rsb = np.random.choice(b, k)
