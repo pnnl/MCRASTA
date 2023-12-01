@@ -158,10 +158,10 @@ def get_thinned_idata(modelvals):
 
 
 def get_trace_variables(modelvals, chain):
-    a = modelvals.a.values[chain, 0::nrstep]
-    b = modelvals.b.values[chain, 0::nrstep]
-    Dc = modelvals.Dc.values[chain, 0::nrstep]
-    mu0 = modelvals.mu0.values[chain, 0::nrstep]
+    a = modelvals.a.values[0::nrstep]
+    b = modelvals.b.values[0::nrstep]
+    Dc = modelvals.Dc.values[0::nrstep]
+    mu0 = modelvals.mu0.values[0::nrstep]
 
     return a, b, Dc, mu0
 
