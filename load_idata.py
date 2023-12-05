@@ -176,8 +176,9 @@ def get_constants(vlps):
     return k, vref
 
 
-def generate_rsf_data(nrplot, modelvars):
-    a, b, Dc, mu0 = modelvars
+def generate_rsf_data(idata, nrplot=nrplot):
+    modelvals = get_model_vals(idata, combined=True)
+    a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
 
     # dimensional variables output from mcmc_rsf.py
     times, mutrue, vlps, x = load_section_data(idata_location)
@@ -204,6 +205,11 @@ def generate_rsf_data(nrplot, modelvars):
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = vlps
 
+    # pre-allocate array
+    nobs = len(t0)
+    mu_sims = np.ones((nobs, nrplot))
+    print(f'mu_sims.shape = {mu_sims.shape}')
+
     logps = []
     j = 0
     for i in np.arange(nrplot):
@@ -226,7 +232,7 @@ def generate_rsf_data(nrplot, modelvars):
         logps.append(logp)
 
         # attempt at storing results to save time - seems like it's just too much data
-        # mu_sims[:, j] = mu_sim
+        mu_sims[:, j] = mu_sim
 
         # save the max logp, "map" solution, "map" vars
         if logp == np.nanmax(logps):
@@ -236,7 +242,7 @@ def generate_rsf_data(nrplot, modelvars):
 
         j += 1
 
-    return logps, map_vars, map_mu_sim, maxlogp
+    return mu_sims, logps, map_vars, map_mu_sim, maxlogp
 
 
 def get_vmax_l0(vlps):
@@ -307,7 +313,8 @@ def plot_priors_posteriors(modelvals):
     xmaxs = [0.05, 0.05, 60, 1.25]
 
     for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc', 'mu0'), xmaxs)):
-        plt.figure(10+i)
+        num = plt.gcf().number + 1
+        plt.figure(num=num)
         # sns.histplot(prior, kde=True)
         line1 = sns.kdeplot(prior, color='b', common_norm=False, bw_method=0.1)
         line2 = sns.kdeplot(post, color='g', common_norm=False)
@@ -427,7 +434,7 @@ def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
     for chain in np.arange(nch):
         # get posteriors and plot them
         # get posteriors from model trace
-        apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, chain)
+        apost, bpost, Dcpost, mu0post = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
         modes = get_modes(modelvals, chain)
 
         vars_all = apost, bpost, Dcpost, mu0post
@@ -444,10 +451,13 @@ def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
         # this generates the rsf data using parameter draws, calc logp vals, and plots the best fit with observed
         # data for each chain
 
+        idata = load_inference_data(idata_location, idataname)
+
         plot_flag = plot_flag
         if plot_flag == 'yes':
             # necessary variables are nondimensionalized in this function for comparison to observed data
-            logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(nr, vars_all) # generates rsf sim
+            # generates rsf sim
+            mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata)
             map_mu_sims.append(map_mu_sim)
             logps_all.append(logps)
             map_vars_all.append(map_vars)
@@ -502,29 +512,30 @@ def plot_a_minus_b(idata):
     ab_idata = az.convert_to_inference_data(datadict, group='posterior')
     hdi_prob = 0.89
 
-    plt.figure(300)
+    num = plt.gcf().number
+    plt.figure(num+1)
     ax = az.plot_posterior(ab_idata, var_names=['a_min_b'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
     ax.set_xlim(-0.05, 0.05)
     ax.set_title(f'(a-b) posterior distribution, {samplename}')
     mab = az.plots.plot_utils.calculate_point_estimate('mode', a_min_b)
     gpl.aminbmode = mab
 
-    plt.figure(301)
+    plt.figure(num+2)
     ax1 = az.plot_posterior(idata, var_names=['a'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
     ax1.set_title(f'a posterior distribution, {samplename}')
     ax1.set_xlim(0, 0.04)
 
-    plt.figure(302)
+    plt.figure(num+3)
     ax2 = az.plot_posterior(idata, var_names=['b'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
     ax2.set_title(f'b posterior distribution, {samplename}')
     ax2.set_xlim(0, 0.05)
 
-    plt.figure(303)
+    plt.figure(num+4)
     ax3 = az.plot_posterior(idata, var_names=['Dc'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
     ax3.set_title(f'Dc posterior distribution, {samplename}')
     ax3.set_xlim(0, 60)
 
-    plt.figure(304)
+    plt.figure(num+5)
     ax4 = az.plot_posterior(idata, var_names=['mu0'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
     ax4.set_title(f'mu0 posterior distribution, {samplename}')
 
@@ -601,7 +612,8 @@ def plot_ensemble_hdi(logps, mu_sims, mutrue, x):
 
 
     # hdi_data = np.array(hdi_data)
-    plt.figure(601)
+    num = plt.gcf().number
+    plt.figure(num+1)
     # plt.plot(x, hdi_lower, 'b-')
     # plt.plot(x, hdi_upper, 'c-')
     az.plot_hdi(x, y=None, hdi_data=hdi_data, color='cyan')
@@ -632,17 +644,23 @@ def draw_from_posteriors(idata, mutrue, x):
     rsmu0 = np.random.choice(mu0, k)
 
     vars_all = rsa, rsb, rsDc, rsmu0
-    logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(k, vars_all)  # generates rsf sim
+    mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, nrplot=k)  # generates rsf sim
 
     p = gpl.get_output_storage_folder()
 
     save_data(logps, map_vars, map_mu_sim, maxlogp, p)
 
-    # plot_ensemble_hdi(logps, mu_sims, mutrue, x)
+    plot_ensemble_hdi(logps, mu_sims, mutrue, x)
+
+
+def calc_rsf_results(x, mutrue, idata):
+    mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, nrplot)  # generates rsf sim
+    plot_ensemble_hdi(logps, mu_sims, mutrue, x)
 
 
 def plot_observed_and_vlps(mutrue, vlps, xax):
-    fig, axs = plt.subplots(2, 1, sharex='all', num=70, gridspec_kw={'height_ratios': [2, 1]})
+    num = plt.gcf().number + 1
+    fig, axs = plt.subplots(2, 1, sharex='all', num=num, gridspec_kw={'height_ratios': [2, 1]})
     fig.subplots_adjust(hspace=0.05)
     axs[0].plot(xax * um_to_mm, mutrue, '.', alpha=0.2, label='observed')
     axs[0].set(ylabel=r'$\mu$', ylim=[np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
@@ -667,7 +685,7 @@ def main():
     times, mutrue, vlps, x = load_section_data(idata_location)
     idata = load_inference_data(idata_location, idataname)
 
-    # first plot the mcmc trace with all original data
+    # first plot: mcmc trace with all original data
     plot_trace(idata, chain=None)
 
     # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
@@ -679,11 +697,13 @@ def main():
     elif dataset_type == 'new':
         vref, mus, sigmas = read_from_json(idata_location)
 
+    calc_rsf_results(x, mutrue, idata)
+
     # this function takes random sample from posterior of each variable, then evaluates the draw in the rsf model
     # a manual "posterior predictive check" of sorts
     draw_from_posteriors(idata, mutrue, x)
 
-    # this calculates and plots posteriors and pair plot for (a-b) dataset
+    # this plots posteriors and pair plot for (a-b) dataset
     # instead of a and b individually
     ab_idata = plot_a_minus_b(idata)
 
