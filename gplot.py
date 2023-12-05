@@ -5,7 +5,7 @@ import pandas as pd
 
 class Globals:
     def __init__(self):
-        self.samplename = 'p5760'
+        self.samplename = None
         self.mintime = None
         self.maxtime = None
         self.mindisp = None
