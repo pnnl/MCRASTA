@@ -6,17 +6,17 @@ import pandas as pd
 class Globals:
     def __init__(self):
         self.samplename = 'p5756'
-        self.mintime = 2973
-        self.maxtime = 3120.65
+        self.mintime = 5732.811
+        self.maxtime = 5906.41
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = 5756001
-        self.k = 0.0021129
+        self.section_id = 5756002
+        self.k = 0.0029722
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
-        self.vel_windowlen = 1000
-        self.filter_windowlen = 20
-        self.q = 5
+        self.vel_windowlen = 500
+        self.filter_windowlen = 100
+        self.q = 10
         self.ndr = 500000
         self.nch = 4
         self.ntune = 20000

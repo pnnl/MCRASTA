@@ -62,11 +62,9 @@ def preplot(df, colnames):
     plt.plot(t, df['mu'])
     plt.xlabel('time (s)')
     plt.ylabel('mu')
-    plt.show()
+    # plt.show()
     #
-    plt.plot(x, t)
-    plt.show()
-
+    # plt.show()
 
 
 def read_hdf(fullpath):
@@ -179,7 +177,7 @@ def get_obs_data(samplename):
     plt.plot(t, vlps)
     plt.xlabel('time (s)')
     plt.ylabel('velocity (um/s)')
-    plt.show()
+    # plt.show()
 
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
