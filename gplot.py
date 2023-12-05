@@ -6,21 +6,21 @@ import pandas as pd
 class Globals:
     def __init__(self):
         self.samplename = 'p5760'
-        self.mintime = 4975.22
-        self.maxtime = 5125.89
+        self.mintime = None
+        self.maxtime = None
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = 5760003
-        self.k = 0.00194
-        self.lc = 125
+        self.section_id = None
+        self.k = None
+        self.lc = None
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
-        self.vel_windowlen = 1000
-        self.filter_windowlen = 20
-        self.q = 5
-        self.ndr = 100000
-        self.nch = 4
-        self.ntune = 10000
-        self.ncores = 4
+        self.vel_windowlen = None
+        self.filter_windowlen = None
+        self.q = None
+        self.ndr = None
+        self.nch = None
+        self.ntune = None
+        self.ncores = None
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
 

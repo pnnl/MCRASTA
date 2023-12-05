@@ -20,11 +20,11 @@ from gplot import gpl
 
 home = os.path.expanduser('~')
 
-samplename = 'p5760'
+samplename = 'p5756'
 nr = 500000
 nch = 4
-section = '003'
-sampleid = f'5760{section}'
+section = '001'
+sampleid = f'5756{section}'
 dirname = f'out_{nr}d{nch}ch_{sampleid}'
 # dirname = f'~out_{nr}d{nch}ch'
 dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', samplename, dirname)
@@ -43,11 +43,28 @@ def read_from_json(dirpath):
     jpath = os.path.join(dirpath, 'out.json')
     with open(jpath, 'r') as rfile:
         js = json.load(rfile)
-        k = js.get('k', 'k not available')
-        lc = js.get('lc', 'lc not available')
-        priors_info = js.get('priors_mus_sigmas', 'priors info not available')
+        print(js)
+        gpl.samplename = samplename
+        gpl.mintime = js.get('time_start')
+        gpl.maxtime = js.get('time_end')
+        gpl.mindisp = js.get('x_start')
+        gpl.maxdisp = js.get('x_end')
+        gpl.section_id = js.get('section_ID')
+        gpl.k = js.get('k')
+        gpl.lc = js.get('lc')
+        gpl.vel_windowlen = js.get('dvdt_window_len')
+        gpl.filter_windowlen = js.get('filter_window_len')
+        gpl.q = js.get('q')
+        gpl.ndr = js.get('n_draws')
+        gpl.nch = js.get('n_chains')
+        gpl.ntune = js.get('n_tune')
+        vref = js.get('vref')
 
-    return k, lc, priors_info
+        priors_info = js.get('prior_mus_sigmas', 'priors info not available')
+        mus = priors_info[0]
+        sigmas = priors_info[1]
+
+        return mus, sigmas, vref
 
 
 def get_storage_folder(dirname):
@@ -667,7 +684,10 @@ def main():
     # k, lc, priors_info = read_from_json(dirpath)
     out_folder = get_storage_folder(dirname)
     times, mutrue, vlps, x = load_section_data(dirpath)
-    k, vref = get_constants(vlps)
+
+    vref, mus, sigmas = read_from_json(dirpath)
+
+    # k, vref = get_constants(vlps)
 
     idata = load_inference_data(dirpath, idataname)
     fig, ax = plt.subplots(num=100)
@@ -679,9 +699,6 @@ def main():
     # aw, bw, Dcw, mu0w = warmup_posterior_vals
     modelvals = get_model_vals(idata)
     modelvals_ab = get_model_vals(ab_idata)
-
-    # plot_model_autocorrelations(warmup_posterior_vals, modelvals)
-    # sys.exit()
 
     # plots pairs for a-b, Dc, mu0
     original_trace_all_chains(modelvals_ab, times, vref)
