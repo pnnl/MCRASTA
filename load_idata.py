@@ -26,8 +26,9 @@ nch = 4
 section = '001'
 sampleid = f'5756{section}'
 dirname = f'out_{nr}d{nch}ch_{sampleid}'
+# dirname = f'out_{nr}d{nch}ch'
 # dirname = f'~out_{nr}d{nch}ch'
-dirpath = os.path.join(home, 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out', samplename, dirname)
+idata_location = gpl.make_path('mcmc_out', samplename, dirname)
 idataname = f'{dirname}_idata'
 
 # nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
@@ -67,33 +68,11 @@ def read_from_json(dirpath):
         return vref, mus, sigmas
 
 
-def get_storage_folder(dirname):
-    print('checking if storage directory exists')
-    homefolder = os.path.expanduser('~')
-    outfolder = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'postprocess_out', samplename)
-    # name = sim_name
-
-    dirpath = os.path.join(homefolder, outfolder, dirname)
-    isExisting = os.path.exists(dirpath)
-    if isExisting is False:
-        print(f'directory does not exist, creating new directory --> {dirpath}')
-        os.makedirs(dirpath)
-        return dirpath
-    elif isExisting is True:
-        print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
-              f'overwritten --> {dirpath}')
-        return dirpath
-
-
 def load_inference_data(dirpath, name):
     fullname = os.path.join(dirpath, name)
     trace = az.from_netcdf(fullname)
 
     return trace
-
-
-def save_trace(idata, dirpath, idataname):
-    idata.to_netcdf(os.path.join(dirpath, f'{idataname}_pp'))
 
 
 def plot_trace(idata, chain):
@@ -118,21 +97,6 @@ def plot_trace(idata, chain):
     ax2[2].set_xlim(0, 100)
 
 
-def plot_posterior_distributions(modelvals, chain, modes):
-    tracevals = get_trace_variables(modelvals, chain)
-    names = ['a', 'b', 'Dc', 'mu0']
-    colors = ['b', 'g', 'k', 'm']
-
-    i=200
-    for traceval, name, c, m in zip(tracevals, names, colors, modes):
-        counts, bins = np.histogram(traceval, bins='doane', density=True)
-        plt.figure(i)
-        plt.hist(bins[:-1], bins, density=True, stacked=True, weights=counts, alpha=0.5, color=c, label=f'chain {chain}, mode={round(m, 4)}')
-        plt.title(f'probability density, {name}')
-        plt.legend(fontsize='small')
-        i += 1
-
-
 def plot_pairs(idata, modes, chain=None):
     # plot_kwargs = {'linewidths': 0.2}
     marginal_kwargs = {'color': 'teal', 'textsize': 18}
@@ -155,8 +119,8 @@ def plot_pairs(idata, modes, chain=None):
         # reference_values_kwargs=reference_values_kwargs
     )
 
-    ax[0][0].set_xlim(-0.02, 0.02)
-    ax[1][1].set_xlim(0, 45)
+    ax[0][0].set_xlim(-0.05, 0.05)
+    ax[1][1].set_xlim(0, 80)
 
 
 def get_model_vals(idata, combined=True):
@@ -165,17 +129,26 @@ def get_model_vals(idata, combined=True):
     return modelvals
 
 
-def get_trace_variables_allchains(modelvals):
-    a_min_b = modelvals.a_min_b.values[0::nrstep]
-    a = modelvals.a.values[0::nrstep]
-    b = modelvals.b.values[0::nrstep]
-    Dc = modelvals.Dc.values[0::nrstep]
-    mu0 = modelvals.mu0.values[0::nrstep]
+def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
+    if thin_data is True:
+        a_min_b = modelvals.a_min_b.values[0::nrstep]
+        a = modelvals.a.values[0::nrstep]
+        b = modelvals.b.values[0::nrstep]
+        Dc = modelvals.Dc.values[0::nrstep]
+        mu0 = modelvals.mu0.values[0::nrstep]
+    elif thin_data is False:
+        a = modelvals.a.values
+        b = modelvals.b.values
+        Dc = modelvals.Dc.values
+        mu0 = modelvals.mu0.values
 
-    return a_min_b, a, b, Dc, mu0
+    if return_aminb is True:
+        return a_min_b, a, b, Dc, mu0
+    elif return_aminb is False:
+        return a, b, Dc, mu0
 
 
-def get_thinned_idata(modelvals):
+def get_thinned_idata_original(modelvals):
     a = modelvals.a.values[0::nrstep]
     b = modelvals.b.values[0::nrstep]
     Dc = modelvals.Dc.values[0::nrstep]
@@ -207,19 +180,18 @@ def generate_rsf_data(nrplot, modelvars):
     a, b, Dc, mu0 = modelvars
 
     # dimensional variables output from mcmc_rsf.py
-    times, mutrue, vlps, x = load_section_data(dirpath)
+    times, mutrue, vlps, x = load_section_data(idata_location)
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
+    # time is the only variable that needs to be re-nondimensionalized...?
     k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
-
-    nobs = len(t0)
 
     # set up rsf model
     model = rsf.Model()
-    model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref  # Reference velocity, generally vlp(t=0)
+    model.k = k             # Normalized System stiffness (friction/micron)
+    model.v = vlps[0]       # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref       # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax
@@ -232,24 +204,16 @@ def generate_rsf_data(nrplot, modelvars):
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = vlps
 
-    # pre-allocate array
-    mu_sims = np.ones((nobs, nrplot))
-    print(f'mu_sims.shape = {mu_sims.shape}')
-
     logps = []
-    # need to iterate over nr rows, that's it
-    print('this takes a long time for large number of realizations')
-    print(f'only plotting every {nrstep}th realization')
     j = 0
     for i in np.arange(nrplot):
         if i % 1000 == 0:
           print(f'solving for realization {i}')
         # Set model initial conditions
-        model.mu0 = mu0[i]  # Friction initial (at the reference velocity)
-        # print('model mu0 = ', model.mu0)
-        model.a = a[i]  # Empirical coefficient for the direct effect
-        state1.b = b[i]  # Empirical coefficient for the evolution effect
-        state1.Dc = Dc[i]  # Critical slip distance
+        model.mu0 = mu0[i]      # Friction initial (at the reference velocity)
+        model.a = a[i]          # Empirical coefficient for the direct effect
+        state1.b = b[i]         # Empirical coefficient for the evolution effect
+        state1.Dc = Dc[i]       # Critical slip distance
 
         # Run the model!
         model.solve()
@@ -261,8 +225,10 @@ def generate_rsf_data(nrplot, modelvars):
         logp = -1/2 * np.sum(resids ** 2)
         logps.append(logp)
 
-        mu_sims[:, j] = mu_sim
+        # attempt at storing results to save time - seems like it's just too much data
+        # mu_sims[:, j] = mu_sim
 
+        # save the max logp, "map" solution, "map" vars
         if logp == np.nanmax(logps):
             map_vars = a[i], b[i], Dc[i], mu0[i]
             map_mu_sim = mu_sim
@@ -270,7 +236,7 @@ def generate_rsf_data(nrplot, modelvars):
 
         j += 1
 
-    return mu_sims, logps, map_vars, map_mu_sim, maxlogp
+    return logps, map_vars, map_mu_sim, maxlogp
 
 
 def get_vmax_l0(vlps):
@@ -303,8 +269,8 @@ def load_section_data(dirpath):
     return times, mutrue, vlps, x
 
 
-def original_trace_all_chains(modelvals, times, vref):
-    a_min_b, a, b, Dc, mu0 = get_trace_variables_allchains(modelvals)
+def plot_pairs_thinned_idata(modelvals):
+    a_min_b, a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=True, thin_data=True)
 
     datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
@@ -312,17 +278,6 @@ def original_trace_all_chains(modelvals, times, vref):
     modes = get_modes(modelvals)
 
     plot_pairs(new_idata, modes, chain=None)
-    # plot_trace(new_idata, chain=None)
-
-
-def plot_chain_trace(modelvals, chain):
-    a, b, Dc, mu0 = get_trace_variables(modelvals, chain)
-    datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
-    new_idata = az.convert_to_inference_data(datadict)
-
-    plot_pairs(new_idata, chain)
-    plot_trace(new_idata, chain)
-
 
 
 def save_figs(out_folder):
@@ -336,17 +291,18 @@ def save_figs(out_folder):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
 
 
-def plot_priors_posteriors(*posts):
+def plot_priors_posteriors(modelvals):
+    posts = get_posterior_data(modelvals, return_aminb=False, thin_data=False)
     # define priors same as in mcmc_rsf.py - get this info from out file
     mus, sigmas = gpl.get_prior_parameters()
 
     a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
-    Dc_nd = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
+    Dc = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
 
     # take same number of draws as in mcmc_rsf.py
-    vpriors = pm.draw([a, b, Dc_nd, mu0], draws=500000)
+    vpriors = pm.draw([a, b, Dc, mu0], draws=gpl.ndr)
 
     xmaxs = [0.05, 0.05, 60, 1.25]
 
@@ -359,21 +315,22 @@ def plot_priors_posteriors(*posts):
         # plt.gca().set_legend([line1, line2], ['priors', 'posteriors'])
 
 
-def get_posteriors(modelvals, chain):
-    a, b, Dc, mu0 = get_trace_variables(modelvals, chain)
+# def get_posteriors(modelvals, chain):
+#     a, b, Dc, mu0 = get_trace_variables(modelvals, chain)
+#
+#     return a, b, Dc, mu0
 
-    return a, b, Dc, mu0
 
-
-def get_modes(modelvals, chain=None):
-    a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
+def get_modes(modelvals):
+    aminb, a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=True, thin_data=False)
 
     amode = az.plots.plot_utils.calculate_point_estimate('mode', a)
     bmode = az.plots.plot_utils.calculate_point_estimate('mode', b,)
-    Dcndmode = az.plots.plot_utils.calculate_point_estimate('mode', Dc_nd)
+    Dcmode = az.plots.plot_utils.calculate_point_estimate('mode', Dc)
     mu0mode = az.plots.plot_utils.calculate_point_estimate('mode', mu0)
+    aminbmode = az.plots.plot_utils.calculate_point_estimate('mode', aminb)
 
-    return amode, bmode, Dcndmode, mu0mode
+    return amode, bmode, Dcmode, mu0mode, aminbmode
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
@@ -459,7 +416,81 @@ def get_warmup_vals(idata):
     return aw, bw, Dcw, mu0w
 
 
-def plot_a_minus_b(idata, vlps, vref, nrstep):
+def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
+    fig, axs = plt.subplots(2, 1, sharex='all', num=1000, gridspec_kw={'height_ratios': [2, 1]})
+
+    map_mu_sims = []
+    logps_all = []
+    map_vars_all = []
+    maxlogps = []
+
+    for chain in np.arange(nch):
+        # get posteriors and plot them
+        # get posteriors from model trace
+        apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, chain)
+        modes = get_modes(modelvals, chain)
+
+        vars_all = apost, bpost, Dcpost, mu0post
+        names = ['a', 'b', 'Dc', 'mu0']
+
+        # this is to double-check sampler is sampling appropriate range
+        for modelvar, name in zip(vars_all, names):
+            print(f'model parameter = {name}')
+            mi = np.min(modelvar)
+            mx = np.max(modelvar)
+            print(f'min = {mi}')
+            print(f'max = {mx}')
+
+        # this generates the rsf data using parameter draws, calc logp vals, and plots the best fit with observed
+        # data for each chain
+
+        plot_flag = plot_flag
+        if plot_flag == 'yes':
+            # necessary variables are nondimensionalized in this function for comparison to observed data
+            logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(nr, vars_all) # generates rsf sim
+            map_mu_sims.append(map_mu_sim)
+            logps_all.append(logps)
+            map_vars_all.append(map_vars)
+            maxlogps.append(maxlogp)
+
+            # plot_hdi_mu_sims(mu_sims)
+
+            ahat, bhat, Dchat, mu0hat = map_vars    # parameter vals which resulted in highest logp val
+
+            aminb_hat = ahat - bhat
+
+            # plot all the stuff
+            axs[0].plot(xax * um_to_mm, map_mu_sim, label=f'chain {chain};'
+                                                          # f'max logp = {round(maxlogp, 4)} \n '
+                                                          f'a-b={round(aminb_hat, 4)} \n '
+                                                          # f'a={round(ahat, 4)}; '
+                                                          # f'b={round(bhat, 4)}; '
+                                                          f'Dc={round(Dchat, 2)}; '
+                                                          f'mu0={round(mu0hat, 3)}')
+
+            axs[1].plot(xax * um_to_mm, vlps, 'k')
+            axs[1].set(ylabel=r'Velocity ($\mu$m/s)')
+            plt.xlabel(r'Loadpoint Displacement ($\mu$m)')
+
+            pos = axs[0].get_position()
+            axs[0].set_position([pos.x0, pos.y0, pos.width*0.9, pos.height])
+            axs[0].legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='x-small')
+
+            pos1 = axs[1].get_position()
+            axs[1].set_position([pos1.x0, pos1.y0, pos1.width*0.9, pos1.height])
+
+            # plot logp vals as sanity check
+            plt.figure(71)
+            logps = np.sort(logps)
+            plt.plot(logps, '.')
+            plt.ylabel('logp values')
+            plt.xlabel('realization no.')
+            plt.title('logp vals')
+        elif plot_flag == 'no':
+            print('skipping plotting observed data with realizations')
+
+
+def plot_a_minus_b(idata):
     modelvals = az.extract(idata.posterior, combined=True)
     a = modelvals.a.values
     b = modelvals.b.values
@@ -497,36 +528,24 @@ def plot_a_minus_b(idata, vlps, vref, nrstep):
     ax4 = az.plot_posterior(idata, var_names=['mu0'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
     ax4.set_title(f'mu0 posterior distribution, {samplename}')
 
+    labeller = azl.MapLabeller(var_name_map={'a_min_b': 'a-b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
     marginal_kwargs = {'color': 'purple'}
-    kde_kwargs = {'hdi_probs': [0.89, 0.94]}
+    kde_kwargs = {'hdi_probs': [0.10, 0.25, 0.50, 0.75, 0.89, 0.94]}
     ax = az.plot_pair(
         ab_idata,
         var_names=['a_min_b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
         scatter_kwargs={'color': 'purple', 'alpha': 0.01},
+        point_estimate='mode',
         kde_kwargs=kde_kwargs,
         marginal_kwargs=marginal_kwargs,
+        labeller=labeller,
+        textsize=18
     )
 
-    # plt.figure(300)
-    # plt.plot(a_min_b, '.', alpha=0.2)
-    #
-    # colors = ['k--', 'g--']
-    # for prob, color in zip(hdi_probs, colors):
-    #     hdi = az.hdi(ab_idata, hdi_prob=prob)
-    #     y0 = hdi.a_min_b.data[0]*np.ones_like(x)
-    #     y1 = hdi.a_min_b.data[1]*np.ones_like(x)
-    #     y2 = mab*np.ones_like(x)
-    #     plt.plot(x, y0, color, label=f'ci={prob*100}%, [{hdi.a_min_b.data[0]}, {hdi.a_min_b.data[1]}]')
-    #     plt.plot(x, y1, color)
-    #     plt.plot(x, y2, 'r', label=f'mode={mab}')
-    #     plt.title('(a-b) ')
-    #     plt.legend()
-    # plt.show()
-    # sys.exit()
-
-    # plt.show()
+    ax[0][0].set_xlim(-0.05, 0.05)
+    ax[1][1].set_xlim(0, 80)
 
     return ab_idata
 
@@ -535,15 +554,15 @@ def plot_hdi_mu_sims(mu_sims):
     az.plot_hdi(mu_sims, mu_sims)
 
 
-def save_data(mu_sims, logps, map_vars, map_mu_sims, maxlogps, out_folder):
-    mu_sims = np.array(mu_sims)
+def save_data(logps, map_vars, map_mu_sims, maxlogps, out_folder):
+    # mu_sims = np.array(mu_sims)
     logps = np.array(logps)
     map_vars = np.array(map_vars)
     map_mu_sims = np.array(map_mu_sims)
     # maxlogps = np.array(maxlogps)
 
-    data = mu_sims, logps, map_vars, map_mu_sims
-    names = ['mu_sims', 'logps', 'map_vars', 'map_mu_sims']
+    data = logps, map_vars, map_mu_sims
+    names = ['logps', 'map_vars', 'map_mu_sims']
 
     p = gpl.make_path('postprocess_out', gpl.samplename, gpl.sim_name)
 
@@ -552,50 +571,7 @@ def save_data(mu_sims, logps, map_vars, map_mu_sims, maxlogps, out_folder):
         np.savetxt(f, d)
 
 
-# def plot_data(ax, lw=2, title="Hudson's Bay Company Data"):
-#     ax.plot(data.year, data.lynx, color="b", lw=lw, marker="o", markersize=12, label="Lynx (Data)")
-#     ax.plot(data.year, data.hare, color="g", lw=lw, marker="+", markersize=14, label="Hare (Data)")
-#     ax.legend(fontsize=14, loc="center left", bbox_to_anchor=(1, 0.5))
-#     ax.set_xlim([1900, 1920])
-#     ax.set_ylim(0)
-#     ax.set_xlabel("Year", fontsize=14)
-#     ax.set_ylabel("Pelts (Thousands)", fontsize=14)
-#     ax.set_xticks(data.year.astype(int))
-#     ax.set_xticklabels(ax.get_xticks(), rotation=45)
-#     ax.set_title(title, fontsize=16)
-#     return ax
-#
-#
-# def plot_model_trace(ax, trace_df, row_idx, lw=1, alpha=0.2):
-#     cols = ["alpha", "beta", "gamma", "delta", "xto", "yto"]
-#     row = trace_df.iloc[row_idx, :][cols].values
-#
-#     # alpha, beta, gamma, delta, Xt0, Yt0
-#     time = np.arange(1900, 1921, 0.01)
-#     theta = row
-#     x_y = odeint(func=rhs, y0=theta[-2:], t=time, args=(theta,))
-#     plot_model(ax, x_y, time=time, lw=lw, alpha=alpha)
-#
-#
-#
-# def plot_inference(
-#     ax,
-#     trace,
-#     num_samples=25,
-#     title="Hudson's Bay Company Data and\nInference Model Runs",
-#     plot_model_kwargs=dict(lw=1, alpha=0.2),
-# ):
-#     trace_df = az.extract(trace, num_samples=num_samples).to_dataframe()
-#     plot_data(ax, lw=0)
-#     for row_idx in range(num_samples):
-#         plot_model_trace(ax, trace_df, row_idx, **plot_model_kwargs)
-#         generate_rsf_data(nr, modelvars)
-#     handles, labels = ax.get_legend_handles_labels()
-#     ax.legend(handles[:2], labels[:2], loc="center left", bbox_to_anchor=(1, 0.5))
-#     ax.set_title(title, fontsize=16)
-
-
-def plot_chisquare_interval(logps, mu_sims, mutrue, x):
+def plot_ensemble_hdi(logps, mu_sims, mutrue, x):
     mu_sims = np.array(mu_sims)
     logps = np.abs(logps)
     logps = np.array(logps)
@@ -638,22 +614,6 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
     plt.show()
 
 
-    # data = np.column_stack((logps, mu_sims))
-    # df = pd.DataFrame(data)
-    # dfsort = df.sort_values(by=0)
-    #
-    # limit = round(0.11 * nrplot*gpl.nch)
-    # mu_sort = dfsort.iloc[:, 1:]
-    # mu_sort = np.array(mu_sort)
-    #
-    # plt.figure(600)
-    # for i in np.arange(limit):
-    #     plt.plot(x, mu_sort[i, :], 'b-', alpha=0.05)
-    #
-    # plt.plot(x, mutrue, 'k.', alpha=0.2, label='observed')
-    # plt.legend()
-
-
 def draw_from_posteriors(idata, mutrue, x):
     # draw values from the 89% credible interval for each parameter
     # then generate rsf data for draws
@@ -672,49 +632,18 @@ def draw_from_posteriors(idata, mutrue, x):
     rsmu0 = np.random.choice(mu0, k)
 
     vars_all = rsa, rsb, rsDc, rsmu0
-    mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(k, vars_all)  # generates rsf sim
-    # plt.plot(mu_sims, 'b-', alpha=0.01)
-    # plt.plot(mutrue, '.')
-    # plt.show()
+    logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(k, vars_all)  # generates rsf sim
 
     p = gpl.get_output_storage_folder()
 
-    save_data(mu_sims, logps, map_vars, map_mu_sim, maxlogp, p)
+    save_data(logps, map_vars, map_mu_sim, maxlogp, p)
 
-    plot_chisquare_interval(logps, mu_sims, mutrue, x)
-
-
-def main():
-    out_folder = get_storage_folder(dirname)
-    times, mutrue, vlps, x = load_section_data(dirpath)
-
-    vref, mus, sigmas = read_from_json(dirpath)
-
-    idata = load_inference_data(dirpath, idataname)
-    fig, ax = plt.subplots(num=100)
-
-    draw_from_posteriors(idata, mutrue, x)
-
-    ab_idata = plot_a_minus_b(idata, vlps, vref, nrstep)
+    # plot_ensemble_hdi(logps, mu_sims, mutrue, x)
 
 
-    modelvals = get_model_vals(idata)
-    modelvals_ab = get_model_vals(ab_idata)
-
-    # plots pairs for a-b, Dc, mu0
-    original_trace_all_chains(modelvals_ab, times, vref)
-
-    # plots original trace
-    thinned_idata = get_thinned_idata(modelvals)
-    new_data = get_model_vals(idata, combined=False)
-    plot_trace(new_data, chain=None)
-
-    # plot observed data on this figure before chains are plotted to avoid plotting it 4 times
-    # fig, ax = plt.subplots(num=70)
-    # p1, = ax.plot(times, mutrue, '.', alpha=0.2, label='observed')
+def plot_observed_and_vlps(mutrue, vlps, xax):
     fig, axs = plt.subplots(2, 1, sharex='all', num=70, gridspec_kw={'height_ratios': [2, 1]})
     fig.subplots_adjust(hspace=0.05)
-    xax = x
     axs[0].plot(xax * um_to_mm, mutrue, '.', alpha=0.2, label='observed')
     axs[0].set(ylabel=r'$\mu$', ylim=[np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
 
@@ -729,83 +658,49 @@ def main():
     pos1 = axs[1].get_position()
     axs[1].set_position([pos1.x0, pos1.y0, pos1.width * 0.9, pos1.height])
 
-    map_mu_sims = []
-    mu_sims_all = []
-    logps_all = []
-    map_vars_all = []
-    maxlogps = []
 
-    for chain in np.arange(nch):
-        # get posteriors and plot them
-        # get posteriors from model trace
-        apost, bpost, Dcpost, mu0post = get_posteriors(modelvals, chain)
-        modes = get_modes(modelvals, chain)
+def main():
+    # setup output directory
+    out_folder = gpl.get_output_storage_folder()
 
-        # plot the priors and posteriors for comparison when necessary
-        # plot_priors_posteriors(apost, bpost, Dcpost, mu0post)
-        # plot_posterior_distributions(modelvals, chain, modes)
+    # load observed section data and mcmc inference data
+    times, mutrue, vlps, x = load_section_data(idata_location)
+    idata = load_inference_data(idata_location, idataname)
 
-        vars_all = apost, bpost, Dcpost, mu0post
-        names = ['a', 'b', 'Dc', 'mu0']
+    # first plot the mcmc trace with all original data
+    plot_trace(idata, chain=None)
 
-        # this is to double-check sampler is sampling appropriate range
-        for modelvar, name in zip(vars_all, names):
-            print(f'model parameter = {name}')
-            mi = np.min(modelvar)
-            mx = np.max(modelvar)
-            print(f'min = {mi}')
-            print(f'max = {mx}')
+    # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
+    # 'old' data = had to fill in parameters manually
+    # if there's no .json in the mcmc results folder, then the data is type 'old'
+    dataset_type = 'new'
+    if dataset_type == 'old':
+        k, vref = get_constants(vlps)
+    elif dataset_type == 'new':
+        vref, mus, sigmas = read_from_json(idata_location)
 
-        # this generates the rsf data using parameter draws, calc logp vals, and plots the best fit with observed
-        # data for each chain
+    # this function takes random sample from posterior of each variable, then evaluates the draw in the rsf model
+    # a manual "posterior predictive check" of sorts
+    draw_from_posteriors(idata, mutrue, x)
 
-        plot_flag = 'no'
-        if plot_flag == 'yes':
-            # necessary variables are nondimensionalized in this function for comparison to observed data
-            mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(nr, vars_all) # generates rsf sim
-            map_mu_sims.append(map_mu_sim)
-            mu_sims_all.append(mu_sims)
-            logps_all.append(logps)
-            map_vars_all.append(map_vars)
-            maxlogps.append(maxlogp)
+    # this calculates and plots posteriors and pair plot for (a-b) dataset
+    # instead of a and b individually
+    ab_idata = plot_a_minus_b(idata)
 
-            # plot_hdi_mu_sims(mu_sims)
+    # plots thinned data pairs for a-b, Dc, mu0
+    modelvals = get_model_vals(ab_idata)
+    plot_pairs_thinned_idata(modelvals)
 
-            ahat, bhat, Dchat, mu0hat = map_vars    # parameter vals which resulted in highest logp val
+    # plot observed data section and velocity steps
+    plot_observed_and_vlps(mutrue, vlps, xax=x)
 
-            aminb_hat = ahat - bhat
+    # this plots individual chains - keeping for now but don't see a particular need for it
+    # plot_individual_chains(modelvals, vlps, xax=x, plot_flag='no')
 
-            # plot all the stuff
-            axs[0].plot(xax * um_to_mm, map_mu_sim, label=f'chain {chain};'
-                                                          # f'max logp = {round(maxlogp, 4)} \n '
-                                                          f'a-b={round(aminb_hat, 4)} \n '
-                                                          # f'a={round(ahat, 4)}; '
-                                                          # f'b={round(bhat, 4)}; '
-                                                          f'Dc={round(Dchat, 2)}; '
-                                                          f'mu0={round(mu0hat, 3)}')
+    # plot the priors and posteriors for comparison
+    plot_priors_posteriors(modelvals)
 
-            axs[1].plot(xax * um_to_mm, vlps, 'k')
-            axs[1].set(ylabel=r'Velocity ($\mu$m/s)')
-            plt.xlabel(r'Loadpoint Displacement ($\mu$m)')
-
-            pos = axs[0].get_position()
-            axs[0].set_position([pos.x0, pos.y0, pos.width*0.9, pos.height])
-            axs[0].legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='x-small')
-
-            pos1 = axs[1].get_position()
-            axs[1].set_position([pos1.x0, pos1.y0, pos1.width*0.9, pos1.height])
-
-            # plot logp vals as sanity check
-            plt.figure(71)
-            logps = np.sort(logps)
-            plt.plot(logps, '.')
-            plt.ylabel('logp values')
-            plt.xlabel('realization no.')
-            plt.title('logp vals')
-        elif plot_flag == 'no':
-            print('skipping plotting observed data with realizations')
-
-    # save_data(mu_sims_all, logps_all, map_vars_all, map_mu_sims, maxlogps, out_folder)
+    # save all figures
     save_figs(out_folder)
 
 

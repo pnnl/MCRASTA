@@ -11,8 +11,8 @@ class Globals:
         self.mindisp = None
         self.maxdisp = None
         self.section_id = '5756001'
-        self.k = None
-        self.lc = None
+        self.k = 0.0021129
+        self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = None
         self.filter_windowlen = None
@@ -21,7 +21,8 @@ class Globals:
         self.nch = 4
         self.ntune = None
         self.ncores = 4
-        self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
+        # self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
+        self.sim_name = f'out_{self.ndr}d{self.nch}ch'
         self.mu_sim = None
         self.aminbmode = None
 
@@ -29,7 +30,7 @@ class Globals:
         return os.path.join(self.rootpath, *args)
 
     def get_output_storage_folder(self):
-        p = self.make_path('mcmc_out', self.samplename, self.sim_name)
+        p = self.make_path('postprocess_out', self.samplename, self.sim_name)
 
         isExisting = os.path.exists(p)
 
