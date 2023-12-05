@@ -664,7 +664,7 @@ def draw_from_posteriors(idata, mutrue, x):
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
 
-    k = 100000
+    k = 10000
 
     rsa = np.random.choice(a, k)
     rsb = np.random.choice(b, k)
