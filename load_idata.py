@@ -242,7 +242,8 @@ def generate_rsf_data(nrplot, modelvars):
     print(f'only plotting every {nrstep}th realization')
     j = 0
     for i in np.arange(nrplot):
-        print(f'solving for realization {i}')
+        if i % 1000 == 0:
+          print(f'solving for realization {i}')
         # Set model initial conditions
         model.mu0 = mu0[i]  # Friction initial (at the reference velocity)
         # print('model mu0 = ', model.mu0)
