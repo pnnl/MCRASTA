@@ -5,7 +5,7 @@ import pandas as pd
 
 class Globals:
     def __init__(self):
-        self.samplename = None
+        self.samplename = 'p5756'
         self.mintime = None
         self.maxtime = None
         self.mindisp = None
@@ -30,7 +30,7 @@ class Globals:
         return os.path.join(self.rootpath, *args)
 
     def get_output_storage_folder(self):
-        p = self.make_path('postprocess_out', self.samplename, self.sim_name)
+        p = self.make_path('postprocess_out', self.samplename, self.sim_name, 'test')
 
         isExisting = os.path.exists(p)
 

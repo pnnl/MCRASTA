@@ -16,8 +16,6 @@ import arviz.labels as azl
 from random import sample
 from gplot import gpl
 
-# az.style.use("arviz-darkgrid")
-
 home = os.path.expanduser('~')
 
 samplename = 'p5756'
@@ -31,11 +29,11 @@ dirname = f'out_{nr}d{nch}ch_{sampleid}'
 idata_location = gpl.make_path('mcmc_out', samplename, dirname)
 idataname = f'{dirname}_idata'
 
-# nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
+# nrstep: interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
 # more interpretable)
-nrstep = 100
-# nrplot = number of total realizations we'll look at
-nrplot = 5000
+nrstep = 10
+# nrplot: number of total realizations we'll look at
+nrplot = 50000
 
 um_to_mm = 0.001
 
@@ -130,21 +128,21 @@ def get_model_vals(idata, combined=True):
 
 
 def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
-    if thin_data is True:
+    if thin_data is False:
+        nrstep = 1
+
+    if return_aminb is True:
         a_min_b = modelvals.a_min_b.values[0::nrstep]
         a = modelvals.a.values[0::nrstep]
         b = modelvals.b.values[0::nrstep]
         Dc = modelvals.Dc.values[0::nrstep]
         mu0 = modelvals.mu0.values[0::nrstep]
-    elif thin_data is False:
+        return a_min_b, a, b, Dc, mu0
+    elif return_aminb is False:
         a = modelvals.a.values
         b = modelvals.b.values
         Dc = modelvals.Dc.values
         mu0 = modelvals.mu0.values
-
-    if return_aminb is True:
-        return a_min_b, a, b, Dc, mu0
-    elif return_aminb is False:
         return a, b, Dc, mu0
 
 
@@ -170,7 +168,7 @@ def get_trace_variables(modelvals, chain):
 
 
 def get_constants(vlps):
-    k = 0.00194
+    k = gpl.k
     vref = vlps[0]
 
     return k, vref
@@ -213,8 +211,10 @@ def generate_rsf_data(idata, nrplot=nrplot):
     logps = []
     j = 0
     for i in np.arange(nrplot):
-        if i % 1000 == 0:
+        if i % 100 == 0:
           print(f'solving for realization {i}')
+        # print(f'solving for realization {i}')
+
         # Set model initial conditions
         model.mu0 = mu0[i]      # Friction initial (at the reference velocity)
         model.a = a[i]          # Empirical coefficient for the direct effect
@@ -582,8 +582,8 @@ def save_data(logps, map_vars, map_mu_sims, maxlogps, out_folder):
         np.savetxt(f, d)
 
 
-def plot_ensemble_hdi(logps, mu_sims, mutrue, x):
-    mu_sims = np.array(mu_sims)
+def plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim):
+    # mu_sims = np.array(mu_sims)
     logps = np.abs(logps)
     logps = np.array(logps)
     rdim = mu_sims.shape[0]
@@ -597,18 +597,21 @@ def plot_ensemble_hdi(logps, mu_sims, mutrue, x):
     hdi_lower = []
     hdi_upper = []
     # hdi_data = []
-    hdi_data = np.zeros((rdim, 2))
-    for i in np.arange(rdim):
-        r = mu_sims[i, :]
-        ensemble_mode = az.plots.plot_utils.calculate_point_estimate('mode', r, skipna=True)
-        ensemble_mean = az.plots.plot_utils.calculate_point_estimate('mean', r, skipna=True)
-        hdi = az.hdi(r, hdi_prob=0.89, skipna=True)
-        # hdi_data.append(hdi)
-        hdi_data[i, :] = hdi
-        ensemble_modes.append(ensemble_mode)
-        ensemble_means.append(ensemble_mean)
-        hdi_lower.append(hdi[0])
-        hdi_upper.append(hdi[1])
+    # hdi_data = np.zeros((rdim, 2))
+
+    hdi_data = az.hdi(np.transpose(mu_sims), hdi_prob=0.89, skipna=True)
+
+    # for i in np.arange(rdim):
+    #     r = mu_sims[i, :]
+    #     ensemble_mode = az.plots.plot_utils.calculate_point_estimate('mode', r, skipna=True)
+    #     ensemble_mean = az.plots.plot_utils.calculate_point_estimate('mean', r, skipna=True)
+    #     hdi = az.hdi(r, hdi_prob=0.89, skipna=True)
+    #     # hdi_data.append(hdi)
+    #     hdi_data[i, :] = hdi
+    #     ensemble_modes.append(ensemble_mode)
+    #     ensemble_means.append(ensemble_mean)
+    #     hdi_lower.append(hdi[0])
+    #     hdi_upper.append(hdi[1])
 
 
     # hdi_data = np.array(hdi_data)
@@ -616,12 +619,18 @@ def plot_ensemble_hdi(logps, mu_sims, mutrue, x):
     plt.figure(num+1)
     # plt.plot(x, hdi_lower, 'b-')
     # plt.plot(x, hdi_upper, 'c-')
-    az.plot_hdi(x, y=None, hdi_data=hdi_data, color='cyan')
+    az.plot_hdi(x, hdi_data=hdi_data, color='cyan', smooth=False)
+    # az.plot_hdi(x, mu_sims, input_core_dims=[['chain']], color='cyan')
+
     # plt.plot(x, ensemble_modes, 'k.')
-    plt.plot(x, mutrue, 'b.', alpha=0.2)
+    plt.plot(x, mutrue, 'k.', alpha=0.09)
+    for i in np.arange(cdim):
+        m = mu_sims[:, i]
+        plt.plot(x, m, 'k-', alpha=0.05)
+    plt.plot(x, map_mu_sim, 'r-')
     plt.ylim([np.min(hdi_data[:, 0]) - 0.01, np.max(hdi_data[:, 1]) + 0.01])
-    plt.xlabel('loadpoint displacement ($\mu$m)')
-    plt.ylabel('$\mu$')
+    plt.xlabel(r'loadpoint displacement ($\mu$m)')
+    plt.ylabel(r'$\mu$')
     plt.title('Posterior draws')
     plt.show()
 
@@ -655,7 +664,7 @@ def draw_from_posteriors(idata, mutrue, x):
 
 def calc_rsf_results(x, mutrue, idata):
     mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, nrplot)  # generates rsf sim
-    plot_ensemble_hdi(logps, mu_sims, mutrue, x)
+    plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim)
 
 
 def plot_observed_and_vlps(mutrue, vlps, xax):
@@ -701,7 +710,7 @@ def main():
 
     # this function takes random sample from posterior of each variable, then evaluates the draw in the rsf model
     # a manual "posterior predictive check" of sorts
-    draw_from_posteriors(idata, mutrue, x)
+    # draw_from_posteriors(idata, mutrue, x)
 
     # this plots posteriors and pair plot for (a-b) dataset
     # instead of a and b individually
