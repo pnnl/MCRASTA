@@ -10,19 +10,20 @@ class Globals:
         self.maxtime = None
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = None
+        self.section_id = '5756001'
         self.k = None
         self.lc = None
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = None
         self.filter_windowlen = None
         self.q = None
-        self.ndr = None
-        self.nch = None
+        self.ndr = 500000
+        self.nch = 4
         self.ntune = None
-        self.ncores = None
+        self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
+        self.aminbmode = None
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)

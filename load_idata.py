@@ -32,9 +32,9 @@ idataname = f'{dirname}_idata'
 
 # nrstep = interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
 # more interpretable)
-nrstep = 500
+nrstep = 100
 # nrplot = number of total realizations we'll look at
-nrplot = 1000
+nrplot = 5000
 
 um_to_mm = 0.001
 
@@ -64,7 +64,7 @@ def read_from_json(dirpath):
         mus = priors_info[0]
         sigmas = priors_info[1]
 
-        return mus, sigmas, vref
+        return vref, mus, sigmas
 
 
 def get_storage_folder(dirname):
@@ -97,10 +97,19 @@ def save_trace(idata, dirpath, idataname):
 
 
 def plot_trace(idata, chain):
-    ax = az.plot_trace(idata, var_names=['a', 'b', 'Dc', 'mu0'], combined=False)
-    ax[0][0].set_xlim(0, 0.08)
-    ax[1][0].set_xlim(0, 0.12)
-    ax[2][0].set_xlim(0, 100)
+    backend_kwargs = {'layout': 'tight'}
+    plot_kwargs = {'textsize': 16}
+    labeller = azl.MapLabeller(var_name_map={'a': 'a', 'b': 'b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
+    ax = az.plot_trace(idata,
+                       var_names=['a', 'b', 'Dc', 'mu0'],
+                       labeller=labeller,
+                       combined=False,
+                       plot_kwargs=plot_kwargs,
+                       backend_kwargs=backend_kwargs)
+
+    # ax[0][0].set_xlim(0, 0.08)
+    # ax[1][0].set_xlim(0, 0.12)
+    # ax[2][0].set_xlim(0, 100)
 
     ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode', round_to=3)
     print(ax2)
@@ -124,30 +133,34 @@ def plot_posterior_distributions(modelvals, chain, modes):
         i += 1
 
 
-def plot_pairs(idata, chain=None):
+def plot_pairs(idata, modes, chain=None):
     # plot_kwargs = {'linewidths': 0.2}
-    marginal_kwargs = {'color': 'teal'}
-    kde_kwargs = {'hdi_probs': [0.89, 0.94]}
+    marginal_kwargs = {'color': 'teal', 'textsize': 18}
+    kde_kwargs = {'hdi_probs': [0.10, 0.50, 0.75, 0.89, 0.94]}
+    # reference_values = {0}
+    # reference_values_kwargs = {'label': 'mode'}
     labeller = azl.MapLabeller(var_name_map={'a_min_b': 'a-b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
     ax = az.plot_pair(
         idata,
         var_names=['a_min_b', 'Dc', 'mu0'],
         kind=['scatter', 'kde'],
         marginals=True,
-        scatter_kwargs={'color': 'teal', 'alpha': 0.6},
+        scatter_kwargs={'color': 'teal', 'alpha': 0.1},
         labeller=labeller,
         point_estimate='mode',
-        # kde_kwargs=kde_kwargs,
-        # marginal_kwargs=marginal_kwargs,
+        kde_kwargs=kde_kwargs,
+        marginal_kwargs=marginal_kwargs,
         textsize=18,
+        # reference_values=reference_values,
+        # reference_values_kwargs=reference_values_kwargs
     )
 
     ax[0][0].set_xlim(-0.02, 0.02)
     ax[1][1].set_xlim(0, 45)
 
 
-def get_model_vals(idata):
-    modelvals = az.extract(idata.posterior, combined=True)
+def get_model_vals(idata, combined=True):
+    modelvals = az.extract(idata.posterior, combined=combined)
 
     return modelvals
 
@@ -295,7 +308,9 @@ def original_trace_all_chains(modelvals, times, vref):
     datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
 
-    plot_pairs(new_idata, chain=None)
+    modes = get_modes(modelvals)
+
+    plot_pairs(new_idata, modes, chain=None)
     # plot_trace(new_idata, chain=None)
 
 
@@ -349,7 +364,7 @@ def get_posteriors(modelvals, chain):
     return a, b, Dc, mu0
 
 
-def get_modes(modelvals, chain):
+def get_modes(modelvals, chain=None):
     a, b, Dc_nd, mu0 = get_trace_variables(modelvals, chain)
 
     amode = az.plots.plot_utils.calculate_point_estimate('mode', a)
@@ -460,6 +475,7 @@ def plot_a_minus_b(idata, vlps, vref, nrstep):
     ax.set_xlim(-0.05, 0.05)
     ax.set_title(f'(a-b) posterior distribution, {samplename}')
     mab = az.plots.plot_utils.calculate_point_estimate('mode', a_min_b)
+    gpl.aminbmode = mab
 
     plt.figure(301)
     ax1 = az.plot_posterior(idata, var_names=['a'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
@@ -487,7 +503,7 @@ def plot_a_minus_b(idata, vlps, vref, nrstep):
         var_names=['a_min_b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
-        scatter_kwargs={'color': 'purple', 'alpha': 0.6},
+        scatter_kwargs={'color': 'purple', 'alpha': 0.01},
         kde_kwargs=kde_kwargs,
         marginal_kwargs=marginal_kwargs,
     )
@@ -523,33 +539,16 @@ def save_data(mu_sims, logps, map_vars, map_mu_sims, maxlogps, out_folder):
     logps = np.array(logps)
     map_vars = np.array(map_vars)
     map_mu_sims = np.array(map_mu_sims)
-    maxlogps = np.array(maxlogps)
+    # maxlogps = np.array(maxlogps)
 
-    rdim = mu_sims.shape[0] * mu_sims.shape[2]
-    cdim = mu_sims.shape[1]
+    data = mu_sims, logps, map_vars, map_mu_sims
+    names = ['mu_sims', 'logps', 'map_vars', 'map_mu_sims']
 
-    mu_sims = mu_sims.reshape(rdim, cdim)
-    logps = logps.reshape(rdim,)
-    map_vars = map_vars.reshape(16,)
-    map_mu_sims = map_mu_sims.reshape(4, cdim)
-    maxlogps = maxlogps.reshape(4,)
+    p = gpl.make_path('postprocess_out', gpl.samplename, gpl.sim_name)
 
-    df1 = pd.DataFrame(mu_sims)
-    df2 = pd.DataFrame(logps)
-    df3 = pd.DataFrame(map_vars)
-    df4 = pd.DataFrame(map_mu_sims)
-    df5 = pd.DataFrame(maxlogps)
-
-    dfs = [df1, df2, df3, df4, df5]
-    names = ['mu_sims', 'logps', 'map_vars', 'map_mu_sims', 'maxlogps']
-
-
-    for df, name in zip(dfs, names):
-        p = os.path.join(out_folder, f'{name}.h5')
-        df.to_hdf(p, key='df', mode='w')
-        # with open(p, 'w') as wfile:
-        #     json.dump(df, wfile)
-        # df.to_csv(os.path.join(out_folder, f'{name}.csv'))
+    for d, name in zip(data, names):
+        f = os.path.join(p, f'{name}.gz')
+        np.savetxt(f, d)
 
 
 # def plot_data(ax, lw=2, title="Hudson's Bay Company Data"):
@@ -634,7 +633,7 @@ def plot_chisquare_interval(logps, mu_sims, mutrue, x):
     plt.ylim([np.min(hdi_data[:, 0]) - 0.01, np.max(hdi_data[:, 1]) + 0.01])
     plt.xlabel('loadpoint displacement ($\mu$m)')
     plt.ylabel('$\mu$')
-    plt.title('Posterior Predictive Check')
+    plt.title('Posterior draws')
     plt.show()
 
 
@@ -664,7 +663,7 @@ def draw_from_posteriors(idata, mutrue, x):
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
 
-    k = 10000
+    k = 100000
 
     rsa = np.random.choice(a, k)
     rsb = np.random.choice(b, k)
@@ -677,26 +676,27 @@ def draw_from_posteriors(idata, mutrue, x):
     # plt.plot(mutrue, '.')
     # plt.show()
 
+    p = gpl.get_output_storage_folder()
+
+    save_data(mu_sims, logps, map_vars, map_mu_sim, maxlogp, p)
+
     plot_chisquare_interval(logps, mu_sims, mutrue, x)
 
 
 def main():
-    # k, lc, priors_info = read_from_json(dirpath)
     out_folder = get_storage_folder(dirname)
     times, mutrue, vlps, x = load_section_data(dirpath)
 
     vref, mus, sigmas = read_from_json(dirpath)
 
-    # k, vref = get_constants(vlps)
-
     idata = load_inference_data(dirpath, idataname)
     fig, ax = plt.subplots(num=100)
 
     draw_from_posteriors(idata, mutrue, x)
+
     ab_idata = plot_a_minus_b(idata, vlps, vref, nrstep)
 
-    # warmup_posterior_vals = get_warmup_vals(idata)
-    # aw, bw, Dcw, mu0w = warmup_posterior_vals
+
     modelvals = get_model_vals(idata)
     modelvals_ab = get_model_vals(ab_idata)
 
@@ -705,7 +705,8 @@ def main():
 
     # plots original trace
     thinned_idata = get_thinned_idata(modelvals)
-    plot_trace(thinned_idata, chain=None)
+    new_data = get_model_vals(idata, combined=False)
+    plot_trace(new_data, chain=None)
 
     # plot observed data on this figure before chains are plotted to avoid plotting it 4 times
     # fig, ax = plt.subplots(num=70)
@@ -715,6 +716,17 @@ def main():
     xax = x
     axs[0].plot(xax * um_to_mm, mutrue, '.', alpha=0.2, label='observed')
     axs[0].set(ylabel=r'$\mu$', ylim=[np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
+
+    axs[1].plot(xax * um_to_mm, vlps, 'k')
+    axs[1].set(ylabel=r'Velocity ($\mu$m/s)')
+    plt.xlabel(r'Loadpoint Displacement ($\mu$m)')
+
+    pos = axs[0].get_position()
+    axs[0].set_position([pos.x0, pos.y0, pos.width * 0.9, pos.height])
+    axs[0].legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='x-small')
+
+    pos1 = axs[1].get_position()
+    axs[1].set_position([pos1.x0, pos1.y0, pos1.width * 0.9, pos1.height])
 
     map_mu_sims = []
     mu_sims_all = []
