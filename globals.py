@@ -6,11 +6,11 @@ import pandas as pd
 class Globals:
     def __init__(self):
         self.samplename = 'p5866'
-        self.mintime = 11900.58
-        self.maxtime = 11988.5
+        self.mintime = 12030.18
+        self.maxtime = 12061.57
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = 5866001
+        self.section_id = 5866002
         self.k = 0.0005
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
