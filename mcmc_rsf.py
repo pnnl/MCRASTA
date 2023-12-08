@@ -163,7 +163,8 @@ def write_model_info(time_elapsed, vref, vsummary, file_name, times):
                'lc': myglobals.lc,
                'dvdt_window_len': myglobals.vel_windowlen,
                'filter_window_len': myglobals.filter_windowlen,
-               'q': myglobals.q
+               'q': myglobals.q,
+               'threshold': myglobals.threshold
                }
 
     with open(os.path.join(p, 'out.json'), mode='w') as wfile:

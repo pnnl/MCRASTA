@@ -25,6 +25,7 @@ class Globals:
         self.sim_name = f'out_{self.ndr}d{self.nch}ch'
         self.mu_sim = None
         self.aminbmode = None
+        self.threshold = 10
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)

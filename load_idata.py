@@ -222,7 +222,7 @@ def generate_rsf_data(idata, nrplot=nrplot):
         state1.Dc = Dc[i]       # Critical slip distance
 
         # Run the model!
-        model.solve()
+        model.solve(threshold=gpl.threshold)
 
         mu_sim = model.results.friction
         state_sim = model.results.states
