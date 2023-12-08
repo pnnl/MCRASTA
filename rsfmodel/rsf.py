@@ -101,7 +101,7 @@ class Model(LoadingSystem):
         self.storage_name = os.path.join(self.homefolder, 'PycharmProjects', 'mcmcrsf_xfiles', 'musim_out',
                                          f'musim{self.pid}.hdf5')
         self.datalen = None
-        self.count = 0
+        self.threshold = 10
 
     def create_h5py_dataset(self):
         with h5py.File(self.storage_name, 'w') as f:
@@ -228,7 +228,7 @@ class Model(LoadingSystem):
         critical_times = self.time[np.abs(acceleration) > threshold]
         return critical_times
 
-    def solve(self, threshold=5, **kwargs):
+    def solve(self, threshold, **kwargs):
         """
         Runs the integrator to actually solve the model and returns a
         named tuple of results.

@@ -148,6 +148,18 @@ def calc_derivative(y, x, window_len=None):
         return dydx
 
 
+def determine_threshold(vlps, t):
+    velocity_gradient = np.gradient(vlps)
+    time_gradient = np.gradient(t)
+    acceleration = velocity_gradient / time_gradient
+
+    n = plt.gcf().number
+    plt.figure(n+1)
+    plt.plot(acceleration)
+    plt.title('acceleration values to determine threshold used in ode solver')
+    plt.ylabel('acceleration')
+
+
 def get_obs_data(samplename):
     homefolder = os.path.expanduser('~')
     path = os.path.join('PycharmProjects', 'mcmcrsf_xfiles', 'data', 'FORGE_DataShare', f'{samplename}')
@@ -199,10 +211,11 @@ def get_obs_data(samplename):
     vlps = cleaned_data[:, 2]
     x = cleaned_data[:, 3]
 
+    determine_threshold(vlps, times)
+
     myglobals.set_disp_bounds(x)
     print(myglobals.mindisp)
     print(myglobals.maxdisp)
-
 
     # plot raw data section with filtered/downsampled for reference
     df_raw = df[(df['vdcdt_um'] > myglobals.mindisp) & (df['vdcdt_um'] < myglobals.maxdisp)]

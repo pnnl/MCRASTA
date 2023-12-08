@@ -54,7 +54,7 @@ def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
     model.loadpoint_velocity = lp_velocity
 
     # Run the model!
-    model.solve()
+    model.solve(threshold=myglobals.threshold)
 
     mu_sim = model.results.friction
 
