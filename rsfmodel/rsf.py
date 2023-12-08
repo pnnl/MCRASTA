@@ -245,7 +245,7 @@ class Model(LoadingSystem):
             Results of the model
         """
         # print('FORWARD MODEL BEGIN MODEL.SOLVE')
-        odeint_kwargs = dict(rtol=1e-2, atol=1e-2, mxstep=1000)
+        odeint_kwargs = dict(rtol=1e-3, atol=1e-3, mxstep=1000)
         odeint_kwargs.update(kwargs)
         # print('forward model: odeint_kwargs')
 
@@ -276,10 +276,6 @@ class Model(LoadingSystem):
         self.results.friction = wsol[:, 0]
         self.results.states = wsol[:, 1:]
         self.results.time = self.time
-
-        # print(f'self.results.friction = {self.results.friction}; results friction shape = {self.results.friction.shape}')
-        # print(f'self.results.states = {self.results.states}; results states shape = {self.results.states.shape}')
-        # print(f'self.results.time =  {self.results.time}; results time shape = {self.results.time.shape}')
 
         # Calculate slider velocity after we have solved everything
         velocity_contribution = 0

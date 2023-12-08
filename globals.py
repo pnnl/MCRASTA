@@ -15,8 +15,8 @@ class Globals:
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = 100
-        self.filter_windowlen = 100
-        self.q = 5
+        self.filter_windowlen = 20
+        self.q = 8
         self.ndr = 500000
         self.nch = 4
         self.ntune = 20000
