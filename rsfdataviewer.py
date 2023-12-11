@@ -18,7 +18,7 @@ um_to_mm = 0.001
 
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter
-    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=2, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=1, mode='mirror')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
@@ -131,11 +131,11 @@ def calc_derivative(y, x, window_len=None):
         # dydx = np.gradient(y_smooth,x_smooth)
         dxdN = savgol_filter(x,
                              window_length=window_len,
-                             polyorder=3,
+                             polyorder=1,
                              deriv=1)
         dydN = savgol_filter(y,
                              window_length=window_len,
-                             polyorder=3,
+                             polyorder=1,
                              deriv=1)
         dydx = dydN / dxdN
 
