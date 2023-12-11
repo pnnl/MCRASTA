@@ -18,11 +18,11 @@ from gplot import gpl
 
 home = os.path.expanduser('~')
 
-samplename = 'p5756'
+samplename = 'p5866'
 nr = 500000
 nch = 4
 section = '001'
-sampleid = f'5756{section}'
+sampleid = f'5866{section}'
 dirname = f'out_{nr}d{nch}ch_{sampleid}'
 # dirname = f'out_{nr}d{nch}ch'
 # dirname = f'~out_{nr}d{nch}ch'
@@ -659,7 +659,7 @@ def draw_from_posteriors(idata, mutrue, x):
 
     save_data(logps, map_vars, map_mu_sim, maxlogp, p)
 
-    plot_ensemble_hdi(logps, mu_sims, mutrue, x)
+    plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim)
 
 
 def calc_rsf_results(x, mutrue, idata):

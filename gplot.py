@@ -5,13 +5,13 @@ import pandas as pd
 
 class Globals:
     def __init__(self):
-        self.samplename = 'p5756'
+        self.samplename = 'p5866'
         self.mintime = None
         self.maxtime = None
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = '5756001'
-        self.k = 0.0021129
+        self.section_id = '5866001'
+        self.k = 0.0005
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = None
@@ -25,13 +25,13 @@ class Globals:
         self.sim_name = f'out_{self.ndr}d{self.nch}ch'
         self.mu_sim = None
         self.aminbmode = None
-        self.threshold = 10
+        self.threshold = 8
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
 
     def get_output_storage_folder(self):
-        p = self.make_path('postprocess_out', self.samplename, self.sim_name, 'test')
+        p = self.make_path('postprocess_out', self.samplename, self.sim_name)
 
         isExisting = os.path.exists(p)
 
