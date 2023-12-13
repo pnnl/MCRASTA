@@ -31,9 +31,9 @@ idataname = f'{dirname}_idata'
 
 # nrstep: interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
 # more interpretable)
-nrstep = 10
+nrstep = 1000
 # nrplot: number of total realizations we'll look at
-nrplot = 50000
+nrplot = 500
 
 um_to_mm = 0.001
 
@@ -130,6 +130,8 @@ def get_model_vals(idata, combined=True):
 def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
     if thin_data is False:
         nrstep = 1
+    elif thin_data is True:
+        nrstep = gpl.nrstep
 
     if return_aminb is True:
         a_min_b = modelvals.a_min_b.values[0::nrstep]
