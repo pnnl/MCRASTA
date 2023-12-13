@@ -630,7 +630,8 @@ def plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim):
     #     m = mu_sims[:, i]
     #     plt.plot(x, m, 'k-', alpha=0.05)
     plt.plot(x, map_mu_sim, 'r-')
-    plt.ylim([np.min(hdi_data[:, 0]) - 0.01, np.max(hdi_data[:, 1]) + 0.01])
+    # plt.ylim([np.min(hdi_data[:, 0]) - 0.01, np.max(hdi_data[:, 1]) + 0.01])
+    plt.ylim([0.2, 0.6])
     plt.xlabel(r'loadpoint displacement ($\mu$m)')
     plt.ylabel(r'$\mu$')
     plt.title('HDI plot')
