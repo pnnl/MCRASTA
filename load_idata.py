@@ -31,9 +31,9 @@ idataname = f'{dirname}_idata'
 
 # nrstep: interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
 # more interpretable)
-nrstep = 100
+nrstep = 10
 # nrplot: number of total realizations we'll look at
-nrplot = 5000
+nrplot = 50000
 
 um_to_mm = 0.001
 

@@ -26,8 +26,8 @@ class Globals:
         self.mu_sim = None
         self.aminbmode = None
         self.threshold = 8
-        self.nrstep = 100
-        self.nrplot = 5000
+        self.nrstep = 10
+        self.nrplot = 50000
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
