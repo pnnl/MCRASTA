@@ -621,7 +621,7 @@ def plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim):
     plt.figure(num+1)
     # plt.plot(x, hdi_lower, 'b-')
     # plt.plot(x, hdi_upper, 'c-')
-    az.plot_hdi(x, hdi_data=hdi_data, color='cyan', smooth=False)
+    az.plot_hdi(x, hdi_data=hdi_data, color='cyan', smooth=True)
     # az.plot_hdi(x, mu_sims, input_core_dims=[['chain']], color='cyan')
 
     # plt.plot(x, ensemble_modes, 'k.')
