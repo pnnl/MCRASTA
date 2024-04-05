@@ -45,6 +45,7 @@ def section_data(data):
 
     return df_section.to_numpy(), start_idx, end_idx
 
+
 def preplot(df, colnames):
     t = df['time_s']
     x = df['vdcdt_um']
@@ -153,10 +154,10 @@ def determine_threshold(vlps, t):
     time_gradient = np.gradient(t)
     acceleration = velocity_gradient / time_gradient
 
-    threshold_line = myglobals.threshold*np.ones_like(acceleration)
+    threshold_line = myglobals.threshold * np.ones_like(acceleration)
 
     n = plt.gcf().number
-    plt.figure(n+1)
+    plt.figure(n + 1)
     plt.plot(acceleration)
     plt.plot(threshold_line, 'r')
     plt.title('acceleration values to determine threshold used in ode solver')
@@ -240,6 +241,7 @@ def get_obs_data(samplename):
     plt.show()
 
     return mutrue, times, vlps, x, sample_name
+
 
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
