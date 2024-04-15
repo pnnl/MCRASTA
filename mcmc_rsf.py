@@ -335,7 +335,7 @@ def read_hdf(fullpath):
 
 def downsample_dataset(mu, t, vlps, x):
     # low pass filter
-    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=2, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=1, mode='mirror')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, vlps, x))
@@ -354,6 +354,9 @@ def section_data(data):
     df0 = pd.DataFrame(data)
     # changing column names
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
+
+    # cut off first 100 points to avoid sectioning mistakes
+    df = df.iloc[100:]
 
     start_idx = np.argmax(df['t'] > myglobals.mintime)
     end_idx = np.argmax(df['t'] > myglobals.maxtime)
