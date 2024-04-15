@@ -14,6 +14,7 @@ import seaborn as sns
 import globals
 import arviz.labels as azl
 from random import sample
+from multiprocessing import Process
 from gplot import gpl
 
 home = os.path.expanduser('~')

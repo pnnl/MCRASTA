@@ -38,6 +38,9 @@ def section_data(data):
     # changing column names
     df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
 
+    # cut off first 100 points to avoid sectioning mistakes
+    df = df.iloc[100:]
+
     start_idx = np.argmax(df['t'] > myglobals.mintime)
     end_idx = np.argmax(df['t'] > myglobals.maxtime)
 
