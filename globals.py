@@ -5,25 +5,25 @@ import pandas as pd
 
 class Globals:
     def __init__(self):
-        self.samplename = 'p5896'
-        self.mintime = 15086
-        self.maxtime = 15379
+        self.samplename = 'p5791'
+        self.mintime = 24340
+        self.maxtime = 24533
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = 5896002
-        self.k = 0.0012527
+        self.section_id = 5791001
+        self.k = 0.00136
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
-        self.vel_windowlen = 400
-        self.filter_windowlen = 20
-        self.q = 20
+        self.vel_windowlen = 110
+        self.filter_windowlen = 30
+        self.q = 15
         self.ndr = 500000
         self.nch = 4
         self.ntune = 20000
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
-        self.threshold = 18
+        self.threshold = 0.252
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
