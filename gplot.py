@@ -79,7 +79,7 @@ class Globals:
         jpath = os.path.join(dirpath, 'out.json')
         with open(jpath, 'r') as rfile:
             js = json.load(rfile)
-            print(js)
+            # print(js)
             gpl.samplename = self.samplename
             gpl.mintime = js.get('time_start')
             gpl.maxtime = js.get('time_end')

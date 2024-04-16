@@ -25,7 +25,7 @@ def get_model_values(idata):
 
 def generate_rsf_data(inputs):
     gpl.read_from_json(idata_location)
-    print(f'self.threshold = {gpl.threshold}')
+    # print(f'self.threshold = {gpl.threshold}')
     a, b, Dc, mu0 = inputs
 
     # dimensional variables output from mcmc_rsf.py
@@ -139,6 +139,7 @@ if __name__ == '__main__':
     pool = Pool()
     # inputs = zip(a, b, Dc, mu0)
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
+    print(outputs.shape)
     op = np.array(outputs)
     op.reshape(gpl.nrplot, len(mutrue))
     pool.close()
