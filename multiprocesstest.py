@@ -1,6 +1,6 @@
 from multiprocessing import Process, Queue, Pool
 from gplot import gpl
-import plot_mcmc_results as lid
+import plot_mcmc_results as pmr
 import itertools
 import numpy as np
 from plotrsfmodel import rsf, staterelations
@@ -18,8 +18,8 @@ idataname = f'{dirname}_idata'
 
 
 def get_model_values(idata):
-    modelvals = lid.get_model_vals(idata, combined=True)
-    a, b, Dc, mu0 = lid.get_posterior_data(modelvals, return_aminb=False, thin_data=True)
+    modelvals = pmr.get_model_vals(idata, combined=True)
+    a, b, Dc, mu0 = pmr.get_posterior_data(modelvals, return_aminb=False, thin_data=True)
     return a, b, Dc, mu0
 
 
@@ -27,17 +27,17 @@ def generate_rsf_data(inputs):
     a, b, Dc, mu0 = inputs
 
     # dimensional variables output from mcmc_rsf.py
-    times, mutrue, vlps, x = lid.load_section_data(idata_location)
-    k, vref = lid.get_constants(vlps)
-    lc, vmax = lid.get_vmax_l0(vlps)
+    times, mutrue, vlps, x = pmr.load_section_data(idata_location)
+    k, vref = pmr.get_constants(vlps)
+    lc, vmax = pmr.get_vmax_l0(vlps)
 
     # time is the only variable that needs to be re-nondimensionalized...?
-    k0, vlps0, vref0, t0 = lid.nondimensionalize_parameters(vlps, vref, k, times, vmax)
+    k0, vlps0, vref0, t0 = pmr.nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
     # set up rsf model
     model = rsf.Model()
     model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.v = vlps[0]  # Initial spmrer velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
@@ -93,26 +93,26 @@ def get_dataset():
     out_folder = gpl.get_output_storage_folder()
 
     # load observed section data and mcmc inference data
-    times, mutrue, vlps, x = lid.load_section_data(idata_location)
-    idata = lid.load_inference_data(idata_location, idataname)
+    times, mutrue, vlps, x = pmr.load_section_data(idata_location)
+    idata = pmr.load_inference_data(idata_location, idataname)
 
     # first plot: mcmc trace with all original data
-    lid.plot_trace(idata, chain=None)
+    pmr.plot_trace(idata, chain=None)
 
     # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
     # 'old' data = had to fill in parameters manually
     # if there's no .json in the mcmc results folder, then the data is type 'old'
     dataset_type = 'new'
     if dataset_type == 'old':
-        k, vref = lid.get_constants(vlps)
+        k, vref = pmr.get_constants(vlps)
     elif dataset_type == 'new':
-        vref, mus, sigmas = lid.read_from_json(idata_location)
+        vref, mus, sigmas = pmr.read_from_json(idata_location)
 
     return idata, mutrue
 
 
 def rsf_calcs(x, mutrue, idata):
-    return lid.calc_rsf_results(x, mutrue, idata)
+    return pmr.calc_rsf_results(x, mutrue, idata)
 
 
 if __name__ == '__main__':

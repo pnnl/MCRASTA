@@ -59,6 +59,7 @@ def read_from_json(dirpath):
         gpl.nch = js.get('n_chains')
         gpl.ntune = js.get('n_tune')
         vref = js.get('vref')
+        gpl.threshold = js.get('threshold')
 
         priors_info = js.get('prior_mus_sigmas', 'priors info not available')
         mus = priors_info[0]
