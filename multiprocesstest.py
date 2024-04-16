@@ -136,7 +136,7 @@ if __name__ == '__main__':
     # pr1.join()
     # pr2.join()
 
-    pool = Pool()
+    pool = Pool(processes=20)
     # inputs = zip(a, b, Dc, mu0)
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     print(outputs.shape)
