@@ -24,6 +24,8 @@ def get_model_values(idata):
 
 
 def generate_rsf_data(inputs):
+    gpl.read_from_json(idata_location)
+    print(f'self.threshold = {gpl.threshold}')
     a, b, Dc, mu0 = inputs
 
     # dimensional variables output from mcmc_rsf.py
@@ -106,7 +108,7 @@ def get_dataset():
     if dataset_type == 'old':
         k, vref = pmr.get_constants(vlps)
     elif dataset_type == 'new':
-        vref, mus, sigmas = pmr.read_from_json(idata_location)
+        vref, mus, sigmas = gpl.read_from_json(idata_location)
 
     return idata, mutrue
 

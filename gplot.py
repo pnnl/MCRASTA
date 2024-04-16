@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import json
 
 
 class Globals:
@@ -26,8 +27,8 @@ class Globals:
         self.mu_sim = None
         self.aminbmode = None
         self.threshold = None
-        self.nrstep = 10000
-        self.nrplot = 200   # nch * ndr / nrstep
+        self.nrstep = 100000
+        self.nrplot = 20   # nch * ndr / nrstep
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
@@ -73,6 +74,34 @@ class Globals:
         print('saving', id(self))
         p = os.path.join(self.rootpath, f'{os.getpid()}.y_preds.npy')
         np.save(p, np.array(self.mu_sim))
+
+    def read_from_json(self, dirpath):
+        jpath = os.path.join(dirpath, 'out.json')
+        with open(jpath, 'r') as rfile:
+            js = json.load(rfile)
+            print(js)
+            gpl.samplename = self.samplename
+            gpl.mintime = js.get('time_start')
+            gpl.maxtime = js.get('time_end')
+            gpl.mindisp = js.get('x_start')
+            gpl.maxdisp = js.get('x_end')
+            gpl.section_id = js.get('section_ID')
+            gpl.k = js.get('k')
+            gpl.lc = js.get('lc')
+            gpl.vel_windowlen = js.get('dvdt_window_len')
+            gpl.filter_windowlen = js.get('filter_window_len')
+            gpl.q = js.get('q')
+            gpl.ndr = js.get('n_draws')
+            gpl.nch = js.get('n_chains')
+            gpl.ntune = js.get('n_tune')
+            vref = js.get('vref')
+            gpl.threshold = js.get('threshold')
+
+            priors_info = js.get('prior_mus_sigmas', 'priors info not available')
+            mus = priors_info[0]
+            sigmas = priors_info[1]
+
+            return vref, mus, sigmas
 
 
 gpl = Globals()

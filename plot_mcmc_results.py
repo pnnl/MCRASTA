@@ -692,6 +692,7 @@ def plot_observed_and_vlps(mutrue, vlps, xax):
 
 
 def main():
+    print('THIS SHOULD NOT BE RUNNING')
     # setup output directory
     out_folder = gpl.get_output_storage_folder()
 
