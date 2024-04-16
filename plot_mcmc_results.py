@@ -6,7 +6,7 @@ import pymc as pm
 import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
-from rsfmodel import staterelations, rsf, plot
+from plotrsfmodel import staterelations, rsf, plot
 import sys
 from scipy.stats import lognorm, mode, skew, kurtosis
 from scipy import signal
