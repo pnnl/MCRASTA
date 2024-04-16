@@ -138,7 +138,7 @@ if __name__ == '__main__':
     # inputs = zip(a, b, Dc, mu0)
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
-    op.reshape(gpl.ndr / gpl.nrstep, len(mutrue))
+    op.reshape(gpl.nrplot, len(mutrue))
     pool.close()
     pool.join()
     print('doneskies')
