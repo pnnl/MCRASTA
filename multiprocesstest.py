@@ -3,7 +3,7 @@ from gplot import gpl
 import plot_mcmc_results as lid
 import itertools
 import numpy as np
-from rsfmodel import rsf, staterelations
+from plotrsfmodel import rsf, staterelations
 
 samplename = 'p5866'
 nr = 500000
