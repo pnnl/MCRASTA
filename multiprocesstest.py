@@ -133,6 +133,7 @@ if __name__ == '__main__':
     # inputs = zip(a, b, Dc, mu0)
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
+    print(op.shape)
     pool.close()
     pool.join()
     print('doneskies')
