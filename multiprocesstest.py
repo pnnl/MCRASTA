@@ -136,6 +136,7 @@ if __name__ == '__main__':
     print(op.shape)
     pool.close()
     pool.join()
+    np.save('mu_sims', op)
     print('doneskies')
 
     # with Pool() as pool:
