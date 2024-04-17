@@ -121,27 +121,21 @@ if __name__ == '__main__':
     model = rsf.Model
     idata, mutrue = get_dataset()
     a, b, Dc, mu0 = get_model_values(idata)
-    # model1 = rsf.Model()
-    # model2 = rsf.Model()
-    # q1 = Queue()
-    # q2 = Queue()
-    # pr1 = Process(target=model1.solve(threshold=gpl.threshold), args=(q1,))
-    # pr2 = Process(target=model2.solve(threshold=gpl.threshold), args=(q2,))
-    # pr1.start()
-    # pr2.start()
-    # out1 = q1.get()
-    # out2 = q2.get()
-    # model1.blah = out1
-    # model2.blah = out2
-    # pr1.join()
-    # pr2.join()
+    print(f'a shape = {a.shape}')
+    # at = a[0:9]
+    # bt = b[0:9]
+    # Dct = Dc[0:9]
+    # mu0t = mu0[0:9]
 
-    pool = Pool(processes=20)
+    # intest = zip(at, bt, Dct, mu0t)
+
+    pool = Pool()
     # inputs = zip(a, b, Dc, mu0)
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
     print(op.shape)
-    op.reshape(gpl.nrplot, len(mutrue))
+    print(op)
+    # op.reshape(gpl.nrplot, len(mutrue))
     pool.close()
     pool.join()
     print('doneskies')

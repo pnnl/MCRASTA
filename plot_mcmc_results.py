@@ -135,18 +135,15 @@ def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
     elif thin_data is True:
         nrstep = gpl.nrstep
 
+    a = modelvals.a.values[0::nrstep]
+    b = modelvals.b.values[0::nrstep]
+    Dc = modelvals.Dc.values[0::nrstep]
+    mu0 = modelvals.mu0.values[0::nrstep]
+
     if return_aminb is True:
         a_min_b = modelvals.a_min_b.values[0::nrstep]
-        a = modelvals.a.values[0::nrstep]
-        b = modelvals.b.values[0::nrstep]
-        Dc = modelvals.Dc.values[0::nrstep]
-        mu0 = modelvals.mu0.values[0::nrstep]
         return a_min_b, a, b, Dc, mu0
     elif return_aminb is False:
-        a = modelvals.a.values
-        b = modelvals.b.values
-        Dc = modelvals.Dc.values
-        mu0 = modelvals.mu0.values
         return a, b, Dc, mu0
 
 

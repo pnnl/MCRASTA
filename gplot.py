@@ -28,7 +28,7 @@ class Globals:
         self.aminbmode = None
         self.threshold = None
         self.nrstep = 100000
-        self.nrplot = 20   # nch * ndr / nrstep
+        self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
