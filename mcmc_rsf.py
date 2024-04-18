@@ -527,47 +527,6 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     return k0, vlps0, vref0, t0
 
 
-# Custom LogLikelihood function for use in pymc - runs forward model with sample draws
-# def log_likelihood(theta, times, vlps, k, vref, data, vmax):
-#     if type(theta) == list:
-#         theta = theta[0]
-#     (
-#         a,
-#         b,
-#         Dc,
-#         mu0,
-#     ) = theta
-#
-#     y_pred = mcmc_rsf_sim(theta, times, vlps, k, vref, vmax)
-#     # if myglobals.mu_sim is not None:
-#     #     print(id(myglobals), len(myglobals.mu_sim))
-#     resids = (data - y_pred)
-#     myglobals.store_mu_sim(y_pred)
-#     # print('resid = ', resids)
-#     logp = -1 / 2 * (np.sum(resids ** 2))
-#     # print(f'logp = {logp}')
-#
-#     with pm.Model():
-#         yp = y_pred
-#
-#     return logp, yp
-
-YPREDS = []
-
-def callback_func(trace, draw):
-    # print(trace)
-    # item = trace.chain, trace.draw_idx, trace.model.likelihood.owner.op.y_pred
-    # YPREDS.append(item)
-    print(trace.draw_idx, myglobals.ndr)
-    if trace.draw_idx==myglobals.ndr:
-        myglobals.save_mu_sim()
-    # print(YPREDS)
-
-
-# wrapper classes to theano-ize log likelihood
-
-
-
 # MAIN - CALLS ALL FUNCTIONS AND IMPLEMENTS MCMC MODEL RUN
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')

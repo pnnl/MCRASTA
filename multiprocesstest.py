@@ -129,7 +129,7 @@ if __name__ == '__main__':
     print(op.shape)
     pool.close()
     pool.join()
-    np.save('mu_sims', op)
+    np.save(f'mu_sims{gpl.samplename}', op)
     print('doneskies')
 
     # with Pool() as pool:

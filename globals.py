@@ -23,7 +23,7 @@ class Globals:
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
-        self.threshold = 0.252
+        self.threshold = 0.169
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
