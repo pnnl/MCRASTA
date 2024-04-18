@@ -5,11 +5,11 @@ import itertools
 import numpy as np
 from plotrsfmodel import rsf, staterelations
 
-samplename = 'p5866'
+samplename = gpl.samplename
 nr = 500000
 nch = 4
 section = '001'
-sampleid = f'5866{section}'
+sampleid = f'5894{section}'
 dirname = f'out_{nr}d{nch}ch_{sampleid}'
 # dirname = f'out_{nr}d{nch}ch'
 # dirname = f'~out_{nr}d{nch}ch'
