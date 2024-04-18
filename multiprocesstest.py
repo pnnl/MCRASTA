@@ -121,16 +121,9 @@ if __name__ == '__main__':
     model = rsf.Model
     idata, mutrue = get_dataset()
     a, b, Dc, mu0 = get_model_values(idata)
-    print(f'a shape = {a.shape}')
-    # at = a[0:9]
-    # bt = b[0:9]
-    # Dct = Dc[0:9]
-    # mu0t = mu0[0:9]
-
-    # intest = zip(at, bt, Dct, mu0t)
 
     pool = Pool()
-    # inputs = zip(a, b, Dc, mu0)
+
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
     print(op.shape)

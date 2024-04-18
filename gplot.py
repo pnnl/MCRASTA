@@ -6,13 +6,13 @@ import json
 
 class Globals:
     def __init__(self):
-        self.samplename = 'p5866'
+        self.samplename = 'p5894'
         self.mintime = None
         self.maxtime = None
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = '5866001'
-        self.k = 0.0005
+        self.section_id = '5894001'
+        self.k = 0.00153
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = None
@@ -23,11 +23,11 @@ class Globals:
         self.ntune = None
         self.ncores = 4
         # self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
-        self.sim_name = f'out_{self.ndr}d{self.nch}ch'
+        self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
         self.aminbmode = None
         self.threshold = None
-        self.nrstep = 10
+        self.nrstep = 1
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
 
     def make_path(self, *args):
