@@ -38,9 +38,9 @@ def generate_rsf_data(inputs):
 
     # set up rsf model
     model = rsf.Model()
-    model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial spmrer velocity, generally is vlp(t=0)
-    model.vref = vref  # Reference velocity, generally vlp(t=0)
+    model.k = k0  # Normalized System stiffness (friction/micron)
+    model.v = vlps0[0]  # Initial spmrer velocity, generally is vlp(t=0)
+    model.vref = vref0  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax
@@ -99,7 +99,7 @@ def get_dataset():
     idata = pmr.load_inference_data(idata_location, idataname)
 
     # first plot: mcmc trace with all original data
-    pmr.plot_trace(idata, chain=None)
+    # pmr.plot_trace(idata, chain=None)
 
     # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
     # 'old' data = had to fill in parameters manually
@@ -118,11 +118,11 @@ def rsf_calcs(x, mutrue, idata):
 
 
 if __name__ == '__main__':
-    model = rsf.Model
+    model = rsf.Model()
     idata, mutrue = get_dataset()
     a, b, Dc, mu0 = get_model_values(idata)
 
-    pool = Pool(processes=20)
+    pool = Pool(processes=2)
 
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
