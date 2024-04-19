@@ -45,6 +45,7 @@ def set_critical_times(vlps, t, threshold):
     tcrit = tcrit0 - t[0]
     np.round(tcrit, 2)
     np.save('tcrittest.npy', tcrit)
+    print('this should only print once')
 
 
 def get_model_values(idata):
