@@ -31,7 +31,7 @@ def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t0  # nondimensionalized time
+    model.time = np.round(t0, 2)  # nondimensionalized time
     lp_velocity = v0
 
     # Set the model load point velocity, must be same shape as model.model_time
