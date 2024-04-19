@@ -27,7 +27,7 @@ class Globals:
         self.mu_sim = None
         self.aminbmode = None
         self.threshold = None
-        self.nrstep = 1
+        self.nrstep = 100
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
 
     def make_path(self, *args):

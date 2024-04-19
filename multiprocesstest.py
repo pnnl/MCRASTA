@@ -38,9 +38,9 @@ def generate_rsf_data(inputs):
 
     # set up rsf model
     model = rsf.Model()
-    model.k = k0  # Normalized System stiffness (friction/micron)
-    model.v = vlps0[0]  # Initial spmrer velocity, generally is vlp(t=0)
-    model.vref = vref0  # Reference velocity, generally vlp(t=0)
+    model.k = k  # Normalized System stiffness (friction/micron)
+    model.v = vlps[0]  # Initial spmrer velocity, generally is vlp(t=0)
+    model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax
@@ -60,34 +60,12 @@ def generate_rsf_data(inputs):
 
     model.solve(threshold=gpl.threshold)
 
-    # pre-allocate array
-    # nobs = len(t0)
-    # # mu_sims = np.ones((nobs, nrplot))
-    # # print(f'mu_sims.shape = {mu_sims.shape}')
-    #
-    # logps = []
-    # j = 0
-
     #
     mu_sim = model.results.friction
     state_sim = model.results.states
-    #
-    # resids = mutrue - mu_sim
-    # logp = -1/2 * np.sum(resids ** 2)
-    # logps.append(logp)
-    #
-    #     # attempt at storing results to save time - seems like it's just too much data
+
     return mu_sim
-    #
-    #     # save the max logp, "map" solution, "map" vars
-    #     if logp == np.nanmax(logps):
-    #         map_vars = a[i], b[i], Dc[i], mu0[i]
-    #         map_mu_sim = mu_sim
-    #         maxlogp = logp
-    #
-    #     j += 1
-    #
-    # return mu_sims, logps, map_vars, map_mu_sim, maxlogp
+
 
 
 def get_dataset():
@@ -122,7 +100,7 @@ if __name__ == '__main__':
     idata, mutrue = get_dataset()
     a, b, Dc, mu0 = get_model_values(idata)
 
-    pool = Pool(processes=20)
+    pool = Pool(processes=2)
 
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
