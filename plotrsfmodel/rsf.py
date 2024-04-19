@@ -50,21 +50,9 @@ class LoadingSystem(object):
             self.v = self.vref * exp((self.mu - self.mu0 - v_contribution) / self.a)
         except OverflowError as exc:
             pass
-#             # print(exc)
-#             # print('overflow error, here are the vars that caused it')
-#             # print('a = ', self.a)
-#             # print('vref = ', self.vref)
-#             # print('mu = ', self.mu)
-#             # print('mu0 = ', self.mu0)
-#             # print(f'velocity component = {state.velocity_component(self)}')
-#             # print('v_contribution = ', v_contribution)
-#             # print('end')
 
     def friction_evolution(self, loadpoint_vel):
-        # print(f'k = {self.k}')
-        # print(f'v = {self.v}')
         return self.k * (loadpoint_vel - self.v)
-        # return self.tc * self.k * (loadpoint_vel - self.v)
 
 
 class Model(LoadingSystem):
@@ -104,6 +92,7 @@ class Model(LoadingSystem):
                                          f'musim{self.pid}.hdf5')
         self.datalen = None
         self.threshold = 10
+        self.tcrit = None
 
     def create_h5py_dataset(self):
         with h5py.File(self.storage_name, 'w') as f:
@@ -112,7 +101,7 @@ class Model(LoadingSystem):
     def savetxt(self, fname, line_ending='\n'):
         """ Save the output of the model to a csv file.
         """
-#         print('TEST TO SEE IF THIS GETS CALLED')
+        #         print('TEST TO SEE IF THIS GETS CALLED')
         with open(fname, 'w') as f:
             # Model Properties
             f.write(f'mu0 = {self.mu0}{line_ending}')
@@ -170,13 +159,12 @@ class Model(LoadingSystem):
         # Find the loadpoint_velocity corresponding to the most recent time
         # <= the current time.
         loadpoint_vel = system.loadpoint_velocity[system.time <= t][-1]
-#         print(f'loadpoint_vel = {loadpoint_vel}')
 
         self.dmu_dt = system.friction_evolution(loadpoint_vel)
         step_results = [self.dmu_dt]
 
         for state_variable in system.state_relations:
-            dtheta_dt = state_variable.evolve_state(self)
+            dtheta_dt = state_variable.evolve_state(self.v)
             step_results.append(dtheta_dt)
 
         return step_results
@@ -186,7 +174,7 @@ class Model(LoadingSystem):
         Determines if all necessary parameters are set to run the model.
         Will raise appropriate error as necessary.
         """
-#         # print('forward model: performing ready check')
+        #         # print('forward model: performing ready check')
         if self.a is None:
             raise IncompleteModelError('Parameter a is None')
         elif self.vref is None:
@@ -231,7 +219,7 @@ class Model(LoadingSystem):
         critical_times = self.time[np.abs(acceleration) > threshold]
         return critical_times
 
-    def solve(self, threshold, **kwargs):
+    def solve(self, **kwargs):
         """
         Runs the integrator to actually solve the model and returns a
         named tuple of results.
@@ -247,38 +235,28 @@ class Model(LoadingSystem):
         results : named tuple
             Results of the model
         """
-#         # print('FORWARD MODEL BEGIN MODEL.SOLVE')
+        #         # print('FORWARD MODEL BEGIN MODEL.SOLVE')
         odeint_kwargs = dict(rtol=1, atol=1, mxstep=1000)
         odeint_kwargs.update(kwargs)
-#         # print('forward model: odeint_kwargs')
+        #         # print('forward model: odeint_kwargs')
 
         # Make sure we have everything set before we try to run
         self.readyCheck()
 
         # Initial conditions at t = 0
-#         # print('forward model: set initial conditions at t=0')
         w0 = [self.mu0]
         for state_variable in self.state_relations:
-#             # print('forward model: set state var')
             state_variable.set_steady_state(self)
-#             # print('forward model: append state var')
             w0.append(state_variable.state)
 
         # Find any critical time points we need to let the integrator know about
-#         # print('forward model: Find any critical time points we need to let the integrator know about')
-        self.critical_times = self._get_critical_times(threshold)
+        # self.critical_times = self._get_critical_times(threshold)
 
         # Solve it
-#         # print('forward model: integrate.odeint solver')
-#         # print('y0 = ', w0)
-
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
-                                                  full_output=True, tcrit=self.critical_times,
+                                                  full_output=True, tcrit=self.tcrit,
                                                   args=(self,))
-        print(f'solver info = {self.solver_info}')
-#         print(f'a = {self.a}')
-#         print(f'b = {self.b}')
-#         print(f'Dc = {self.Dc}')
+        print(self.solver_info)
 
         self.results.friction = wsol[:, 0]
         self.results.states = wsol[:, 1:]
@@ -287,7 +265,6 @@ class Model(LoadingSystem):
         # Calculate slider velocity after we have solved everything
         velocity_contribution = 0
         for i, state_variable in enumerate(self.state_relations):
-#             # print('forward model: define state_variable.state from soln')
             state_variable.state = wsol[:, i + 1]
             velocity_contribution += state_variable.velocity_component(self)
 

@@ -29,6 +29,8 @@ class Globals:
         self.threshold = None
         self.nrstep = 100
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
+        self.tcrit = None
+        self.vmax = None
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
@@ -55,8 +57,7 @@ class Globals:
         return mus, sigmas
 
     def set_vch(self, vlps):
-        vch = np.max(vlps)
-        return vch
+        self.vmax = np.max(vlps)
 
     def set_disp_bounds(self, x):
         self.mindisp = x[0]
