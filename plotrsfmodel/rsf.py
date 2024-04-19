@@ -275,7 +275,7 @@ class Model(LoadingSystem):
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
                                                   full_output=True, tcrit=self.critical_times,
                                                   args=(self,))
-#         print(f'solver info = {self.solver_info}')
+        print(f'solver info = {self.solver_info}')
 #         print(f'a = {self.a}')
 #         print(f'b = {self.b}')
 #         print(f'Dc = {self.Dc}')
