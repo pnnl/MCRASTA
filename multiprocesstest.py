@@ -122,7 +122,7 @@ if __name__ == '__main__':
     idata, mutrue = get_dataset()
     a, b, Dc, mu0 = get_model_values(idata)
 
-    pool = Pool(processes=2)
+    pool = Pool(processes=20)
 
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
