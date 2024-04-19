@@ -255,7 +255,7 @@ class Model(LoadingSystem):
         # Solve it
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
                                                   full_output=True, tcrit=self.tcrit,
-                                                  args=(self,))
+                                                  args=(self,), rtol=0.001, atol=0.001)
         print(self.solver_info)
 
         self.results.friction = wsol[:, 0]
