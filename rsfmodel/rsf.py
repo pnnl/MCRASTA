@@ -90,22 +90,12 @@ class Model(LoadingSystem):
         self.vref = None
         self.state_relations = []
         self.loadpoint_displacement = None
-        self.slider_displacement = None
         self.results = namedtuple("results", ["time", "loadpoint_displacement",
                                               "slider_velocity", "friction",
                                               "states", "slider_displacement"])
         self.current_GMT = time.gmtime()
         self.time_stamp = calendar.timegm(self.current_GMT)
-        self.pid = os.getpid()
         self.homefolder = os.path.expanduser('~')
-        self.storage_name = os.path.join(self.homefolder, 'PycharmProjects', 'mcmcrsf_xfiles', 'musim_out',
-                                         f'musim{self.pid}.hdf5')
-        self.datalen = None
-        self.threshold = 10
-
-    def create_h5py_dataset(self):
-        with h5py.File(self.storage_name, 'w') as f:
-            f['musimdata'] = f.create_dataset(f'{self.pid}init', shape=(0, self.datalen), maxshape=(None, self.datalen))
 
     def savetxt(self, fname, line_ending='\n'):
         """ Save the output of the model to a csv file.
@@ -271,7 +261,7 @@ class Model(LoadingSystem):
 
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
                                                   full_output=True, tcrit=self.critical_times,
-                                                  args=(self,), **odeint_kwargs)
+                                                  args=(self,))
 
         self.results.friction = wsol[:, 0]
         self.results.states = wsol[:, 1:]
