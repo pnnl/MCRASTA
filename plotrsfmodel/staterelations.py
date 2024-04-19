@@ -74,22 +74,11 @@ class DieterichState(StateRelation):
         return s
 
     def set_steady_state(self, system):
-        # print(f'SETTING STEADY STATE STATE')
         state_dim = self.Dc/system.vref
         self.state = state_dim * self.vmax / self.lc
 
-    def evolve_state(self, system):
-        # print(f'SOLVING FOR STATE EVOLUTION')
-        evolve_state = 1. - system.v * self.state / self.Dc
-        # if self.state + evolve_state < 0:
-        #     print('ERROR ERROR ERROR')
-        #     ssee = self.state + evolve_state
-        #     print(f'state + dstate/dt = {ssee}')
-        #     print(f'system.v={system.v}')
-        #     print(f'self.state={self.state}')
-        #     print(f'evolve_state = {evolve_state}')
-        #     print(f'self.Dc={self.Dc}')
-        return 1. - system.v * self.state / self.Dc
+    def evolve_state(self, v):
+        return 1. - v * self.state / self.Dc
 
 
 class RuinaState(StateRelation):
