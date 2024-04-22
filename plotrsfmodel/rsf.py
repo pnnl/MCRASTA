@@ -92,7 +92,6 @@ class Model(LoadingSystem):
                                          f'musim{self.pid}.hdf5')
         self.datalen = None
         self.threshold = 10
-        self.tcrit = None
 
     def create_h5py_dataset(self):
         with h5py.File(self.storage_name, 'w') as f:
@@ -219,7 +218,7 @@ class Model(LoadingSystem):
         critical_times = self.time[np.abs(acceleration) > threshold]
         return critical_times
 
-    def solve(self, **kwargs):
+    def solve(self, threshold, **kwargs):
         """
         Runs the integrator to actually solve the model and returns a
         named tuple of results.
@@ -236,7 +235,7 @@ class Model(LoadingSystem):
             Results of the model
         """
         #         # print('FORWARD MODEL BEGIN MODEL.SOLVE')
-        odeint_kwargs = dict(rtol=1, atol=1, mxstep=1000)
+        odeint_kwargs = dict(rtol=1e-3, atol=1e-3, mxstep=1000)
         odeint_kwargs.update(kwargs)
         #         # print('forward model: odeint_kwargs')
 
@@ -250,13 +249,12 @@ class Model(LoadingSystem):
             w0.append(state_variable.state)
 
         # Find any critical time points we need to let the integrator know about
-        # self.critical_times = self._get_critical_times(threshold)
+        self.critical_times = self._get_critical_times(threshold)
 
         # Solve it
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
-                                                  full_output=True, tcrit=self.tcrit,
-                                                  args=(self,), rtol=0.001, atol=0.001)
-        print(self.solver_info)
+                                                  full_output=True, tcrit=self.critical_times,
+                                                  args=(self,), **odeint_kwargs)
 
         self.results.friction = wsol[:, 0]
         self.results.states = wsol[:, 1:]
