@@ -41,10 +41,10 @@ class Globals:
 
     def idata_location(self):
         if sys.platform == 'win32':
-            print(gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name))
+            # print(gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name))
             return gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
         else:
-            print(gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name))
+            # print(gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name))
             return gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
 
     def get_output_storage_folder(self):
