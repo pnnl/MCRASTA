@@ -1,4 +1,6 @@
 import os
+import sys
+
 import numpy as np
 import pandas as pd
 import json
@@ -38,7 +40,10 @@ class Globals:
         return os.path.join(self.rootpath, *args)
 
     def idata_location(self):
-        return gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
+        if sys.platform == 'win32':
+            return gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
+        else:
+            return gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
 
     def get_output_storage_folder(self):
         p = self.make_path('postprocess_out', self.samplename, self.sim_name)
