@@ -172,7 +172,7 @@ def main():
     print(op.shape)
     pool.close()
     pool.join()
-    pathname = gpl.make_path(gpl.samplename, gpl.sim_name, f'mu_simsp{gpl.section_id}')
+    pathname = gpl.make_path('musim_out', f'mu_simsp{gpl.section_id}')
     np.save(pathname, op)
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
