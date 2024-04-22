@@ -119,7 +119,7 @@ def get_dataset():
     out_folder = gpl.get_output_storage_folder()
 
     # load observed section data and mcmc inference data
-    times, mt, vlps, x = pmr.load_section_data(idata_location)
+    times, mt, vlps, x = pmr.load_section_data()
     idat = pmr.load_inference_data()
 
     # first plot: mcmc trace with all original data

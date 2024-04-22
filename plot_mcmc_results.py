@@ -219,8 +219,8 @@ def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain):
     sys.exit()
 
 
-def load_section_data(dirpath):
-    section_data = pd.read_csv(os.path.join(dirpath, 'section_data.csv'))
+def load_section_data():
+    section_data = pd.read_csv(os.path.join(gpl.idata_location(), 'section_data.csv'))
     df = pd.DataFrame(section_data)
     times = df['times'].to_numpy()
     mutrue = df['mutrue'].to_numpy()
