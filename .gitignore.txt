@@ -10,3 +10,4 @@ customdist_test.py
 .xml
 .npy
 phdtest.py
+.idea
