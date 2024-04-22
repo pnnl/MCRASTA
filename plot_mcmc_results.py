@@ -18,13 +18,12 @@ from multiprocessing import Process
 from gplot import gpl
 
 home = os.path.expanduser('~')
-idata_location = gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
 
 um_to_mm = 0.001
 
 
 def load_inference_data():
-    p = os.path.join(idata_location, f'{gpl.sim_name}_idata')
+    p = os.path.join(gpl.idata_location, f'{gpl.sim_name}_idata')
     trace = az.from_netcdf(p)
 
     return trace
@@ -135,7 +134,7 @@ def generate_rsf_data(idata, nrplot=gpl.nrplot):
     a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
 
     # dimensional variables output from mcmc_rsf.py
-    times, mutrue, vlps, x = load_section_data(idata_location)
+    times, mutrue, vlps, x = load_section_data(gpl.idata_location)
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
@@ -596,7 +595,7 @@ def main():
     out_folder = gpl.get_output_storage_folder()
 
     # load observed section data and mcmc inference data
-    times, mutrue, vlps, x = load_section_data(idata_location)
+    times, mutrue, vlps, x = load_section_data(gpl.idata_location)
     idata = load_inference_data()
 
     # first plot: mcmc trace with all original data
@@ -609,7 +608,7 @@ def main():
     if dataset_type == 'old':
         k, vref = get_constants(vlps)
     elif dataset_type == 'new':
-        vref, mus, sigmas = gpl.read_from_json(idata_location)
+        vref, mus, sigmas = gpl.read_from_json(gpl.idata_location)
 
     calc_rsf_results(x, mutrue, idata)
 
