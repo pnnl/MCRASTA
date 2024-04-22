@@ -10,9 +10,6 @@ import matplotlib.pyplot as plt
 import os
 import cProfile
 
-idata_location = gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
-
-
 def determine_threshold(vlps, t):
     vlps0 = vlps / np.max(vlps)
     t0 = t * np.max(vlps) / gpl.lc
@@ -69,12 +66,12 @@ def get_model_values(idata):
 
 
 def generate_rsf_data(inputs):
-    gpl.read_from_json(idata_location)
+    gpl.read_from_json(gpl.idata_location())
     # print(f'self.threshold = {gpl.threshold}')
     a, b, Dc, mu0 = inputs
 
     # dimensional variables output from mcmc_rsf.py
-    times, mutrue, vlps, x = pmr.load_section_data(idata_location)
+    times, mutrue, vlps, x = pmr.load_section_data()
     k, vref = pmr.get_constants(vlps)
     lc, vmax = pmr.get_vmax_l0(vlps)
 
@@ -132,7 +129,7 @@ def get_dataset():
     if dataset_type == 'old':
         k, vref = pmr.get_constants(vlps)
     elif dataset_type == 'new':
-        vref, mus, sigmas = gpl.read_from_json(idata_location)
+        vref, mus, sigmas = gpl.read_from_json(gpl.idata_location())
 
     return idat, mt, vlps, times
 
