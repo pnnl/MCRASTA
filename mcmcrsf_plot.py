@@ -48,6 +48,8 @@ def load_section_data():
     vlps = df['vlps'].to_numpy().round(2)
     x = df['x'].to_numpy().round(2)
 
+    print(len(x))
+
     return times, mutrue, vlps, x
 
 

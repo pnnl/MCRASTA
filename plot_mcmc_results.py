@@ -134,7 +134,7 @@ def generate_rsf_data(idata, nrplot=gpl.nrplot):
     a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
 
     # dimensional variables output from mcmc_rsf.py
-    times, mutrue, vlps, x = load_section_data(gpl.idata_location())
+    times, mutrue, vlps, x = load_section_data()
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
@@ -226,6 +226,8 @@ def load_section_data():
     mutrue = df['mutrue'].to_numpy()
     vlps = df['vlps'].to_numpy()
     x = df['x'].to_numpy()
+
+    print(len(x))
 
     return times, mutrue, vlps, x
 
@@ -595,7 +597,7 @@ def main():
     out_folder = gpl.get_output_storage_folder()
 
     # load observed section data and mcmc inference data
-    times, mutrue, vlps, x = load_section_data(gpl.idata_location())
+    times, mutrue, vlps, x = load_section_data()
     idata = load_inference_data()
 
     # first plot: mcmc trace with all original data

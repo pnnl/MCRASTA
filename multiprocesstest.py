@@ -117,6 +117,7 @@ def get_dataset():
 
     # load observed section data and mcmc inference data
     times, mt, vlps, x = pmr.load_section_data()
+    print(len(x))
     idat = pmr.load_inference_data()
 
     # first plot: mcmc trace with all original data
