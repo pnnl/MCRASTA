@@ -17,6 +17,7 @@ import time
 import seaborn as sns
 import globals
 from globals import myglobals
+import cProfile
 
 
 p = myglobals.get_output_storage_folder()
@@ -193,17 +194,18 @@ def plot_obs_data_processing(x, mu1, mu2, mu3, xog):
 def calc_derivative(y, x, window_len=None):
     # returns dydx
     if window_len is not None:
+        print(f'calculating derivative using SG filter and window length {window_len}')
         # smooth
         # x_smooth = smooth(x,window_len=params['window_len'],window='flat')
         # y_smooth = smooth(y,window_len=params['window_len'],window='flat')
         # dydx = np.gradient(y_smooth,x_smooth)
         dxdN = savgol_filter(x,
                              window_length=window_len,
-                             polyorder=3,
+                             polyorder=1,
                              deriv=1)
         dydN = savgol_filter(y,
                              window_length=window_len,
-                             polyorder=3,
+                             polyorder=1,
                              deriv=1)
         dydx = dydN / dxdN
 
@@ -212,6 +214,7 @@ def calc_derivative(y, x, window_len=None):
                                     polyorder=1)
         return dydx_smooth
     else:
+        print(f'calculating derivative using gradient because window_len= {window_len}')
         dydx = np.gradient(y, x)
         return dydx
 
@@ -234,11 +237,15 @@ def get_obs_data():
 
     # convert to numpy arrays
     t = df['time_s'].to_numpy()
+    t = np.round(t, 2)
     mu = df['mu'].to_numpy()
+    mu = np.round(mu, 3)
     x = df['vdcdt_um'].to_numpy()
+    x = np.round(x, 2)
 
     # calculate loading velocities = dx/dt
     vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
+    vlps = np.round(vlps, 2)
 
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
@@ -255,10 +262,10 @@ def get_obs_data():
     cleaned_data = remove_non_monotonic(t, sectioned_data, axis=0)
 
     # data for pymc
-    mutrue = cleaned_data[:, 0]
+    mutrue = np.round(cleaned_data[:, 0], 3)
     times = cleaned_data[:, 1]
-    vlps = cleaned_data[:, 2]
-    x = cleaned_data[:, 3]
+    vlps = np.round(cleaned_data[:, 2], 2)
+    x = np.round(cleaned_data[:, 3], 2)
 
     myglobals.set_disp_bounds(x)
     plotx = x * um_to_mm
@@ -514,12 +521,13 @@ def get_vmax_lc(vlps):
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     # define characteristic length and velocity for nondimensionalizing
+
     lc, vmax = get_vmax_lc(vlps)
 
     # then remove dimensions
     k0 = myglobals.k * myglobals.lc
-    vlps0 = vlps / vmax
-    vref0 = vref / vmax
+    vlps0 = np.round(vlps / vmax, 2)
+    vref0 = np.round(vref / vmax, 2)
 
     t0 = times * vmax / lc
     t0 = t0 - t0[0]
@@ -566,7 +574,7 @@ def main():
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')
         idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(),
-                          discard_tuned_samples=False)
+                          discard_tuned_samples=True)
         print(f'inference data = {idata}')
 
 
