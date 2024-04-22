@@ -18,59 +18,14 @@ from multiprocessing import Process
 from gplot import gpl
 
 home = os.path.expanduser('~')
-
-samplename = 'p5866'
-nr = 500000
-nch = 4
-section = '001'
-sampleid = f'5866{section}'
-dirname = f'out_{nr}d{nch}ch_{sampleid}'
-# dirname = f'out_{nr}d{nch}ch'
-# dirname = f'~out_{nr}d{nch}ch'
-idata_location = gpl.make_path('mcmc_out', samplename, dirname)
-idataname = f'{dirname}_idata'
-
-# nrstep: interval between processed samples to avoid correlated samples (and/or to just work with less data/make it
-# more interpretable)
-nrstep = 2
-# nrplot: number of total realizations we'll look at
-nrplot = 1000000
+idata_location = gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
 
 um_to_mm = 0.001
 
 
-def read_from_json(dirpath):
-    jpath = os.path.join(dirpath, 'out.json')
-    with open(jpath, 'r') as rfile:
-        js = json.load(rfile)
-        print(js)
-        gpl.samplename = samplename
-        gpl.mintime = js.get('time_start')
-        gpl.maxtime = js.get('time_end')
-        gpl.mindisp = js.get('x_start')
-        gpl.maxdisp = js.get('x_end')
-        gpl.section_id = js.get('section_ID')
-        gpl.k = js.get('k')
-        gpl.lc = js.get('lc')
-        gpl.vel_windowlen = js.get('dvdt_window_len')
-        gpl.filter_windowlen = js.get('filter_window_len')
-        gpl.q = js.get('q')
-        gpl.ndr = js.get('n_draws')
-        gpl.nch = js.get('n_chains')
-        gpl.ntune = js.get('n_tune')
-        vref = js.get('vref')
-        gpl.threshold = js.get('threshold')
-
-        priors_info = js.get('prior_mus_sigmas', 'priors info not available')
-        mus = priors_info[0]
-        sigmas = priors_info[1]
-
-        return vref, mus, sigmas
-
-
-def load_inference_data(dirpath, name):
-    fullname = os.path.join(dirpath, name)
-    trace = az.from_netcdf(fullname)
+def load_inference_data():
+    p = os.path.join(idata_location, f'{gpl.sim_name}_idata')
+    trace = az.from_netcdf(p)
 
     return trace
 
@@ -131,27 +86,27 @@ def get_model_vals(idata, combined=True):
 
 def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
     if thin_data is False:
-        nrstep = 1
+        gpl.nrstep = 1
     elif thin_data is True:
-        nrstep = gpl.nrstep
+        gpl.nrstep = gpl.gpl.nrstep
 
-    a = modelvals.a.values[0::nrstep]
-    b = modelvals.b.values[0::nrstep]
-    Dc = modelvals.Dc.values[0::nrstep]
-    mu0 = modelvals.mu0.values[0::nrstep]
+    a = modelvals.a.values[0::gpl.nrstep]
+    b = modelvals.b.values[0::gpl.nrstep]
+    Dc = modelvals.Dc.values[0::gpl.nrstep]
+    mu0 = modelvals.mu0.values[0::gpl.nrstep]
 
     if return_aminb is True:
-        a_min_b = modelvals.a_min_b.values[0::nrstep]
+        a_min_b = modelvals.a_min_b.values[0::gpl.nrstep]
         return a_min_b, a, b, Dc, mu0
     elif return_aminb is False:
         return a, b, Dc, mu0
 
 
 def get_thinned_idata_original(modelvals):
-    a = modelvals.a.values[0::nrstep]
-    b = modelvals.b.values[0::nrstep]
-    Dc = modelvals.Dc.values[0::nrstep]
-    mu0 = modelvals.mu0.values[0::nrstep]
+    a = modelvals.a.values[0::gpl.nrstep]
+    b = modelvals.b.values[0::gpl.nrstep]
+    Dc = modelvals.Dc.values[0::gpl.nrstep]
+    mu0 = modelvals.mu0.values[0::gpl.nrstep]
 
     datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
@@ -160,10 +115,10 @@ def get_thinned_idata_original(modelvals):
 
 
 def get_trace_variables(modelvals, chain):
-    a = modelvals.a.values[0::nrstep]
-    b = modelvals.b.values[0::nrstep]
-    Dc = modelvals.Dc.values[0::nrstep]
-    mu0 = modelvals.mu0.values[0::nrstep]
+    a = modelvals.a.values[0::gpl.nrstep]
+    b = modelvals.b.values[0::gpl.nrstep]
+    Dc = modelvals.Dc.values[0::gpl.nrstep]
+    mu0 = modelvals.mu0.values[0::gpl.nrstep]
 
     return a, b, Dc, mu0
 
@@ -175,7 +130,7 @@ def get_constants(vlps):
     return k, vref
 
 
-def generate_rsf_data(idata, nrplot=nrplot):
+def generate_rsf_data(idata, nrplot=gpl.nrplot):
     modelvals = get_model_vals(idata, combined=True)
     a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
 
@@ -380,7 +335,7 @@ def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
     map_vars_all = []
     maxlogps = []
 
-    for chain in np.arange(nch):
+    for chain in np.arange(gpl.nch):
         # get posteriors and plot them
         # get posteriors from model trace
         apost, bpost, Dcpost, mu0post = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
@@ -400,7 +355,7 @@ def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
         # this generates the rsf data using parameter draws, calc logp vals, and plots the best fit with observed
         # data for each chain
 
-        idata = load_inference_data(idata_location, idataname)
+        idata = load_inference_data()
 
         plot_flag = plot_flag
         if plot_flag == 'yes':
@@ -465,28 +420,28 @@ def plot_a_minus_b(idata):
     plt.figure(num+1)
     ax = az.plot_posterior(ab_idata, var_names=['a_min_b'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
     ax.set_xlim(-0.05, 0.05)
-    ax.set_title(f'(a-b) posterior distribution, {samplename}')
+    ax.set_title(f'(a-b) posterior distribution, {gpl.samplename}')
     mab = az.plots.plot_utils.calculate_point_estimate('mode', a_min_b)
     gpl.aminbmode = mab
 
     plt.figure(num+2)
     ax1 = az.plot_posterior(idata, var_names=['a'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
-    ax1.set_title(f'a posterior distribution, {samplename}')
+    ax1.set_title(f'a posterior distribution, {gpl.samplename}')
     ax1.set_xlim(0, 0.04)
 
     plt.figure(num+3)
     ax2 = az.plot_posterior(idata, var_names=['b'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
-    ax2.set_title(f'b posterior distribution, {samplename}')
+    ax2.set_title(f'b posterior distribution, {gpl.samplename}')
     ax2.set_xlim(0, 0.05)
 
     plt.figure(num+4)
     ax3 = az.plot_posterior(idata, var_names=['Dc'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
-    ax3.set_title(f'Dc posterior distribution, {samplename}')
+    ax3.set_title(f'Dc posterior distribution, {gpl.samplename}')
     ax3.set_xlim(0, 60)
 
     plt.figure(num+5)
     ax4 = az.plot_posterior(idata, var_names=['mu0'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
-    ax4.set_title(f'mu0 posterior distribution, {samplename}')
+    ax4.set_title(f'mu0 posterior distribution, {gpl.samplename}')
 
     labeller = azl.MapLabeller(var_name_map={'a_min_b': 'a-b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
     marginal_kwargs = {'color': 'purple'}
@@ -613,7 +568,7 @@ def draw_from_posteriors(idata, mutrue, x):
 
 
 def calc_rsf_results(x, mutrue, idata):
-    mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, nrplot)  # generates rsf sim
+    mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, gpl.nrplot)  # generates rsf sim
     plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim)
 
 
@@ -642,7 +597,7 @@ def main():
 
     # load observed section data and mcmc inference data
     times, mutrue, vlps, x = load_section_data(idata_location)
-    idata = load_inference_data(idata_location, idataname)
+    idata = load_inference_data()
 
     # first plot: mcmc trace with all original data
     plot_trace(idata, chain=None)
@@ -654,7 +609,7 @@ def main():
     if dataset_type == 'old':
         k, vref = get_constants(vlps)
     elif dataset_type == 'new':
-        vref, mus, sigmas = read_from_json(idata_location)
+        vref, mus, sigmas = gpl.read_from_json(idata_location)
 
     calc_rsf_results(x, mutrue, idata)
 

@@ -32,6 +32,7 @@ class Globals:
         self.tcrit = None
         self.vmax = None
         self.dirname = f'out_{self.ndr}d{self.nch}ch'
+        self.msname = f'mu_sims{self.samplename}'
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
