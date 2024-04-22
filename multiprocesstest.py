@@ -120,7 +120,7 @@ def get_dataset():
 
     # load observed section data and mcmc inference data
     times, mt, vlps, x = pmr.load_section_data(idata_location)
-    idat = pmr.load_inference_data(idata_location, f'{gpl.dirname}_{gpl.section_id}_idata')
+    idat = pmr.load_inference_data()
 
     # first plot: mcmc trace with all original data
     # pmr.plot_trace(idata, chain=None)
