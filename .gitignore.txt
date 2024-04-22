@@ -6,3 +6,7 @@ testing.py
 export_json.py
 customdist_test.py
 .json
+.iml
+.xml
+.npy
+phdtest.py
