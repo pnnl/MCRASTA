@@ -23,7 +23,7 @@ from gplot import gpl
 # 4. plot simulated mus
 
 home = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
-idata_location = gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
+# idata_location = gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
 
 
 def manual_bci(x, mt, msims):
@@ -41,7 +41,7 @@ def get_npy_data():
 
 
 def load_section_data():
-    section_data = pd.read_csv(os.path.join(idata_location, 'section_data.csv'))
+    section_data = pd.read_csv(os.path.join(gpl.idata_location, 'section_data.csv'))
     df = pd.DataFrame(section_data)
     times = df['times'].to_numpy().round(2)
     mutrue = df['mutrue'].to_numpy().round(3)
