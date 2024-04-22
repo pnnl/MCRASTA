@@ -6,17 +6,30 @@ import plot_mcmc_results as pmr
 import itertools
 import numpy as np
 from plotrsfmodel import rsf, staterelations
+import matplotlib.pyplot as plt
+import cProfile
 
-samplename = gpl.samplename
-nr = 500000
-nch = 4
-section = '001'
-sampleid = f'5894{section}'
-dirname = f'out_{nr}d{nch}ch_{sampleid}'
-# dirname = f'out_{nr}d{nch}ch'
-# dirname = f'~out_{nr}d{nch}ch'
-idata_location = gpl.make_path('mcmc_out', samplename, dirname)
-idataname = f'{dirname}_idata'
+idata_location = gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
+
+
+def determine_threshold(vlps, t):
+    vlps0 = vlps / np.max(vlps)
+    t0 = t * np.max(vlps) / gpl.lc
+    t0 = t0 - t0[0]
+    velocity_gradient = np.gradient(vlps0)
+    time_gradient = np.gradient(t0)
+    acceleration = velocity_gradient / time_gradient
+
+    threshold_line = gpl.threshold * np.ones_like(acceleration)
+
+    n = plt.gcf().number
+    plt.figure(n + 1)
+    plt.plot(acceleration)
+    plt.plot(threshold_line, 'r')
+    plt.title('acceleration values to determine threshold used in ode solver')
+    plt.ylabel('acceleration')
+    print(gpl.threshold)
+    plt.show()
 
 
 def set_critical_times(vlps, t, threshold):
@@ -40,7 +53,7 @@ def set_critical_times(vlps, t, threshold):
     acceleration = velocity_gradient / time_gradient
     critical_times = t[np.abs(acceleration) > threshold]
 
-    #nondimen
+    # nondimen
     tcrit0 = critical_times * gpl.vmax / gpl.lc
     tcrit = tcrit0 - t[0]
     np.round(tcrit, 2)
@@ -59,12 +72,13 @@ def generate_rsf_data(inputs):
     # print(f'self.threshold = {gpl.threshold}')
     a, b, Dc, mu0 = inputs
 
-    tcrit = np.load('tcrittest.npy')
-
     # dimensional variables output from mcmc_rsf.py
     times, mutrue, vlps, x = pmr.load_section_data(idata_location)
     k, vref = pmr.get_constants(vlps)
     lc, vmax = pmr.get_vmax_l0(vlps)
+
+    mutrue.round(2)
+    vlps.round(2)
 
     # time is the only variable that needs to be re-nondimensionalized...?
     k0, vlps0, vref0, t0 = pmr.nondimensionalize_parameters(vlps, vref, k, times, vmax)
@@ -72,7 +86,7 @@ def generate_rsf_data(inputs):
     # set up rsf model
     model = rsf.Model()
     model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial spmrer velocity, generally is vlp(t=0)
+    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
@@ -91,14 +105,8 @@ def generate_rsf_data(inputs):
     state1.b = b
     state1.Dc = Dc
 
-    # model.tcrit = inputs[4]
+    model.solve(threshold=gpl.threshold)
 
-    # need to pass in critical times as a variable, because it's recalculating that gradient every single time
-    model.tcrit = tcrit
-
-    model.solve()
-
-    #
     mu_sim = model.results.friction
     state_sim = model.results.states
 
@@ -111,7 +119,7 @@ def get_dataset():
 
     # load observed section data and mcmc inference data
     times, mt, vlps, x = pmr.load_section_data(idata_location)
-    idat = pmr.load_inference_data(idata_location, idataname)
+    idat = pmr.load_inference_data(idata_location, f'{gpl.dirname}_idata')
 
     # first plot: mcmc trace with all original data
     # pmr.plot_trace(idata, chain=None)
@@ -138,20 +146,27 @@ def get_time(name):
     return codetime
 
 
-if __name__ == '__main__':
+def main():
     comptime_start = get_time('start')
     idata, mutrue, vlps, times = get_dataset()
+    # gpl.read_from_json(idata_location)
+    # determine_threshold(vlps, times)
     gpl.set_vch(vlps)
-    set_critical_times(vlps, times, threshold=gpl.threshold)
+    # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0 = get_model_values(idata)
-    at = a[0:10]
-    bt = b[0:10]
-    Dct = Dc[0:10]
-    mu0t = mu0[0:10]
+    a = np.round(a, 4)
+    b = np.round(b, 4)
+    Dc = np.round(Dc, 2)
+    mu0 = np.round(mu0, 3)
 
-    pool = Pool(processes=1)
+    # at = a[0:10]
+    # bt = b[0:10]
+    # Dct = Dc[0:10]
+    # mu0t = mu0[0:10]
 
-    outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
+    pool = Pool(processes=20)
+
+    outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
     print(op.shape)
     pool.close()
@@ -162,3 +177,7 @@ if __name__ == '__main__':
     time_elapsed = comptime_end - comptime_start
     print(f'time elapsed = {time_elapsed}')
     print('end')
+
+
+if __name__ == '__main__':
+    main()

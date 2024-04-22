@@ -372,58 +372,6 @@ def calc_expected_vals(modelvar):
     return muhat, sigmahat
 
 
-def autocorr(x, step):
-    corr = signal.correlate(x, x, mode='full')
-    corr = corr[np.argmax(corr):]
-    corr /= np.max(corr)
-    laglen = len(corr)
-    lags = np.arange(laglen)
-
-    return lags, corr
-
-
-def plot_model_autocorrelations(warmupvals, modelvals):
-    aw, bw, Dcw, mu0w = warmupvals
-
-    steptry = 150
-
-    a = modelvals.a.values
-    b = modelvals.b.values
-    Dc = modelvals.Dc.values
-    mu0 = modelvals.mu0.values
-
-    afull = np.concatenate((aw, a), axis=1)
-    bfull = np.concatenate((bw, b), axis=1)
-    Dcfull = np.concatenate((Dcw, Dc), axis=1)
-    mu0full = np.concatenate((mu0w, mu0), axis=1)
-
-    parameters = afull[:, 0::steptry], bfull[:, 0::steptry], Dcfull[:, 0::steptry], mu0full[:, 0::steptry]
-    names = ['a', 'b', 'Dc', 'mu0']
-
-    i = 500
-    for j, (p, name) in enumerate(zip(parameters, names)):
-        lags, corr = autocorr(p[j, :], steptry)
-        plt.figure(i)
-        plt.plot(lags, corr, '.')
-        # plt.ylim(-0.5, 1)
-        plt.xlabel('lag')
-        plt.title(f'autocorrelated posterior draws: {name}')
-        i += 1
-    plt.show()
-    sys.exit()
-
-
-def get_warmup_vals(idata):
-    warmupvals = az.extract(idata.warmup_posterior, combined=False)
-
-    aw = warmupvals.a.values
-    bw = warmupvals.b.values
-    Dcw = warmupvals.Dc.values
-    mu0w = warmupvals.mu0.values
-
-    return aw, bw, Dcw, mu0w
-
-
 def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
     fig, axs = plt.subplots(2, 1, sharex='all', num=1000, gridspec_kw={'height_ratios': [2, 1]})
 
@@ -689,7 +637,6 @@ def plot_observed_and_vlps(mutrue, vlps, xax):
 
 
 def main():
-    print('THIS SHOULD NOT BE RUNNING')
     # setup output directory
     out_folder = gpl.get_output_storage_folder()
 
