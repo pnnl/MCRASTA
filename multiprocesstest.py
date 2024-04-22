@@ -7,6 +7,7 @@ import itertools
 import numpy as np
 from plotrsfmodel import rsf, staterelations
 import matplotlib.pyplot as plt
+import os
 import cProfile
 
 idata_location = gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
@@ -171,8 +172,8 @@ def main():
     print(op.shape)
     pool.close()
     pool.join()
-    np.save(f'mu_sims{gpl.samplename}', op)
-
+    pathname = gpl.make_path(gpl.samplename, gpl.dirname, f'mu_simsp{gpl.section_id}')
+    np.save(pathname, op)
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
     print(f'time elapsed = {time_elapsed}')
