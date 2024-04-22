@@ -88,7 +88,7 @@ def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
     if thin_data is False:
         gpl.nrstep = 1
     elif thin_data is True:
-        gpl.nrstep = gpl.gpl.nrstep
+        gpl.nrstep = gpl.nrstep
 
     a = modelvals.a.values[0::gpl.nrstep]
     b = modelvals.b.values[0::gpl.nrstep]
