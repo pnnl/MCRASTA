@@ -254,11 +254,10 @@ class Model(LoadingSystem):
         # Find any critical time points we need to let the integrator know about
         # print('forward model: Find any critical time points we need to let the integrator know about')
         self.critical_times = self._get_critical_times(threshold)
+        print('threshold = ', threshold)
+        print(self.critical_times)
 
         # Solve it
-        # print('forward model: integrate.odeint solver')
-        # print('y0 = ', w0)
-
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
                                                   full_output=True, tcrit=self.critical_times,
                                                   args=(self,), **odeint_kwargs)

@@ -26,6 +26,8 @@ def downsample_dataset(mu, t, vlps, x):
     # downsamples to every qth sample after applying low-pass filter along columns
     f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
 
+    print(len(f_ds))
+
     # FOR P5760 ONLY - no downsampling
     # f_ds = f_data
 
@@ -84,7 +86,7 @@ def read_hdf(fullpath):
 
         # loop on names:
         for name in f.keys():
-            print(name)
+            # print(name)
             names.append(name)
         # loop on names and H5 objects:
         for name, h5obj in f.items():
@@ -129,6 +131,7 @@ def remove_non_monotonic(times, data, axis=0):
 def calc_derivative(y, x, window_len=None):
     # returns dydx
     if window_len is not None:
+        print(f'calculating derivative using SG filter and window length {window_len}')
         # smooth
         # x_smooth = smooth(x,window_len=params['window_len'],window='flat')
         # y_smooth = smooth(y,window_len=params['window_len'],window='flat')
@@ -148,21 +151,45 @@ def calc_derivative(y, x, window_len=None):
                                     polyorder=1)
         return dydx_smooth
     else:
+        print(f'calculating derivative using gradient because window_len= {window_len}')
         dydx = np.gradient(y, x)
         return dydx
 
 
+def nondimensionalize_parameters(vlps, vref, k, times, vmax):
+    # define characteristic length and velocity for nondimensionalizing
+    lc = myglobals.lc
+    vmax = np.max(vlps)
+
+    # then remove dimensions
+    k0 = myglobals.k * myglobals.lc
+    vlps0 = vlps / vmax
+    vref0 = vref / vmax
+
+    t0 = times * vmax / lc
+    t0 = t0 - t0[0]
+
+    return k0, vlps0, vref0, t0
+
+
 def determine_threshold(vlps, t):
-    velocity_gradient = np.gradient(vlps)
-    time_gradient = np.gradient(t)
+    vlps0 = vlps / np.max(vlps)
+    t0 = t * np.max(vlps) / myglobals.lc
+    t0 = t0 - t0[0]
+    t0 = np.round(t0, 2)
+    velocity_gradient = np.gradient(vlps0)
+    time_gradient = np.gradient(t0)
     acceleration = velocity_gradient / time_gradient
+
+    critical_times = t0[np.abs(acceleration) > myglobals.threshold]
 
     threshold_line = myglobals.threshold * np.ones_like(acceleration)
 
     n = plt.gcf().number
     plt.figure(n + 1)
-    plt.plot(acceleration)
-    plt.plot(threshold_line, 'r')
+    plt.plot(t0, acceleration)
+    plt.plot(critical_times, np.zeros_like(critical_times), 'co')
+    plt.plot(t0, threshold_line, 'r')
     plt.title('acceleration values to determine threshold used in ode solver')
     plt.ylabel('acceleration')
 
@@ -187,6 +214,7 @@ def get_obs_data(samplename):
 
     # convert to numpy arrays
     t = df['time_s'].to_numpy()
+    t = np.round(t, 2)
     mu = df['mu'].to_numpy()
     x = df['vdcdt_um'].to_numpy()
 

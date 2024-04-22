@@ -37,6 +37,7 @@ def manual_bci(x, mt, msims):
 
 def get_npy_data():
     data = os.path.join(home, 'mu_sims5894001.npy')
+    data = 'mu_simsp5894.npy'
     return np.load(data)
 
 
@@ -95,7 +96,6 @@ def find_best_fits(x, mt, msims):
     plt.plot(x, np.transpose(ms_best), 'b')
     plt.ylim([0.3, 0.5])
     plt.show()
-
 
 
 def main():
