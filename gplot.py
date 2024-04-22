@@ -32,10 +32,13 @@ class Globals:
         self.tcrit = None
         self.vmax = None
         self.dirname = f'out_{self.ndr}d{self.nch}ch'
-        self.msname = f'mu_sims{self.samplename}'
+        self.msname = f'mu_simsp{self.section_id}'
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
+
+    def idata_location(self):
+        return gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
 
     def get_output_storage_folder(self):
         p = self.make_path('postprocess_out', self.samplename, self.sim_name)
