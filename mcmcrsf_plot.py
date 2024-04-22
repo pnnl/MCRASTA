@@ -65,8 +65,8 @@ def calc_ensemble_stats(x, msims):
     sig_upper = means + stdevs
     sig_lower = means - stdevs
 
-    plt.plot(x, means, 'r')
-    plt.plot(x, sig_lower, 'c-')
+    plt.plot(x, means, 'r', label='ensemble mean')
+    plt.plot(x, sig_lower, 'c-', label='ensemble std. dev.')
     plt.plot(x, sig_upper, 'c-')
 
 
@@ -94,7 +94,7 @@ def find_best_fits(x, mt, msims):
     ms_best = msims[sortedi[0], :]
     plt.gcf()
     plt.plot(x, mt, 'r')
-    plt.plot(x, np.transpose(ms_best), 'b')
+    plt.plot(x, np.transpose(ms_best), 'b', label='best fit')
     plt.ylim([0.3, 0.5])
     plt.show()
 
