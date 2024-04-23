@@ -29,7 +29,7 @@ class Globals:
         self.mu_sim = None
         self.aminbmode = None
         self.threshold = None
-        self.nrstep = 100
+        self.nrstep = 1
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
         self.tcrit = None
         self.vmax = None
@@ -45,7 +45,9 @@ class Globals:
             return gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
         else:
             # print(gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name))
-            return gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
+            #TEMPORARY CHANGE AFTER NEWER P5894 IS DONE RUNNING
+            return os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmc_rsf', gpl.sim_name)
+            # return gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
 
     def get_output_storage_folder(self):
         p = self.make_path('postprocess_out', self.samplename, self.sim_name)

@@ -6,6 +6,8 @@ import pymc as pm
 import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
+
+import plot_mcmc_results
 from plotrsfmodel import staterelations, rsf, plot
 import sys
 from scipy.stats import lognorm, mode, skew, kurtosis
@@ -16,6 +18,7 @@ import arviz.labels as azl
 from random import sample
 from multiprocessing import Process
 from gplot import gpl
+import plot_mcmc_results as pmr
 
 # 1. read in .npy file
 # 2. calculate log(p) for each simulation
@@ -68,9 +71,10 @@ def calc_ensemble_stats(x, msims):
     plt.plot(x, means, 'r', label='ensemble mean')
     plt.plot(x, sig_lower, 'c-', label='ensemble std. dev.')
     plt.plot(x, sig_upper, 'c-')
+    plt.ylim([np.min(sig_lower) - 0.1, np.max(sig_upper) + 0.1])
 
 
-def find_best_fits(x, mt, msims):
+def find_best_fits(x, mt, msims, a, b, Dc, mu0):
     resids = np.transpose(mt) - msims
     rsq = resids ** 2
     srsq = rsq.sum(axis=1)
@@ -92,22 +96,41 @@ def find_best_fits(x, mt, msims):
     # ci3_ms = msims[ci3_i, :]
     # ci97_ms = msims[ci97_i, :]
     ms_best = msims[sortedi[0], :]
+    abest = a[sortedi[0]]
+    bbest = b[sortedi[0]]
+    Dcbest = Dc[sortedi[0]]
+    mu0best = mu0[sortedi[0]]
+
+    print(f'a = {abest}; b = {bbest}; Dc = {Dcbest}; mu0 = {mu0best}')
+
     plt.gcf()
-    plt.plot(x, mt, 'r')
+    plt.plot(x, mt, 'k', label='observed')
     plt.plot(x, np.transpose(ms_best), 'b', label='best fit')
-    plt.ylim([0.3, 0.5])
+    plt.xlabel('displacement (mm)')
+    plt.ylabel('mu')
+    plt.title(f'Ensemble Statistics: {gpl.section_id}')
+    plt.legend()
+
     plt.show()
+
+
+def get_model_values(idata):
+    modelvals = pmr.get_model_vals(idata, combined=True)
+    a, b, Dc, mu0 = pmr.get_posterior_data(modelvals, return_aminb=False, thin_data=True)
+    return a, b, Dc, mu0
 
 
 def main():
     msims = get_npy_data()
     msims.round(2)
     t, mutrue, vlps, x = load_section_data()
+    idata = pmr.load_inference_data()
+    a, b, Dc, mu0 = get_model_values(idata)
 
     calc_ensemble_stats(x, msims)
 
     # manual_bci(x, mutrue, msims)
-    find_best_fits(x, mutrue, msims)
+    find_best_fits(x, mutrue, msims, a, b, Dc, mu0)
     print('done')
 
 

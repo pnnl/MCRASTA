@@ -163,7 +163,7 @@ def main():
     # Dct = Dc[0:10]
     # mu0t = mu0[0:10]
 
-    pool = Pool(processes=20)
+    pool = Pool(processes=25)
 
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
