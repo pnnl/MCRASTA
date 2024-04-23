@@ -117,7 +117,7 @@ def get_dataset():
 
     # load observed section data and mcmc inference data
     times, mt, vlps, x = pmr.load_section_data()
-    print(len(x))
+    # print(len(x))
     idat = pmr.load_inference_data()
 
     # first plot: mcmc trace with all original data
@@ -145,7 +145,7 @@ def get_time(name):
     return codetime
 
 
-def main():
+if __name__ == '__main__':
     comptime_start = get_time('start')
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(idata_location)
@@ -167,7 +167,7 @@ def main():
 
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
-    print(op.shape)
+    # print(op.shape)
     pool.close()
     pool.join()
     pathname = gpl.make_path('musim_out', f'mu_simsp{gpl.section_id}')
@@ -176,7 +176,3 @@ def main():
     time_elapsed = comptime_end - comptime_start
     print(f'time elapsed = {time_elapsed}')
     print('end')
-
-
-if __name__ == '__main__':
-    main()
