@@ -168,6 +168,7 @@ if __name__ == '__main__':
 
     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
     op = np.array(outputs)
+    time.sleep(0.01)
     pool.close()
     pool.join()
     pathname = gpl.make_path('musim_out', f'mu_simsp{gpl.section_id}')
