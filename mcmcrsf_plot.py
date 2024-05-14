@@ -51,8 +51,6 @@ def load_section_data():
     vlps = df['vlps'].to_numpy().round(2)
     x = df['x'].to_numpy().round(2)
 
-    print(len(x))
-
     return times, mutrue, vlps, x
 
 
@@ -106,7 +104,7 @@ def find_best_fits(x, mt, msims, a, b, Dc, mu0):
     plt.gcf()
     plt.plot(x, mt, 'k', label='observed')
     plt.plot(x, np.transpose(ms_best), 'b', label='best fit')
-    plt.xlabel('displacement (mm)')
+    plt.xlabel('displacement (um)')
     plt.ylabel('mu')
     plt.title(f'Ensemble Statistics: {gpl.section_id}')
     plt.legend()
@@ -122,6 +120,7 @@ def get_model_values(idata):
 
 def main():
     msims = get_npy_data()
+    print(msims.shape)
     msims.round(2)
     t, mutrue, vlps, x = load_section_data()
     idata = pmr.load_inference_data()
