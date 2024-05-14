@@ -76,28 +76,28 @@ def generate_rsf_data(inputs):
     k, vref = pmr.get_constants(vlps)
     lc, vmax = pmr.get_vmax_l0(vlps)
 
-    mutrue.round(2).astype(np.float32)
-    vlps.round(2).astype(np.float32)
+    mutrue.round(2).astype('float32')
+    vlps.round(2).astype('float32')
 
     # time is the only variable that needs to be re-nondimensionalized...?
     k0, vlps0, vref0, t0 = pmr.nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
     # set up rsf model
     model = rsf.Model()
-    model.k = k.astype(np.float32)  # Normalized System stiffness (friction/micron)
+    model.k = k.astype('float32')  # Normalized System stiffness (friction/micron)
     model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref.astype(np.float32)  # Reference velocity, generally vlp(t=0)
+    model.vref = vref.astype('float32')  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
-    state1.vmax = vmax.astype(np.float32)
-    state1.lc = gpl.lc.astype(np.float32)
+    state1.vmax = vmax.astype('float32')
+    state1.lc = gpl.lc.astype('float32')
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = np.round(t0, 2).astype(np.float32)
+    model.time = np.round(t0, 2).astype('float32')
 
     # Set the model load point velocity, must be same shape as model.model_time
-    model.loadpoint_velocity = vlps.astype(np.float32)
+    model.loadpoint_velocity = vlps.astype('float32')
 
     model.mu0 = mu0
     model.a = a
@@ -106,7 +106,7 @@ def generate_rsf_data(inputs):
 
     model.solve(threshold=gpl.threshold)
 
-    mu_sim = model.results.friction.astype(np.float32)
+    mu_sim = model.results.friction.astype('float32')
     state_sim = model.results.states
 
     return mu_sim
@@ -154,10 +154,10 @@ if __name__ == '__main__':
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0 = get_model_values(idata)
-    a = np.round(a, 4).astype(np.float32)
-    b = np.round(b, 4).astype(np.float32)
-    Dc = np.round(Dc, 2).astype(np.float32)
-    mu0 = np.round(mu0, 3).astype(np.float32)
+    a = np.round(a, 4).astype('float32')
+    b = np.round(b, 4).astype('float32')
+    Dc = np.round(Dc, 2).astype('float32')
+    mu0 = np.round(mu0, 3).astype('float32')
 
     # at = a[0:10]
     # bt = b[0:10]
