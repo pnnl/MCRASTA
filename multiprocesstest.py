@@ -86,7 +86,7 @@ def generate_rsf_data(inputs):
     model = rsf.Model()
     model.k = k  # Normalized System stiffness (friction/micron)
     model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref.astype('float32')  # Reference velocity, generally vlp(t=0)
+    model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax.astype('float32')
