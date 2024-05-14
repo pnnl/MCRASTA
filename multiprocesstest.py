@@ -90,7 +90,7 @@ def generate_rsf_data(inputs):
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax.astype('float32')
-    state1.lc = gpl.lc.astype('float32')
+    state1.lc = gpl.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
