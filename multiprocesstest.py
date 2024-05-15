@@ -159,14 +159,14 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 2).astype('float32')
     mu0 = np.round(mu0, 3).astype('float32')
 
-    # at = a[0:10]
-    # bt = b[0:10]
-    # Dct = Dc[0:10]
-    # mu0t = mu0[0:10]
+    at = a[0:200000]
+    bt = b[0:200000]
+    Dct = Dc[0:200000]
+    mu0t = mu0[0:200000]
 
     pool = Pool(processes=25)
 
-    outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
+    outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
     op = np.array(outputs)
     time.sleep(0.01)
     pool.close()
