@@ -159,10 +159,10 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 2).astype('float32')
     mu0 = np.round(mu0, 3).astype('float32')
 
-    at = a[200000:600000]
-    bt = b[200000:600000]
-    Dct = Dc[200000:600000]
-    mu0t = mu0[200000:600000]
+    at = a[600000:1600000]
+    bt = b[600000:1600000]
+    Dct = Dc[600000:1600000]
+    mu0t = mu0[600000:1600000]
 
     pool = Pool(processes=25)
 
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     time.sleep(0.01)
     pool.close()
     pool.join()
-    pathname = gpl.make_path('musim_out', f'mu_simsp{gpl.section_id}_4')
+    pathname = gpl.make_path('musim_out', f'mu_simsp{gpl.section_id}_5')
     np.save(pathname, op)
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
