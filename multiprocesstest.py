@@ -159,10 +159,10 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 2).astype('float32')
     mu0 = np.round(mu0, 3).astype('float32')
 
-    at = a[1100000:1600000]
-    bt = b[1100000:1600000]
-    Dct = Dc[1100000:1600000]
-    mu0t = mu0[1100000:1600000]
+    at = a[1600000:2000000]
+    bt = b[1600000:2000000]
+    Dct = Dc[1600000:2000000]
+    mu0t = mu0[1600000:2000000]
 
     pool = Pool(processes=25)
 
