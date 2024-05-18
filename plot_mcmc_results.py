@@ -272,7 +272,7 @@ def plot_priors_posteriors(modelvals):
         plt.figure(num=num)
         # sns.histplot(prior, kde=True)
         line1 = sns.kdeplot(prior, color='b', common_norm=False, bw_method=0.1)
-        line2 = sns.kdeplot(post, color='g', common_norm=False)
+        # line2 = sns.kdeplot(post, color='g', common_norm=False)
         plt.gca().set_xlim(0, xmax)
         # plt.gca().set_legend([line1, line2], ['priors', 'posteriors'])
 
@@ -610,7 +610,7 @@ def main():
     elif dataset_type == 'new':
         vref, mus, sigmas = gpl.read_from_json(gpl.idata_location())
 
-    calc_rsf_results(x, mutrue, idata)
+    # calc_rsf_results(x, mutrue, idata)
 
     # this function takes random sample from posterior of each variable, then evaluates the draw in the rsf model
     # a manual "posterior predictive check" of sorts
