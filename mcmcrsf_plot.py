@@ -104,7 +104,7 @@ def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
     plt.title(f'Ensemble Statistics: {gpl.section_id}')
     plt.legend()
 
-    plt.show()
+    # plt.show()
 
 
 def find_best_fits(x, mt, msims, a, b, Dc, mu0):
@@ -155,12 +155,23 @@ def calc_sums(msims):
     return column_sums
 
 
+def save_figs():
+    # check if folder exists, make one if it doesn't
+    name = gpl.get_output_storage_folder()
+    print(f'find figures and .out file here: {name}')
+    w = plt.get_fignums()
+    print('w = ', w)
+    for i in plt.get_fignums():
+        print('i = ', i)
+        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
+
+
 def main():
     t, mutrue, vlps, x = load_section_data()
     idata = pmr.load_inference_data()
 
-    num_file_subsets = 2
-    num_chunks = 600000 / 100000
+    num_file_subsets = 5
+    num_chunks = 2000000 / 100000
     num_chunks = int(num_chunks)
 
     chunksize = 100000
@@ -229,6 +240,8 @@ def main():
     plot_results(x, mutrue, combined_means, stdevs_all, bvars, best_musim)
 
     # manual_bci(x, mutrue, msims)
+
+    save_figs()
 
     print('done')
 

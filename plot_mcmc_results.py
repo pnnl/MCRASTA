@@ -20,6 +20,9 @@ from gplot import gpl
 home = os.path.expanduser('~')
 
 um_to_mm = 0.001
+Dclabel = r'$D_c$ ($\mu$m)'
+mu0label = r'$\mu_0$'
+fontsize = 14
 
 
 def load_inference_data():
@@ -81,6 +84,19 @@ def get_model_vals(idata, combined=True):
     modelvals = az.extract(idata.posterior, combined=combined)
 
     return modelvals
+
+
+def main_get_posterior_data(modelvals, return_aminb=False, step=1):
+    a = modelvals.a.values[0::step]
+    b = modelvals.b.values[0::step]
+    Dc = modelvals.Dc.values[0::step]
+    mu0 = modelvals.mu0.values[0::step]
+
+    if return_aminb is True:
+        a_min_b = modelvals.a_min_b.values[0::step]
+        return a_min_b, a, b, Dc, mu0
+    elif return_aminb is False:
+        return a, b, Dc, mu0
 
 
 def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
@@ -231,7 +247,7 @@ def load_section_data():
 
 
 def plot_pairs_thinned_idata(modelvals):
-    a_min_b, a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=True, thin_data=True)
+    a_min_b, a, b, Dc, mu0 = main_get_posterior_data(modelvals, return_aminb=True, step=100)
 
     datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     new_idata = az.convert_to_inference_data(datadict)
@@ -252,10 +268,33 @@ def save_figs(out_folder):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
 
 
+def plot_lognormal(mu, sigma, xmax):
+    # Generate data points for the x-axis
+    x = np.linspace(0, xmax, 10000)
+
+    # Calculate the corresponding y-axis values using the lognormal distribution
+    y = lognorm.pdf(x, s=np.exp(sigma), scale=np.exp(mu))
+
+    # Plot the lognormal distribution
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y, label=f'mu={mu}, sigma={sigma}')
+    plt.title('Lognormal Distribution')
+    plt.xlabel('x')
+    plt.ylabel('Probability Density')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
 def plot_priors_posteriors(modelvals):
     posts = get_posterior_data(modelvals, return_aminb=False, thin_data=False)
     # define priors same as in mcmc_rsf.py - get this info from out file
     mus, sigmas = gpl.get_prior_parameters()
+    xmaxs = [0.05, 0.05, 60, 1.25]
+
+
+    # for mu, sigma, xmax in zip(mus, sigmas, xmaxs):
+    #     plot_lognormal(mu, sigma, xmax)
 
     a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
@@ -265,22 +304,20 @@ def plot_priors_posteriors(modelvals):
     # take same number of draws as in mcmc_rsf.py
     vpriors = pm.draw([a, b, Dc, mu0], draws=gpl.ndr)
 
-    xmaxs = [0.05, 0.05, 60, 1.25]
 
-    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', 'dc', 'mu0'), xmaxs)):
+    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', f'{Dclabel}', f'{mu0label}'), xmaxs)):
         num = plt.gcf().number + 1
-        plt.figure(num=num)
-        # sns.histplot(prior, kde=True)
-        line1 = sns.kdeplot(prior, color='b', common_norm=False, bw_method=0.1)
+        plt.figure(num=num, figsize=(3.25, 3))
+        sns.histplot(prior, stat='probability', label=f'mu={mus[i]}, sigma={sigmas[i]}')
+        # sns.kdeplot(prior, color='b', common_norm=False, bw_method=0.1)
         # line2 = sns.kdeplot(post, color='g', common_norm=False)
         plt.gca().set_xlim(0, xmax)
+        plt.title('Prior Distribution', fontsize=fontsize)
+        plt.xlabel(f'{label}', fontsize=fontsize)
+        plt.ylabel('Probability Density', fontsize=fontsize)
+        plt.legend(fontsize=fontsize)
+        plt.grid(True)
         # plt.gca().set_legend([line1, line2], ['priors', 'posteriors'])
-
-
-# def get_posteriors(modelvals, chain):
-#     a, b, Dc, mu0 = get_trace_variables(modelvals, chain)
-#
-#     return a, b, Dc, mu0
 
 
 def get_modes(modelvals):
@@ -410,6 +447,8 @@ def plot_a_minus_b(idata):
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
 
+    labeller = azl.MapLabeller(var_name_map={'a_min_b': 'a-b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
+
     a_min_b = a-b
     datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     ab_idata = az.convert_to_inference_data(datadict, group='posterior')
@@ -417,32 +456,51 @@ def plot_a_minus_b(idata):
 
     num = plt.gcf().number
     plt.figure(num+1)
-    ax = az.plot_posterior(ab_idata, var_names=['a_min_b'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
+    ax = az.plot_posterior(ab_idata,
+                           var_names=['a_min_b'],
+                           point_estimate='mode',
+                           round_to=4,
+                           hdi_prob=hdi_prob)
     ax.set_xlim(-0.05, 0.05)
     ax.set_title(f'(a-b) posterior distribution, {gpl.samplename}')
     mab = az.plots.plot_utils.calculate_point_estimate('mode', a_min_b)
     gpl.aminbmode = mab
 
     plt.figure(num+2)
-    ax1 = az.plot_posterior(idata, var_names=['a'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
+    ax1 = az.plot_posterior(idata,
+                            var_names=['a'],
+                            point_estimate='mode',
+                            round_to=4,
+                            hdi_prob=hdi_prob)
     ax1.set_title(f'a posterior distribution, {gpl.samplename}')
     ax1.set_xlim(0, 0.04)
 
     plt.figure(num+3)
-    ax2 = az.plot_posterior(idata, var_names=['b'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
+    ax2 = az.plot_posterior(idata,
+                            var_names=['b'],
+                            point_estimate='mode',
+                            round_to=4,
+                            hdi_prob=hdi_prob)
     ax2.set_title(f'b posterior distribution, {gpl.samplename}')
     ax2.set_xlim(0, 0.05)
 
     plt.figure(num+4)
-    ax3 = az.plot_posterior(idata, var_names=['Dc'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
-    ax3.set_title(f'Dc posterior distribution, {gpl.samplename}')
+    ax3 = az.plot_posterior(idata,
+                            var_names=['Dc'],
+                            point_estimate='mode',
+                            round_to=4,
+                            hdi_prob=hdi_prob)
+    ax3.set_title(f'$D_c$ ($\mu$m) posterior distribution, {gpl.samplename}')
     ax3.set_xlim(0, 60)
 
     plt.figure(num+5)
-    ax4 = az.plot_posterior(idata, var_names=['mu0'], point_estimate='mode', round_to=4, hdi_prob=hdi_prob)
-    ax4.set_title(f'mu0 posterior distribution, {gpl.samplename}')
+    ax4 = az.plot_posterior(idata,
+                            var_names=['mu0'],
+                            point_estimate='mode',
+                            round_to=4,
+                            hdi_prob=hdi_prob)
+    ax4.set_title(f'$\mu_0$ posterior distribution, {gpl.samplename}')
 
-    labeller = azl.MapLabeller(var_name_map={'a_min_b': 'a-b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
     marginal_kwargs = {'color': 'purple'}
     kde_kwargs = {'hdi_probs': [0.10, 0.25, 0.50, 0.75, 0.89, 0.94]}
     ax = az.plot_pair(
@@ -485,90 +543,12 @@ def save_data(logps, map_vars, map_mu_sims, maxlogps, out_folder):
         np.savetxt(f, d)
 
 
-def plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim):
-    # mu_sims = np.array(mu_sims)
-    logps = np.abs(logps)
-    logps = np.array(logps)
-    rdim = mu_sims.shape[0]
-    cdim = mu_sims.shape[1]
-
-    # mu_sims = mu_sims.reshape(rdim, cdim)
-    # logps = logps.reshape(rdim,)
-
-    ensemble_modes = []
-    ensemble_means = []
-    hdi_lower = []
-    hdi_upper = []
-    # hdi_data = []
-    # hdi_data = np.zeros((rdim, 2))
-
-    hdi_data = az.hdi(np.transpose(mu_sims), hdi_prob=0.89, skipna=True)
-
-    # for i in np.arange(rdim):
-    #     r = mu_sims[i, :]
-    #     ensemble_mode = az.plots.plot_utils.calculate_point_estimate('mode', r, skipna=True)
-    #     ensemble_mean = az.plots.plot_utils.calculate_point_estimate('mean', r, skipna=True)
-    #     hdi = az.hdi(r, hdi_prob=0.89, skipna=True)
-    #     # hdi_data.append(hdi)
-    #     hdi_data[i, :] = hdi
-    #     ensemble_modes.append(ensemble_mode)
-    #     ensemble_means.append(ensemble_mean)
-    #     hdi_lower.append(hdi[0])
-    #     hdi_upper.append(hdi[1])
 
 
-    # hdi_data = np.array(hdi_data)
-    num = plt.gcf().number
-    plt.figure(num+1)
-    # plt.plot(x, hdi_lower, 'b-')
-    # plt.plot(x, hdi_upper, 'c-')
-    az.plot_hdi(x, hdi_data=hdi_data, color='cyan', smooth=True)
-    # az.plot_hdi(x, mu_sims, input_core_dims=[['chain']], color='cyan')
 
-    # plt.plot(x, ensemble_modes, 'k.')
-    plt.plot(x, mutrue, 'k.', alpha=0.09)
-    # for i in np.arange(cdim):
-    #     m = mu_sims[:, i]
-    #     plt.plot(x, m, 'k-', alpha=0.05)
-    plt.plot(x, map_mu_sim, 'r-')
-    # plt.ylim([np.min(hdi_data[:, 0]) - 0.01, np.max(hdi_data[:, 1]) + 0.01])
-    plt.ylim([0.2, 0.6])
-    plt.xlabel(r'loadpoint displacement ($\mu$m)')
-    plt.ylabel(r'$\mu$')
-    plt.title('HDI plot')
-    plt.show()
-
-
-def draw_from_posteriors(idata, mutrue, x):
-    # draw values from the 89% credible interval for each parameter
-    # then generate rsf data for draws
-
-    modelvals = get_model_vals(idata)
-    a = modelvals.a.values
-    b = modelvals.b.values
-    Dc = modelvals.Dc.values
-    mu0 = modelvals.mu0.values
-
-    k = 100000
-
-    rsa = np.random.choice(a, k)
-    rsb = np.random.choice(b, k)
-    rsDc = np.random.choice(Dc, k)
-    rsmu0 = np.random.choice(mu0, k)
-
-    vars_all = rsa, rsb, rsDc, rsmu0
-    mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, nrplot=k)  # generates rsf sim
-
-    p = gpl.get_output_storage_folder()
-
-    save_data(logps, map_vars, map_mu_sim, maxlogp, p)
-
-    plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim)
-
-
-def calc_rsf_results(x, mutrue, idata):
-    mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, gpl.nrplot)  # generates rsf sim
-    plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim)
+# def calc_rsf_results(x, mutrue, idata):
+#     mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, gpl.nrplot)  # generates rsf sim
+#     plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim)
 
 
 def plot_observed_and_vlps(mutrue, vlps, xax):
