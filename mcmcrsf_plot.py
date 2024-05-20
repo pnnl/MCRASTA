@@ -102,8 +102,6 @@ def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
 
     print(f'a = {abest}; b = {bbest}; Dc = {Dcbest}; mu0 = {mu0best}')
 
-    write_best_estimates(abest, bbest, Dcbest, mu0best)
-
     plt.gcf()
     plt.plot(x, mt, 'k', label='observed')
     plt.plot(x, np.transpose(bestmusim), 'b', label='best fit')
