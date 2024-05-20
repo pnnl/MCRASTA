@@ -95,16 +95,16 @@ def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
     sig_upper = means + stdevs
     sig_lower = means - stdevs
 
-    plt.plot(x, np.transpose(means), 'r', label='ensemble mean')
-    plt.plot(x, np.transpose(sig_lower), 'c-', label='ensemble std. dev.')
-    plt.plot(x, np.transpose(sig_upper), 'c-')
+    plt.plot(x, np.transpose(means), 'dotted', color='crimson', label='ensemble mean')
+    plt.plot(x, np.transpose(sig_lower), 'dashed', color='salmon', label='ensemble std. dev.')
+    plt.plot(x, np.transpose(sig_upper), 'dashed', color='salmon')
     plt.ylim([np.min(sig_lower) - 0.1, np.max(sig_upper) + 0.1])
 
     print(f'a = {abest}; b = {bbest}; Dc = {Dcbest}; mu0 = {mu0best}')
 
     plt.gcf()
-    plt.plot(x, mt, 'k', label='observed')
-    plt.plot(x, np.transpose(bestmusim), 'b', label='best fit')
+    plt.plot(x, mt, 'k.', label='observed', alpha=0.1)
+    plt.plot(x, np.transpose(bestmusim), color='red', label='best fit')
     plt.xlabel('displacement (um)')
     plt.ylabel('mu')
     plt.title(f'Ensemble Statistics: {gpl.section_id}')
@@ -181,20 +181,11 @@ def save_stats(ens_mean, ens_stdev, bestfit):
     np.save(p, bestfit)
 
 
-def save_figs():
-    # check if folder exists, make one if it doesn't
-    name = gpl.get_output_storage_folder()
-    print(f'find figures and .out file here: {name}')
-    w = plt.get_fignums()
-    print('w = ', w)
-    for i in plt.get_fignums():
-        print('i = ', i)
-        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
-
-
 def main():
     t, mutrue, vlps, x = load_section_data()
     idata = pmr.load_inference_data()
+
+    # plot_results(x, mutrue, combined_means, stdevs_all, bvars, best_musim)
 
     num_file_subsets = 20
     num_chunks = 2000000 / 100000
@@ -267,6 +258,20 @@ def main():
     save_figs()
 
     print('done')
+
+
+def save_figs():
+    # check if folder exists, make one if it doesn't
+    name = gpl.get_output_storage_folder()
+    print(f'find figures and .out file here: {name}')
+    w = plt.get_fignums()
+    print('w = ', w)
+    for i in plt.get_fignums():
+        print('i = ', i)
+        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
+#
+# def standalone_plot():
+#     ens_mean = np.load()
 
 
 if __name__ == '__main__':
