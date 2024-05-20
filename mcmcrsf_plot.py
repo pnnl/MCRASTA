@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from gplot import gpl
 import plot_mcmc_results as pmr
+import psutil
+
 
 # 1. read in .npy file
 # 2. calculate log(p) for each simulation
@@ -182,6 +184,7 @@ def main():
     lpbest = 123456789
     start_idx = 0
     nc = 0
+    process = psutil.Process()
     for num in np.arange(num_file_subsets):
         msims_file, total_sims_in_file = get_npy_data(num, chunksize=None)
         print(f'msims file size = {msims_file.shape}')
@@ -212,6 +215,7 @@ def main():
             start_idx = end_idx
 
             nc += 1
+            print(process.memory_info().rss)
         del msims_file, msims
 
     combined_means = calc_combined_stats(sums_each_column, chunksize, num_chunks)
