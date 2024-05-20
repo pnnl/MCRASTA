@@ -112,7 +112,7 @@ def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
     # plt.show()
 
 
-def find_best_fits(x, mt, msims, a, b, Dc, mu0, start_idx, end_idx):
+def find_best_fits(x, mt, msims, a, b, Dc, mu0):
     resids = np.transpose(mt) - msims
     rsq = resids ** 2
     srsq = np.nansum(rsq, axis=1)
@@ -175,7 +175,7 @@ def main():
     t, mutrue, vlps, x = load_section_data()
     idata = pmr.load_inference_data()
 
-    num_file_subsets = 9
+    num_file_subsets = 20
     num_chunks = 2000000 / 100000
     num_chunks = int(num_chunks)
 
@@ -188,42 +188,36 @@ def main():
     nc = 0
     process = psutil.Process()
     for num in np.arange(num_file_subsets):
-        if num != 3:
-            msims_file, total_sims_in_file = get_npy_data(num, chunksize=None)
-            print(f'msims file size = {msims_file.shape}')
-            print(total_sims_in_file)
-            print(f'after reading file: {process.memory_info().rss}')
-            for j in range(0, total_sims_in_file, chunksize):
-                print(f'after chunking file: {process.memory_info().rss}')
-                end_idx = start_idx + chunksize
-                print(f'starting index = {start_idx}')
-                print(f'ending index = {end_idx}')
-                print(f'j = {j}')
+        msims_file, total_sims_in_file = get_npy_data(num, chunksize=None)
+        print(f'msims file size = {msims_file.shape}')
+        print(total_sims_in_file)
+        for j in range(0, total_sims_in_file, chunksize):
+            end_idx = start_idx + chunksize
+            print(f'starting index = {start_idx}')
+            print(f'ending index = {end_idx}')
+            print(f'j = {j}')
+            msims = msims_file[j:j+chunksize, :]
+            print(f'msims size = {msims.shape}')
+            a, b, Dc, mu0 = get_model_values(idata, start_idx, end_idx)
 
-                msims = msims_file[j:j+chunksize, :]
-                print(f'msims size = {msims.shape}')
-                a, b, Dc, mu0 = get_model_values(idata, start_idx, end_idx)
-                print(f'before running best fits: {process.memory_info().rss}')
+            bestvars, ms_best, logpbest = find_best_fits(x, mutrue, msims, a, b, Dc, mu0)
+            print(f'after running best fits: {process.memory_info().rss}')
 
+            if logpbest < lpbest:
+                lpbest = logpbest
+                bvars = bestvars
+                best_musim = ms_best
 
-                bestvars, ms_best, logpbest = find_best_fits(x, mutrue, msims, a, b, Dc, mu0, start_idx, end_idx)
-                print(f'after running best fits: {process.memory_info().rss}')
+            # means_subset = calc_ensemble_stats(x, msims, ddof=num_chunks*num_file_subsets)
 
-                if logpbest < lpbest:
-                    lpbest = logpbest
-                    bvars = bestvars
-                    best_musim = ms_best
+            sums_each_column[nc, :] = calc_sums(msims)
+            print(f'after calc sums: {process.memory_info().rss}')
 
-                # means_subset = calc_ensemble_stats(x, msims, ddof=num_chunks*num_file_subsets)
+            start_idx = end_idx
 
-                sums_each_column[nc, :] = calc_sums(msims)
-                print(f'after calc sums: {process.memory_info().rss}')
-
-                start_idx = end_idx
-                nc += 1
-            # del msims_file, msims
-        else:
-            pass
+            nc += 1
+            print(process.memory_info().rss)
+        del msims_file, msims
 
     combined_means = calc_combined_stats(sums_each_column, chunksize, num_chunks)
 
