@@ -221,7 +221,7 @@ def main():
 
                 start_idx = end_idx
                 nc += 1
-            del msims_file, msims
+            # del msims_file, msims
         else:
             pass
 
