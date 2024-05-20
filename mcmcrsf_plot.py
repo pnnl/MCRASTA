@@ -29,8 +29,8 @@ def manual_bci(x, mt, msims):
 
 
 def get_npy_data(n, chunksize):
-    print(f'reading dataset: {gpl.msname}_{n+3}.npy')
-    filename = gpl.make_path('musim_out', f'{gpl.msname}_{n+3}.npy')
+    print(f'reading dataset: {gpl.msname}_{n}.npy')
+    filename = gpl.make_path('musim_out', 'p5894', f'{gpl.msname}_{n}.npy')
     alldata = np.load(filename)
 
     if chunksize is not None:
