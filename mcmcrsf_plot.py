@@ -176,9 +176,9 @@ def calc_sums(msims):
 
 def save_stats(ens_mean, ens_stdev, bestfit):
     p = gpl.get_output_storage_folder()
-    np.save(p, ens_mean)
-    np.save(p, ens_stdev)
-    np.save(p, bestfit)
+    np.save(os.path.join(p, 'ens_mean'), ens_mean)
+    np.save(os.path.join(p, 'ens_stdev'), ens_stdev)
+    np.save(os.path.join(p, 'bestfit'), bestfit)
 
 
 def main():
