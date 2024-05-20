@@ -24,8 +24,8 @@ def manual_bci(x, mt, msims):
 
 
 def get_npy_data(n, chunksize):
-    print(f'reading dataset: {gpl.msname}_{n+6}.npy')
-    data = gpl.make_path('musim_out', f'{gpl.msname}_{n+6}.npy')
+    print(f'reading dataset: {gpl.msname}_{n+3}.npy')
+    data = gpl.make_path('musim_out', f'{gpl.msname}_{n+3}.npy')
     alldata = np.load(data)
 
     if chunksize is not None:
@@ -170,8 +170,8 @@ def main():
     t, mutrue, vlps, x = load_section_data()
     idata = pmr.load_inference_data()
 
-    num_file_subsets = 1
-    num_chunks = 500000 / 100000
+    num_file_subsets = 5
+    num_chunks = 2000000 / 100000
     num_chunks = int(num_chunks)
 
     chunksize = 100000
