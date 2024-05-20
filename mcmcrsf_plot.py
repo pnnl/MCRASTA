@@ -179,7 +179,6 @@ def main():
     chunksize = 100000
 
     sums_each_column = np.empty((num_chunks, len(mutrue)))
-    ys = np.empty((num_chunks, 1))
 
     lpbest = 123456789
     start_idx = 0
@@ -189,7 +188,9 @@ def main():
         msims_file, total_sims_in_file = get_npy_data(num, chunksize=None)
         print(f'msims file size = {msims_file.shape}')
         print(total_sims_in_file)
+        print(f'after reading file: {process.memory_info().rss}')
         for j in range(0, total_sims_in_file, chunksize):
+            print(f'after chunking file: {process.memory_info().rss}')
             end_idx = start_idx + chunksize
             print(f'starting index = {start_idx}')
             print(f'ending index = {end_idx}')
@@ -197,8 +198,12 @@ def main():
             msims = msims_file[j:j+chunksize, :]
             print(f'msims size = {msims.shape}')
             a, b, Dc, mu0 = get_model_values(idata, start_idx, end_idx)
+            print(f'before running best fits: {process.memory_info().rss}')
+
 
             bestvars, ms_best, logpbest = find_best_fits(x, mutrue, msims, a, b, Dc, mu0)
+            print(f'after running best fits: {process.memory_info().rss}')
+
             if logpbest < lpbest:
                 lpbest = logpbest
                 bvars = bestvars
@@ -207,15 +212,11 @@ def main():
             # means_subset = calc_ensemble_stats(x, msims, ddof=num_chunks*num_file_subsets)
 
             sums_each_column[nc, :] = calc_sums(msims)
-
-            # means_each_subset[nc, :] = means_subset
-            # stdevs_each_subset[num, :] = stdevs_subset
-            ys[nc, :] = chunksize
+            print(f'after calc sums: {process.memory_info().rss}')
 
             start_idx = end_idx
 
             nc += 1
-            print(process.memory_info().rss)
         del msims_file, msims
 
     combined_means = calc_combined_stats(sums_each_column, chunksize, num_chunks)
