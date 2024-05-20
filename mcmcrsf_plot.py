@@ -112,7 +112,7 @@ def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
     # plt.show()
 
 
-def find_best_fits(x, mt, msims, a, b, Dc, mu0):
+def find_best_fits(x, mt, msims, a, b, Dc, mu0, start_idx, end_idx):
     resids = np.transpose(mt) - msims
     rsq = resids ** 2
     srsq = np.nansum(rsq, axis=1)
@@ -206,7 +206,7 @@ def main():
                 print(f'before running best fits: {process.memory_info().rss}')
 
 
-                bestvars, ms_best, logpbest = find_best_fits(x, mutrue, msims, a, b, Dc, mu0)
+                bestvars, ms_best, logpbest = find_best_fits(x, mutrue, msims, a, b, Dc, mu0, start_idx, end_idx)
                 print(f'after running best fits: {process.memory_info().rss}')
 
                 if logpbest < lpbest:
@@ -221,9 +221,9 @@ def main():
 
                 start_idx = end_idx
                 nc += 1
+            del msims_file, msims
         else:
             pass
-        del msims_file, msims
 
     combined_means = calc_combined_stats(sums_each_column, chunksize, num_chunks)
 
