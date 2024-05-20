@@ -189,7 +189,7 @@ def main():
     process = psutil.Process()
     for num in np.arange(num_file_subsets):
         if num != 3:
-            msims_file, total_sims_in_file = get_npy_data(num, num_file_subsets, process, chunksize=None)
+            msims_file, total_sims_in_file = get_npy_data(num, chunksize=None)
             print(f'msims file size = {msims_file.shape}')
             print(total_sims_in_file)
             print(f'after reading file: {process.memory_info().rss}')
