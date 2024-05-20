@@ -28,7 +28,7 @@ def manual_bci(x, mt, msims):
     plt.show()
 
 
-def get_npy_data(n, num_file_subsets, process, chunksize):
+def get_npy_data(n, chunksize):
     print(f'reading dataset: {gpl.msname}_{n+3}.npy')
     filename = gpl.make_path('musim_out', f'{gpl.msname}_{n+3}.npy')
     alldata = np.load(filename)
