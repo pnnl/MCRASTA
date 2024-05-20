@@ -5,14 +5,14 @@ from gplot import gpl
 
 def split_large_files():
     chunksize = 100000
-    filename = gpl.make_path('musim_out', f'{gpl.msname}_3.npy')
+    filename = gpl.make_path('musim_out', f'{gpl.msname}_4.npy')
     alldata = np.load(filename)
 
     dir, oldname = os.path.split(filename)
 
     total_sims_in_file = alldata.shape[0]
 
-    j = 0
+    j = 2
     for i in range(0, total_sims_in_file, chunksize):
         new_name = f'{gpl.msname}_{j}'
         new_path = os.path.join(dir, 'p5894', new_name)
