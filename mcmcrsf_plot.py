@@ -9,13 +9,14 @@ import plot_mcmc_results as pmr
 import psutil
 import split_musim_files
 
-
 # 1. read in .npy file
 # 2. calculate log(p) for each simulation
 # 3. calculate ensemble statistics
 # 4. plot simulated mus
 
 home = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
+
+
 # idata_location = gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
 
 
@@ -101,6 +102,8 @@ def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
 
     print(f'a = {abest}; b = {bbest}; Dc = {Dcbest}; mu0 = {mu0best}')
 
+    write_best_estimates(abest, bbest, Dcbest, mu0best)
+
     plt.gcf()
     plt.plot(x, mt, 'k', label='observed')
     plt.plot(x, np.transpose(bestmusim), 'b', label='best fit')
@@ -110,6 +113,19 @@ def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
     plt.legend()
 
     # plt.show()
+
+
+def write_best_estimates(bvars, lpbest):
+    a, b, Dc, mu0 = bvars
+    p = gpl.get_output_storage_folder()
+    fname = os.path.join(p, 'param_estimates_best.txt')
+
+    paramstrings = ['a', 'b', 'Dc', 'mu0', 'lpbest']
+    paramvals = [a, b, Dc, mu0, lpbest]
+
+    with open(fname, mode='w') as f:
+        for string, val in zip(paramstrings, paramvals):
+            f.write(f'{string}: {val}\n')
 
 
 def find_best_fits(x, mt, msims, a, b, Dc, mu0):
@@ -160,6 +176,13 @@ def calc_sums(msims):
     return column_sums
 
 
+def save_stats(ens_mean, ens_stdev, bestfit):
+    p = gpl.get_output_storage_folder()
+    np.save(p, ens_mean)
+    np.save(p, ens_stdev)
+    np.save(p, bestfit)
+
+
 def save_figs():
     # check if folder exists, make one if it doesn't
     name = gpl.get_output_storage_folder()
@@ -196,7 +219,7 @@ def main():
             print(f'starting index = {start_idx}')
             print(f'ending index = {end_idx}')
             print(f'j = {j}')
-            msims = msims_file[j:j+chunksize, :]
+            msims = msims_file[j:j + chunksize, :]
             print(f'msims size = {msims.shape}')
             a, b, Dc, mu0 = get_model_values(idata, start_idx, end_idx)
 
@@ -207,8 +230,6 @@ def main():
                 lpbest = logpbest
                 bvars = bestvars
                 best_musim = ms_best
-
-            # means_subset = calc_ensemble_stats(x, msims, ddof=num_chunks*num_file_subsets)
 
             sums_each_column[nc, :] = calc_sums(msims)
             print(f'after calc sums: {process.memory_info().rss}')
@@ -228,7 +249,7 @@ def main():
         print(msims_file.shape)
         print(combined_means.shape)
         for j in range(0, total_sims_in_file, chunksize):
-            msims = msims_file[j:j+chunksize, :]
+            msims = msims_file[j:j + chunksize, :]
             msims[msims < 0] = np.nan
             msims[msims > 1] = np.nan
             msims[msims == np.inf] = np.nan
@@ -240,13 +261,11 @@ def main():
     sum_squares_all = np.nansum(sum_squares_each, axis=0)
     stdevs_all = 1 / np.sqrt(num_chunks * chunksize) * np.sqrt(sum_squares_all)
 
-
-    # combined_stdevs = calc_combined_stdev(stdevs_each_subset)
-
     plot_results(x, mutrue, combined_means, stdevs_all, bvars, best_musim)
 
-    # manual_bci(x, mutrue, msims)
+    write_best_estimates(bvars, lpbest)
 
+    save_stats(combined_means, stdevs_all, best_musim)
     save_figs()
 
     print('done')
