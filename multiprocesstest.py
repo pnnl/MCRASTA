@@ -211,11 +211,12 @@ def parallel_processing(inputs):
 
     outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
     op = np.array(outputs)
-    time.sleep(0.01)
     pool.close()
     pool.join()
 
     np.save(pathname, op)
+
+    del op
 
 
 if __name__ == '__main__':
