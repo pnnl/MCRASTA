@@ -337,6 +337,8 @@ def get_modes(modelvals):
     mu0mode = az.plots.plot_utils.calculate_point_estimate('mode', mu0)
     aminbmode = az.plots.plot_utils.calculate_point_estimate('mode', aminb)
 
+
+
     return amode, bmode, Dcmode, mu0mode, aminbmode
 
 
@@ -485,6 +487,8 @@ def plot_a_minus_b(idata):
                             color=color)
     ax1.set_title(f'a posterior distribution, {gpl.samplename}')
     ax1.set_xlim(0, 0.04)
+    ma = az.plots.plot_utils.calculate_point_estimate('mode', a)
+
 
     plt.figure(num + 3)
     ax2 = az.plot_posterior(idata,
@@ -495,6 +499,7 @@ def plot_a_minus_b(idata):
                             color=color)
     ax2.set_title(f'b posterior distribution, {gpl.samplename}')
     ax2.set_xlim(0, 0.05)
+    mb =
 
     plt.figure(num + 4)
     ax3 = az.plot_posterior(idata,
@@ -591,6 +596,9 @@ def main():
     # load observed section data and mcmc inference data
     times, mutrue, vlps, x = load_section_data()
     idata = load_inference_data()
+    modelvals = get_model_vals(idata, combined=True)
+    modes = get_modes(modelvals)
+
 
     # first plot: mcmc trace with all original data
     plot_trace(idata, chain=None)

@@ -149,6 +149,8 @@ def get_time(name):
 
 if __name__ == '__main__':
     comptime_start = get_time('start')
+    parent_dir = gpl.get_musim_storage_folder()
+
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(idata_location)
     # determine_threshold(vlps, times)
@@ -166,6 +168,8 @@ if __name__ == '__main__':
     mu0t = mu0[0:100000]
     snum = 0
 
+    pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{snum}')
+
     pool = Pool(processes=25)
 
     outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
@@ -173,7 +177,8 @@ if __name__ == '__main__':
     time.sleep(0.01)
     pool.close()
     pool.join()
-    pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
+    # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
+
     np.save(pathname, op)
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start

@@ -49,6 +49,20 @@ class Globals:
             # return os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmc_rsf', gpl.sim_name)
             return gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
 
+    def get_musim_storage_folder(self):
+        p = self.make_path('musim_out', self.samplename, self.sim_name)
+
+        isExisting = os.path.exists(p)
+
+        if isExisting is False:
+            print(f'directory does not exist, creating new directory --> {p}')
+            os.makedirs(p)
+            return p
+        elif isExisting is True:
+            print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
+                  f'overwritten --> {p}')
+            return p
+
     def get_output_storage_folder(self):
         p = self.make_path('postprocess_out', self.samplename, self.sim_name)
 
