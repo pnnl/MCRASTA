@@ -499,7 +499,6 @@ def plot_a_minus_b(idata):
                             color=color)
     ax2.set_title(f'b posterior distribution, {gpl.samplename}')
     ax2.set_xlim(0, 0.05)
-    mb =
 
     plt.figure(num + 4)
     ax3 = az.plot_posterior(idata,
