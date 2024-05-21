@@ -168,7 +168,7 @@ def generate_rsf_data(inputs):
     model.solve(threshold=gpl.threshold)
 
     mu_sim = model.results.friction.astype('float32')
-    state_sim = model.results.states
+    # state_sim = model.results.states
 
     return mu_sim
 
@@ -207,17 +207,18 @@ def get_time(name):
 def parallel_processing(inputs):
     pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
-    pool = Pool(processes=25, maxtasksperchild=1)
+    with Pool(processes=25, maxtasksperchild=1) as pool:
+        outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
 
-    outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
     op = np.array(outputs)
-    pool.close()
-    pool.join()
+    # pool.close()
+    # pool.join()
 
     np.save(pathname, op)
 
     del outputs
     del op
+    gc.collect()
 
 
 if __name__ == '__main__':
@@ -256,7 +257,7 @@ if __name__ == '__main__':
         # pool.join()
         # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
         # np.save(pathname, op)
-        gc.collect()
+        # gc.collect()
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
