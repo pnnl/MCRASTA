@@ -212,22 +212,8 @@ def get_time(name):
 
     return codetime
 
-@profile
 def parallel_processing(inputs):
-    pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
-    with Pool(processes=25, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, inputs)
-
-    op = np.array(outputs)
-    # pool.close()
-    # pool.join()
-
-    np.save(pathname, op)
-
-    del outputs
-    del op
-    gc.collect()
 
 
 if __name__ == '__main__':
@@ -252,7 +238,17 @@ if __name__ == '__main__':
 
     # stepsize = 50000
 
-    parallel_processing(zip(at, bt, Dct, mu0t))
+    pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}_0')
+
+    with Pool(processes=20, maxtasksperchild=1) as pool:
+        outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
+
+    op = np.array(outputs)
+    # pool.close()
+    # pool.join()
+
+    np.save(pathname, op)
+
     # for k, i in enumerate(range(0, 500000, stepsize)):
     #     print(f'***********************************************')
     #     print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+stepsize}')
