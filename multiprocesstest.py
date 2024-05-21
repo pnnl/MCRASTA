@@ -218,6 +218,8 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 2).astype('float32')
     mu0 = np.round(mu0, 3).astype('float32')
 
+    pool = Pool(processes=25, maxtasksperchild=1)
+
     for k, i in enumerate(range(0, 2000000, 100000)):
         print(f'***********************************************')
         print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+100000}')
@@ -228,8 +230,6 @@ if __name__ == '__main__':
 
         pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
-        pool = Pool(processes=25, maxtasksperchild=1)
-
         outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
         op = np.array(outputs)
         time.sleep(0.01)
@@ -237,6 +237,7 @@ if __name__ == '__main__':
         pool.join()
         # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
         np.save(pathname, op)
+        del op
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
