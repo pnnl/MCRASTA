@@ -162,11 +162,11 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 2).astype('float32')
     mu0 = np.round(mu0, 3).astype('float32')
 
-    at = a[0:100000]
-    bt = b[0:100000]
-    Dct = Dc[0:100000]
-    mu0t = mu0[0:100000]
-    snum = 0
+    at = a[100000:200000]
+    bt = b[100000:200000]
+    Dct = Dc[100000:200000]
+    mu0t = mu0[100000:200000]
+    snum = 1
 
     pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{snum}')
 
