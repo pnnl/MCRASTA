@@ -203,6 +203,18 @@ def get_time(name):
     return codetime
 
 
+def parallel_processing(inputs):
+    pool = Pool(processes=25, maxtasksperchild=1)
+
+    outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
+    op = np.array(outputs)
+    time.sleep(0.01)
+    pool.close()
+    pool.join()
+
+    return op
+
+
 if __name__ == '__main__':
     comptime_start = get_time('start')
     parent_dir = gpl.get_musim_storage_folder()
@@ -227,21 +239,20 @@ if __name__ == '__main__':
         Dct = Dc[i:i+stepsize]
         mu0t = mu0[i:i+stepsize]
 
+        op = parallel_processing(zip(at, bt, Dct, mu0t))
+
         pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
-        pool = Pool(processes=25, maxtasksperchild=1)
-
-        outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
-        op = np.array(outputs)
-        time.sleep(0.01)
-        pool.close()
-        pool.join()
+        # pool = Pool(processes=25, maxtasksperchild=1)
+        #
+        # outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
+        # op = np.array(outputs)
+        # time.sleep(0.01)
+        # pool.close()
+        # pool.join()
         # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
         np.save(pathname, op)
         del op
-        del outputs
-        del pool
-
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
