@@ -216,6 +216,7 @@ def parallel_processing(inputs):
 
     np.save(pathname, op)
 
+    del outputs
     del op
 
 
