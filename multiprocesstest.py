@@ -240,6 +240,8 @@ if __name__ == '__main__':
         np.save(pathname, op)
         del op
         del outputs
+        del pool
+
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
