@@ -130,7 +130,6 @@ def get_model_values(idata):
 
     return a, b, Dc, mu0
 
-@profile
 def generate_rsf_data(inputs):
     gpl.read_from_json(gpl.idata_location())
     # print(f'self.threshold = {gpl.threshold}')
