@@ -173,7 +173,13 @@ def generate_rsf_data(inputs):
     mu_sim = model.results.friction.astype('float32')
     # state_sim = model.results.states
 
-    return mu_sim
+    resids = np.transpose(mutrue) - mu_sim
+    rsq = resids ** 2
+    srsq = np.nansum(rsq)
+    logp = np.abs(- 1 / 2 * srsq)
+
+    return logp
+    # return mu_sim
 
 
 def get_dataset():
@@ -225,8 +231,6 @@ def parallel_processing(inputs):
 
 
 if __name__ == '__main__':
-    process = psutil.Process()
-
     comptime_start = get_time('start')
     parent_dir = gpl.get_musim_storage_folder()
 
@@ -236,37 +240,41 @@ if __name__ == '__main__':
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0 = get_model_values(idata)
-    a = np.round(a, 4).astype('float32')
-    b = np.round(b, 4).astype('float32')
-    Dc = np.round(Dc, 2).astype('float32')
-    mu0 = np.round(mu0, 3).astype('float32')
+    a = np.round(a, 6).astype('float32')
+    b = np.round(b, 6).astype('float32')
+    Dc = np.round(Dc, 3).astype('float32')
+    mu0 = np.round(mu0, 4).astype('float32')
 
-    stepsize = 50000
-    for k, i in enumerate(range(0, 500000, stepsize)):
-        print(f'***********************************************')
-        print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+stepsize}')
-        print(f'before next dataset: {process.memory_info().rss}')
-        at = a[i:i+stepsize]
-        bt = b[i:i+stepsize]
-        Dct = Dc[i:i+stepsize]
-        mu0t = mu0[i:i+stepsize]
+    at = a[0:500000]
+    bt = b[0:500000]
+    Dct = Dc[0:500000]
+    mu0t = mu0[0:500000]
 
-        parallel_processing(zip(at, bt, Dct, mu0t))
+    # stepsize = 50000
 
-
-        # pool = Pool(processes=25, maxtasksperchild=1)
-        #
-        # outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
-        # op = np.array(outputs)
-        # time.sleep(0.01)
-        # pool.close()
-        # pool.join()
-        # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
-        # np.save(pathname, op)
-        # gc.collect()
-        del at, bt, Dct, mu0t
-        gc.collect()
-        print(f'after dataset: {process.memory_info().rss}')
+    parallel_processing()
+    # for k, i in enumerate(range(0, 500000, stepsize)):
+    #     print(f'***********************************************')
+    #     print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+stepsize}')
+    #     at = a[i:i+stepsize]
+    #     bt = b[i:i+stepsize]
+    #     Dct = Dc[i:i+stepsize]
+    #     mu0t = mu0[i:i+stepsize]
+    #
+    #     parallel_processing(zip(at, bt, Dct, mu0t))
+    #
+    #     # pool = Pool(processes=25, maxtasksperchild=1)
+    #     #
+    #     # outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
+    #     # op = np.array(outputs)
+    #     # time.sleep(0.01)
+    #     # pool.close()
+    #     # pool.join()
+    #     # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
+    #     # np.save(pathname, op)
+    #     # gc.collect()
+    #     del at, bt, Dct, mu0t
+    #     gc.collect()
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
