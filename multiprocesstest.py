@@ -10,6 +10,8 @@ from plotrsfmodel import rsf, staterelations
 import matplotlib.pyplot as plt
 import os
 import cProfile
+import arviz as az
+import pandas as pd
 
 
 def determine_threshold(vlps, t):
@@ -30,6 +32,48 @@ def determine_threshold(vlps, t):
     plt.ylabel('acceleration')
     print(gpl.threshold)
     plt.show()
+
+
+def load_section_data():
+    section_data = pd.read_csv(os.path.join(gpl.idata_location(), 'section_data.csv'))
+    df = pd.DataFrame(section_data)
+    times = df['times'].to_numpy()
+    mutrue = df['mutrue'].to_numpy()
+    vlps = df['vlps'].to_numpy()
+    x = df['x'].to_numpy()
+
+    return times, mutrue, vlps, x
+
+
+def load_inference_data():
+    p = os.path.join(gpl.idata_location(), f'{gpl.sim_name}_idata')
+    trace = az.from_netcdf(p)
+
+    return trace
+
+
+def get_constants(vlps):
+    k = gpl.k
+    vref = vlps[0]
+
+    return k, vref
+
+
+def get_vmax_l0(vlps):
+    l0 = gpl.lc
+    vmax = np.max(vlps)
+
+    return l0, vmax
+
+
+def nondimensionalize_parameters(vlps, vref, k, times, vmax):
+    k0 = gpl.k * gpl.lc
+    vlps0 = vlps / vmax
+    vref0 = vref / vmax
+    t0 = times * vmax / gpl.lc
+    t0 = t0 - t0[0]
+
+    return k0, vlps0, vref0, t0
 
 
 def set_critical_times(vlps, t, threshold):
@@ -61,9 +105,24 @@ def set_critical_times(vlps, t, threshold):
     print('this should only print once')
 
 
+def get_posterior_data(modelvals, thin_data=False):
+    if thin_data is False:
+        gpl.nrstep = 1
+    elif thin_data is True:
+        gpl.nrstep = gpl.nrstep
+
+    a = modelvals.a.values[0::gpl.nrstep]
+    b = modelvals.b.values[0::gpl.nrstep]
+    Dc = modelvals.Dc.values[0::gpl.nrstep]
+    mu0 = modelvals.mu0.values[0::gpl.nrstep]
+
+    return a, b, Dc, mu0
+
+
 def get_model_values(idata):
-    modelvals = pmr.get_model_vals(idata, combined=True)
-    a, b, Dc, mu0 = pmr.get_posterior_data(modelvals, return_aminb=False, thin_data=True)
+    modelvals = az.extract(idata.posterior, combined=True)
+    a, b, Dc, mu0 = get_posterior_data(modelvals)
+
     return a, b, Dc, mu0
 
 
@@ -73,15 +132,15 @@ def generate_rsf_data(inputs):
     a, b, Dc, mu0 = inputs
 
     # dimensional variables output from mcmc_rsf.py
-    times, mutrue, vlps, x = pmr.load_section_data()
-    k, vref = pmr.get_constants(vlps)
-    lc, vmax = pmr.get_vmax_l0(vlps)
+    times, mutrue, vlps, x = load_section_data()
+    k, vref = get_constants(vlps)
+    lc, vmax = get_vmax_l0(vlps)
 
     mutrue.round(2).astype('float32')
     vlps.round(2).astype('float32')
 
     # time is the only variable that needs to be re-nondimensionalized...?
-    k0, vlps0, vref0, t0 = pmr.nondimensionalize_parameters(vlps, vref, k, times, vmax)
+    k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
     # set up rsf model
     model = rsf.Model()
@@ -118,19 +177,16 @@ def get_dataset():
     out_folder = gpl.get_output_storage_folder()
 
     # load observed section data and mcmc inference data
-    times, mt, vlps, x = pmr.load_section_data()
+    times, mt, vlps, x = load_section_data()
     # print(len(x))
-    idat = pmr.load_inference_data()
-
-    # first plot: mcmc trace with all original data
-    # pmr.plot_trace(idata, chain=None)
+    idat = load_inference_data()
 
     # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
     # 'old' data = had to fill in parameters manually
     # if there's no .json in the mcmc results folder, then the data is type 'old'
     dataset_type = 'new'
     if dataset_type == 'old':
-        k, vref = pmr.get_constants(vlps)
+        k, vref = get_constants(vlps)
     elif dataset_type == 'new':
         vref, mus, sigmas = gpl.read_from_json(gpl.idata_location())
 
