@@ -252,7 +252,7 @@ if __name__ == '__main__':
 
     # stepsize = 50000
 
-    parallel_processing()
+    parallel_processing(zip(at, bt, Dct, mu0t))
     # for k, i in enumerate(range(0, 500000, stepsize)):
     #     print(f'***********************************************')
     #     print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+stepsize}')
