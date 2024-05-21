@@ -1,6 +1,6 @@
 import os
 import sys
-
+import arviz as az
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -31,7 +31,7 @@ def manual_bci(x, mt, msims):
 
 def get_npy_data(n, chunksize):
     print(f'reading dataset: {gpl.msname}_{n}.npy')
-    filename = gpl.make_path('musim_out', 'p5894', f'{gpl.msname}_{n}.npy')
+    filename = gpl.make_path('musim_out', f'{gpl.samplename}', f'{gpl.msname}_{n}.npy')
     alldata = np.load(filename)
 
     if chunksize is not None:
@@ -149,8 +149,9 @@ def find_best_fits(x, mt, msims, a, b, Dc, mu0):
 
 
 def get_model_values(idata, start_idx, end_idx):
-    modelvals = pmr.get_model_vals(idata, combined=True)
+    modelvals = az.extract(idata.posterior, combined=True)
     a, b, Dc, mu0 = get_posterior_data(modelvals, start_idx, end_idx)
+
     return a, b, Dc, mu0
 
 

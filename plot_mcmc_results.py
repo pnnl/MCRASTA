@@ -25,6 +25,28 @@ mu0label = r'$\mu_0$'
 fontsize = 12
 
 
+def write_model_info(modes, hdis):
+    headers = ['sampleID', 'aminbmode', 'aminbhdi', 'Dcmode', 'Dchdi', 'mu0mode', 'mu0hdi',
+               'amode', 'ahdi', 'bmode', 'bhdi']
+    p = gpl.make_path('postprocess_out')
+    fname = os.path.join(p, 'posterior_stats.csv')
+
+    amode, bmode, Dcmode, mu0mode, aminbmode = modes
+    ahdi, bhdi, Dchdi, mu0hdi, aminbhdi = hdis
+
+    col = [f'{gpl.section_id}', aminbmode, aminbhdi, Dcmode, Dchdi, mu0mode, mu0hdi,
+            amode, ahdi, bmode, bhdi]
+    df = pd.DataFrame(col)
+
+    row = df.T
+    # row.columns = ['sampleID', 'aminbmode', 'aminbhdi', 'Dcmode', 'Dchdi', 'mu0mode', 'mu0hdi',
+    #                'amode', 'ahdi', 'bmode', 'bhdi']
+
+    row.to_csv(fname, ',', header=False, index=False, index_label=False, mode='a')
+
+    # sys.exit()
+
+
 def load_inference_data():
     p = os.path.join(gpl.idata_location(), f'{gpl.sim_name}_idata')
     trace = az.from_netcdf(p)
@@ -337,9 +359,15 @@ def get_modes(modelvals):
     mu0mode = az.plots.plot_utils.calculate_point_estimate('mode', mu0)
     aminbmode = az.plots.plot_utils.calculate_point_estimate('mode', aminb)
 
+    ahdi = az.hdi(a, hdi_prob=0.89)
+    bhdi = az.hdi(b, hdi_prob=0.89)
+    Dchdi = az.hdi(Dc, hdi_prob=0.89)
+    mu0hdi = az.hdi(mu0, hdi_prob=0.89)
+    aminbhdi = az.hdi(aminb, hdi_prob=0.89)
 
+    hdis = [ahdi, bhdi, Dchdi, mu0hdi, aminbhdi]
 
-    return amode, bmode, Dcmode, mu0mode, aminbmode
+    return [amode, bmode, Dcmode, mu0mode, aminbmode], hdis
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
@@ -590,14 +618,11 @@ def plot_observed_and_vlps(mutrue, vlps, xax):
 
 def main():
     # setup output directory
-    out_folder = gpl.get_output_storage_folder()
+    out_folder = gpl.get_postprocess_storage_folder()
 
     # load observed section data and mcmc inference data
     times, mutrue, vlps, x = load_section_data()
     idata = load_inference_data()
-    modelvals = get_model_vals(idata, combined=True)
-    modes = get_modes(modelvals)
-
 
     # first plot: mcmc trace with all original data
     plot_trace(idata, chain=None)
@@ -620,6 +645,10 @@ def main():
     # this plots posteriors and pair plot for (a-b) dataset
     # instead of a and b individually
     ab_idata = plot_a_minus_b(idata)
+    modelvals = get_model_vals(ab_idata, combined=True)
+    modes, hdis = get_modes(modelvals)
+
+    write_model_info(modes, hdis)
 
     # plots thinned data pairs for a-b, Dc, mu0
     modelvals = get_model_vals(ab_idata)

@@ -5,13 +5,13 @@ import pandas as pd
 
 class Globals:
     def __init__(self):
-        self.samplename = 'p5894'
-        self.mintime = 21342
-        self.maxtime = 21755
+        self.samplename = 'p5791'
+        self.mintime = 24340
+        self.maxtime = 24533
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = 5894001
-        self.k = 0.00153
+        self.section_id = 5791001
+        self.k = 0.0013568
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = 40
