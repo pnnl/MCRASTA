@@ -228,7 +228,7 @@ if __name__ == '__main__':
 
         pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
-        pool = Pool(processes=25)
+        pool = Pool(processes=25, maxtasksperchild=1)
 
         outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
         op = np.array(outputs)
