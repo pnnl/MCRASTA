@@ -230,8 +230,8 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 2).astype('float32')
     mu0 = np.round(mu0, 3).astype('float32')
 
-    stepsize = 50000
-    for k, i in enumerate(range(0, 2000000, stepsize)):
+    stepsize = 100000
+    for k, i in enumerate(range(0, 500000, stepsize)):
         print(f'***********************************************')
         print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+100000}')
         at = a[i:i+stepsize]
