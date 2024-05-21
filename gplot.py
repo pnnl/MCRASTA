@@ -8,13 +8,13 @@ import json
 
 class Globals:
     def __init__(self):
-        self.samplename = 'p5894'
+        self.samplename = 'p5756'
         self.mintime = None
         self.maxtime = None
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = '5894001'
-        self.k = 0.00153
+        self.section_id = '5756001'
+        self.k = 0.0021129
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = None

@@ -22,7 +22,7 @@ home = os.path.expanduser('~')
 um_to_mm = 0.001
 Dclabel = r'$D_c$ ($\mu$m)'
 mu0label = r'$\mu_0$'
-fontsize = 14
+fontsize = 12
 
 
 def load_inference_data():
@@ -33,6 +33,7 @@ def load_inference_data():
 
 
 def plot_trace(idata, chain):
+    chain_prop = {'color': ['rosybrown', 'firebrick', 'red', 'maroon'], 'linestyle': ['solid', 'dotted', 'dashed', 'dashdot']}
     backend_kwargs = {'layout': 'tight'}
     plot_kwargs = {'textsize': 16}
     labeller = azl.MapLabeller(var_name_map={'a': 'a', 'b': 'b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
@@ -41,13 +42,20 @@ def plot_trace(idata, chain):
                        labeller=labeller,
                        combined=False,
                        plot_kwargs=plot_kwargs,
-                       backend_kwargs=backend_kwargs)
+                       backend_kwargs=backend_kwargs,
+                       chain_prop=chain_prop,
+                       )
 
-    # ax[0][0].set_xlim(0, 0.08)
-    # ax[1][0].set_xlim(0, 0.12)
-    # ax[2][0].set_xlim(0, 100)
+    # ax[0][1].set_xlim(200000, 205000)
+    # ax[1][1].set_xlim(200000, 205000)
+    # ax[2][1].set_xlim(200000, 205000)
+    # ax[3][1].set_xlim(200000, 205000)
 
-    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode', round_to=3)
+    # p = gpl.get_output_storage_folder()
+    # plt.gcf().savefig(os.path.join(p, f'fig_zoom_trace.png'), dpi=300, bbox_inches='tight')
+
+    kwargs = {'color': 'firebrick'}
+    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode', round_to=3, **kwargs)
     print(ax2)
     ax2[0].set_xlim(0, 0.08)
     ax2[1].set_xlim(0, 0.12)
@@ -72,6 +80,7 @@ def plot_pairs(idata, modes, chain=None):
         kde_kwargs=kde_kwargs,
         marginal_kwargs=marginal_kwargs,
         textsize=18,
+
         # reference_values=reference_values,
         # reference_values_kwargs=reference_values_kwargs
     )
@@ -159,9 +168,9 @@ def generate_rsf_data(idata, nrplot=gpl.nrplot):
 
     # set up rsf model
     model = rsf.Model()
-    model.k = k             # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]       # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref       # Reference velocity, generally vlp(t=0)
+    model.k = k  # Normalized System stiffness (friction/micron)
+    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax
@@ -183,14 +192,14 @@ def generate_rsf_data(idata, nrplot=gpl.nrplot):
     j = 0
     for i in np.arange(nrplot):
         if i % 100 == 0:
-          print(f'solving for realization {i}')
+            print(f'solving for realization {i}')
         # print(f'solving for realization {i}')
 
         # Set model initial conditions
-        model.mu0 = mu0[i]      # Friction initial (at the reference velocity)
-        model.a = a[i]          # Empirical coefficient for the direct effect
-        state1.b = b[i]         # Empirical coefficient for the evolution effect
-        state1.Dc = Dc[i]       # Critical slip distance
+        model.mu0 = mu0[i]  # Friction initial (at the reference velocity)
+        model.a = a[i]  # Empirical coefficient for the direct effect
+        state1.b = b[i]  # Empirical coefficient for the evolution effect
+        state1.Dc = Dc[i]  # Critical slip distance
 
         # Run the model!
         model.solve(threshold=gpl.threshold)
@@ -199,7 +208,7 @@ def generate_rsf_data(idata, nrplot=gpl.nrplot):
         state_sim = model.results.states
 
         resids = mutrue - mu_sim
-        logp = -1/2 * np.sum(resids ** 2)
+        logp = -1 / 2 * np.sum(resids ** 2)
         logps.append(logp)
 
         # attempt at storing results to save time - seems like it's just too much data
@@ -287,11 +296,11 @@ def plot_lognormal(mu, sigma, xmax):
 
 
 def plot_priors_posteriors(modelvals):
+    color = 'firebrick'
     posts = get_posterior_data(modelvals, return_aminb=False, thin_data=False)
     # define priors same as in mcmc_rsf.py - get this info from out file
     mus, sigmas = gpl.get_prior_parameters()
     xmaxs = [0.05, 0.05, 60, 1.25]
-
 
     # for mu, sigma, xmax in zip(mus, sigmas, xmaxs):
     #     plot_lognormal(mu, sigma, xmax)
@@ -304,11 +313,10 @@ def plot_priors_posteriors(modelvals):
     # take same number of draws as in mcmc_rsf.py
     vpriors = pm.draw([a, b, Dc, mu0], draws=gpl.ndr)
 
-
     for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', f'{Dclabel}', f'{mu0label}'), xmaxs)):
         num = plt.gcf().number + 1
         plt.figure(num=num, figsize=(3.25, 3))
-        sns.histplot(prior, stat='probability', label=f'mu={mus[i]}, sigma={sigmas[i]}')
+        sns.histplot(prior, stat='probability', label=f'M={mus[i]}\n$\sigma$={sigmas[i]}', color=color)
         # sns.kdeplot(prior, color='b', common_norm=False, bw_method=0.1)
         # line2 = sns.kdeplot(post, color='g', common_norm=False)
         plt.gca().set_xlim(0, xmax)
@@ -324,7 +332,7 @@ def get_modes(modelvals):
     aminb, a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=True, thin_data=False)
 
     amode = az.plots.plot_utils.calculate_point_estimate('mode', a)
-    bmode = az.plots.plot_utils.calculate_point_estimate('mode', b,)
+    bmode = az.plots.plot_utils.calculate_point_estimate('mode', b, )
     Dcmode = az.plots.plot_utils.calculate_point_estimate('mode', Dc)
     mu0mode = az.plots.plot_utils.calculate_point_estimate('mode', mu0)
     aminbmode = az.plots.plot_utils.calculate_point_estimate('mode', aminb)
@@ -357,8 +365,8 @@ def calc_logp(mutrue, mu_sims, nr):
 
 def calc_expected_vals(modelvar):
     n = len(modelvar)
-    muhat = np.sum(np.log(modelvar))/n
-    sigmahat = np.sqrt((np.sum((modelvar - muhat)**2))/(n-1))
+    muhat = np.sum(np.log(modelvar)) / n
+    sigmahat = np.sqrt((np.sum((modelvar - muhat) ** 2)) / (n - 1))
 
     return muhat, sigmahat
 
@@ -405,16 +413,16 @@ def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
 
             # plot_hdi_mu_sims(mu_sims)
 
-            ahat, bhat, Dchat, mu0hat = map_vars    # parameter vals which resulted in highest logp val
+            ahat, bhat, Dchat, mu0hat = map_vars  # parameter vals which resulted in highest logp val
 
             aminb_hat = ahat - bhat
 
             # plot all the stuff
             axs[0].plot(xax * um_to_mm, map_mu_sim, label=f'chain {chain};'
-                                                          # f'max logp = {round(maxlogp, 4)} \n '
+            # f'max logp = {round(maxlogp, 4)} \n '
                                                           f'a-b={round(aminb_hat, 4)} \n '
-                                                          # f'a={round(ahat, 4)}; '
-                                                          # f'b={round(bhat, 4)}; '
+            # f'a={round(ahat, 4)}; '
+            # f'b={round(bhat, 4)}; '
                                                           f'Dc={round(Dchat, 2)}; '
                                                           f'mu0={round(mu0hat, 3)}')
 
@@ -423,11 +431,11 @@ def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
             plt.xlabel(r'Loadpoint Displacement ($\mu$m)')
 
             pos = axs[0].get_position()
-            axs[0].set_position([pos.x0, pos.y0, pos.width*0.9, pos.height])
+            axs[0].set_position([pos.x0, pos.y0, pos.width * 0.9, pos.height])
             axs[0].legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='x-small')
 
             pos1 = axs[1].get_position()
-            axs[1].set_position([pos1.x0, pos1.y0, pos1.width*0.9, pos1.height])
+            axs[1].set_position([pos1.x0, pos1.y0, pos1.width * 0.9, pos1.height])
 
             # plot logp vals as sanity check
             plt.figure(71)
@@ -448,72 +456,79 @@ def plot_a_minus_b(idata):
     mu0 = modelvals.mu0.values
 
     labeller = azl.MapLabeller(var_name_map={'a_min_b': 'a-b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
+    color = 'firebrick'
 
-    a_min_b = a-b
+    a_min_b = a - b
     datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
     ab_idata = az.convert_to_inference_data(datadict, group='posterior')
     hdi_prob = 0.89
 
     num = plt.gcf().number
-    plt.figure(num+1)
+    plt.figure(num + 1)
     ax = az.plot_posterior(ab_idata,
                            var_names=['a_min_b'],
                            point_estimate='mode',
                            round_to=4,
-                           hdi_prob=hdi_prob)
+                           hdi_prob=hdi_prob,
+                           color=color)
     ax.set_xlim(-0.05, 0.05)
     ax.set_title(f'(a-b) posterior distribution, {gpl.samplename}')
     mab = az.plots.plot_utils.calculate_point_estimate('mode', a_min_b)
     gpl.aminbmode = mab
 
-    plt.figure(num+2)
+    plt.figure(num + 2)
     ax1 = az.plot_posterior(idata,
                             var_names=['a'],
                             point_estimate='mode',
                             round_to=4,
-                            hdi_prob=hdi_prob)
+                            hdi_prob=hdi_prob,
+                            color=color)
     ax1.set_title(f'a posterior distribution, {gpl.samplename}')
     ax1.set_xlim(0, 0.04)
 
-    plt.figure(num+3)
+    plt.figure(num + 3)
     ax2 = az.plot_posterior(idata,
                             var_names=['b'],
                             point_estimate='mode',
                             round_to=4,
-                            hdi_prob=hdi_prob)
+                            hdi_prob=hdi_prob,
+                            color=color)
     ax2.set_title(f'b posterior distribution, {gpl.samplename}')
     ax2.set_xlim(0, 0.05)
 
-    plt.figure(num+4)
+    plt.figure(num + 4)
     ax3 = az.plot_posterior(idata,
                             var_names=['Dc'],
                             point_estimate='mode',
                             round_to=4,
-                            hdi_prob=hdi_prob)
+                            hdi_prob=hdi_prob,
+                            color=color)
     ax3.set_title(f'$D_c$ ($\mu$m) posterior distribution, {gpl.samplename}')
     ax3.set_xlim(0, 60)
 
-    plt.figure(num+5)
+    plt.figure(num + 5)
     ax4 = az.plot_posterior(idata,
                             var_names=['mu0'],
                             point_estimate='mode',
                             round_to=4,
-                            hdi_prob=hdi_prob)
+                            hdi_prob=hdi_prob,
+                            color=color)
     ax4.set_title(f'$\mu_0$ posterior distribution, {gpl.samplename}')
 
-    marginal_kwargs = {'color': 'purple'}
+    fill_kwargs = {'alpha': 0.5}
+    marginal_kwargs = {'color': color, 'quantiles': [0.11, 0.89], 'fill_kwargs': fill_kwargs}
     kde_kwargs = {'hdi_probs': [0.10, 0.25, 0.50, 0.75, 0.89, 0.94]}
     ax = az.plot_pair(
         ab_idata,
         var_names=['a_min_b', 'Dc', 'mu0'],
         kind=["scatter", "kde"],
         marginals=True,
-        scatter_kwargs={'color': 'purple', 'alpha': 0.01},
+        scatter_kwargs={'color': 'firebrick', 'alpha': 0.01},
         point_estimate='mode',
         kde_kwargs=kde_kwargs,
         marginal_kwargs=marginal_kwargs,
         labeller=labeller,
-        textsize=18
+        textsize=18,
     )
 
     ax[0][0].set_xlim(-0.05, 0.05)
@@ -543,9 +558,6 @@ def save_data(logps, map_vars, map_mu_sims, maxlogps, out_folder):
         np.savetxt(f, d)
 
 
-
-
-
 # def calc_rsf_results(x, mutrue, idata):
 #     mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, gpl.nrplot)  # generates rsf sim
 #     plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim)
@@ -555,19 +567,21 @@ def plot_observed_and_vlps(mutrue, vlps, xax):
     num = plt.gcf().number + 1
     fig, axs = plt.subplots(2, 1, sharex='all', num=num, gridspec_kw={'height_ratios': [2, 1]})
     fig.subplots_adjust(hspace=0.05)
-    axs[0].plot(xax * um_to_mm, mutrue, '.', alpha=0.2, label='observed')
+    axs[0].plot(xax * um_to_mm, mutrue, 'k.', alpha=0.7, label='observed data', markersize=1)
     axs[0].set(ylabel=r'$\mu$', ylim=[np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
 
-    axs[1].plot(xax * um_to_mm, vlps, 'k')
-    axs[1].set(ylabel=r'Velocity ($\mu$m/s)')
-    plt.xlabel(r'Loadpoint Displacement ($\mu$m)')
+    axs[1].plot(xax * um_to_mm, vlps, '.', color='darkred', markersize=1)
+    axs[1].set(ylabel=r'Velocity (m/s)')
+    plt.xlabel(r'Loadpoint Displacement (mm)')
 
     pos = axs[0].get_position()
     axs[0].set_position([pos.x0, pos.y0, pos.width * 0.9, pos.height])
-    axs[0].legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='x-small')
+    axs[0].legend(loc='upper right', fontsize='x-small')
 
     pos1 = axs[1].get_position()
     axs[1].set_position([pos1.x0, pos1.y0, pos1.width * 0.9, pos1.height])
+
+    # plt.show()
 
 
 def main():
