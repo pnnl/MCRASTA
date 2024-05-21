@@ -236,9 +236,9 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
         # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
-
         np.save(pathname, op)
-        comptime_end = get_time('end')
-        time_elapsed = comptime_end - comptime_start
-        print(f'time elapsed = {time_elapsed}')
+
+    comptime_end = get_time('end')
+    time_elapsed = comptime_end - comptime_start
+    print(f'time elapsed = {time_elapsed}')
     print('end')
