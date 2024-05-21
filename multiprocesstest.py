@@ -2,6 +2,9 @@ import sys
 from datetime import datetime
 import time
 from multiprocessing import Process, Queue, Pool
+
+import psutil
+
 from gplot import gpl
 import plot_mcmc_results as pmr
 import itertools
@@ -13,6 +16,7 @@ import cProfile
 import arviz as az
 import pandas as pd
 import gc
+from memory_profiler import profile
 
 
 def determine_threshold(vlps, t):
@@ -126,7 +130,7 @@ def get_model_values(idata):
 
     return a, b, Dc, mu0
 
-
+@profile
 def generate_rsf_data(inputs):
     gpl.read_from_json(gpl.idata_location())
     # print(f'self.threshold = {gpl.threshold}')
@@ -203,7 +207,7 @@ def get_time(name):
 
     return codetime
 
-
+@profile
 def parallel_processing(inputs):
     pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
@@ -222,6 +226,8 @@ def parallel_processing(inputs):
 
 
 if __name__ == '__main__':
+    process = psutil.Process()
+
     comptime_start = get_time('start')
     parent_dir = gpl.get_musim_storage_folder()
 
@@ -240,6 +246,7 @@ if __name__ == '__main__':
     for k, i in enumerate(range(0, 500000, stepsize)):
         print(f'***********************************************')
         print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+stepsize}')
+        print(f'before next dataset: {process.memory_info().rss}')
         at = a[i:i+stepsize]
         bt = b[i:i+stepsize]
         Dct = Dc[i:i+stepsize]
@@ -260,6 +267,7 @@ if __name__ == '__main__':
         # gc.collect()
         del at, bt, Dct, mu0t
         gc.collect()
+        print(f'after dataset: {process.memory_info().rss}')
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
