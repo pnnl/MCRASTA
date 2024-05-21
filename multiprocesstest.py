@@ -212,9 +212,6 @@ def get_time(name):
 
     return codetime
 
-def parallel_processing(inputs):
-
-
 
 if __name__ == '__main__':
     comptime_start = get_time('start')
