@@ -12,6 +12,7 @@ import os
 import cProfile
 import arviz as az
 import pandas as pd
+import gc
 
 
 def determine_threshold(vlps, t):
@@ -204,6 +205,8 @@ def get_time(name):
 
 
 def parallel_processing(inputs):
+    pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
+
     pool = Pool(processes=25, maxtasksperchild=1)
 
     outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
@@ -212,7 +215,7 @@ def parallel_processing(inputs):
     pool.close()
     pool.join()
 
-    return op
+    np.save(pathname, op)
 
 
 if __name__ == '__main__':
@@ -239,9 +242,8 @@ if __name__ == '__main__':
         Dct = Dc[i:i+stepsize]
         mu0t = mu0[i:i+stepsize]
 
-        op = parallel_processing(zip(at, bt, Dct, mu0t))
+        parallel_processing(zip(at, bt, Dct, mu0t))
 
-        pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
         # pool = Pool(processes=25, maxtasksperchild=1)
         #
@@ -251,8 +253,8 @@ if __name__ == '__main__':
         # pool.close()
         # pool.join()
         # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
-        np.save(pathname, op)
-        del op
+        # np.save(pathname, op)
+        gc.collect()
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
