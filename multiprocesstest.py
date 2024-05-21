@@ -218,25 +218,27 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 2).astype('float32')
     mu0 = np.round(mu0, 3).astype('float32')
 
-    at = a[100000:200000]
-    bt = b[100000:200000]
-    Dct = Dc[100000:200000]
-    mu0t = mu0[100000:200000]
-    snum = 1
+    for k, i in enumerate(range(0, 2000000, 100000)):
+        print(f'***********************************************')
+        print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+100000}')
+        at = a[i:i+100000]
+        bt = b[i:i+100000]
+        Dct = Dc[i:i+100000]
+        mu0t = mu0[i:i+100000]
 
-    pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{snum}')
+        pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
-    pool = Pool(processes=25)
+        pool = Pool(processes=25)
 
-    outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
-    op = np.array(outputs)
-    time.sleep(0.01)
-    pool.close()
-    pool.join()
-    # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
+        outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
+        op = np.array(outputs)
+        time.sleep(0.01)
+        pool.close()
+        pool.join()
+        # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
 
-    np.save(pathname, op)
-    comptime_end = get_time('end')
-    time_elapsed = comptime_end - comptime_start
-    print(f'time elapsed = {time_elapsed}')
+        np.save(pathname, op)
+        comptime_end = get_time('end')
+        time_elapsed = comptime_end - comptime_start
+        print(f'time elapsed = {time_elapsed}')
     print('end')
