@@ -211,7 +211,7 @@ def parallel_processing(inputs):
     pathname = os.path.join(parent_dir, f'mu_simsp{gpl.section_id}_{k}')
 
     with Pool(processes=25, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
+        outputs = pool.map(generate_rsf_data, inputs)
 
     op = np.array(outputs)
     # pool.close()
