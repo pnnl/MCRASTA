@@ -28,7 +28,7 @@ class Globals:
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
         self.aminbmode = None
-        self.threshold = 0.02
+        self.threshold = 0.1
         self.nrstep = 1
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
         self.tcrit = None
@@ -63,7 +63,7 @@ class Globals:
                   f'overwritten --> {p}')
             return p
 
-    def get_output_storage_folder(self):
+    def get_postprocess_storage_folder(self):
         p = self.make_path('postprocess_out', self.samplename, self.sim_name)
 
         isExisting = os.path.exists(p)
@@ -124,7 +124,7 @@ class Globals:
             gpl.nch = js.get('n_chains')
             gpl.ntune = js.get('n_tune')
             vref = js.get('vref')
-            gpl.threshold = 0.02
+            gpl.threshold = 0.1
 
             priors_info = js.get('prior_mus_sigmas', 'priors info not available')
             mus = priors_info[0]

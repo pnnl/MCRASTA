@@ -174,7 +174,7 @@ def generate_rsf_data(inputs):
 
 def get_dataset():
     # setup output directory
-    out_folder = gpl.get_output_storage_folder()
+    out_folder = gpl.get_musim_storage_folder()
 
     # load observed section data and mcmc inference data
     times, mt, vlps, x = load_section_data()
