@@ -20,7 +20,7 @@ home = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles'
 
 
 def get_npy_data(p, f):
-    data = np.load(os.path.join(p, f))
+    data = np.load(os.path.join(p, f'{f}.npy'))
 
     return data
 
