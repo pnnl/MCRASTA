@@ -208,10 +208,10 @@ class PlotDrawsBestFit:
         self.pathname = pathname
         self.op_file = op
 
-    def next(pathname, op_file):
-        musims = get_npy_data(pathname, op_file)
-        logps1 = get_npy_data(pathname, f'logps_p{gpl.section_id}_0')
-        logps2 = get_npy_data(pathname, f'logps_p{gpl.section_id}_1')
+    def next(self):
+        musims = get_npy_data(self.pathname, self.op_file)
+        logps1 = get_npy_data(self.pathname, f'logps_p{gpl.section_id}_0')
+        logps2 = get_npy_data(self.pathname, f'logps_p{gpl.section_id}_1')
 
         logps = np.concatenate((logps1, logps2))
 
@@ -242,5 +242,8 @@ if __name__ == '__main__':
         op = np.array(outputs)
         np.save(pathname, op)
 
+    PlotDrawsBestFit.pathname = pathname
+    PlotDrawsBestFit.op_file = op
+    PlotDrawsBestFit.next()
     print('done')
     # next(pathname, op)
