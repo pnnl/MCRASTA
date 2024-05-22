@@ -9,7 +9,6 @@ import plot_mcmc_results as pmr
 import psutil
 from plotrsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
-from plots import plotresults
 
 
 ''' this script takes random draws from 
@@ -110,24 +109,24 @@ def generate_rsf_data(inputs):
     return mu_sim
 
 
-def plot_results(x, mt, musims, mubest, params):
-    abest, bbest, Dcbest, mu0best = params
-    x = np.transpose(x)
-
-    plt.plot(x, musims, color='indianred', alpha=0.01)
-    plt.plot(x, mt, 'k.', label='observed')
-    plt.plot(x, mubest, color='red', label=f'best fit\n'
-                                           f'a={abest.round(4)}\n'
-                                           f'b={bbest.round(4)}\n'
-                                           f'$D_c$={Dcbest.round(3)}\n'
-                                           f'$\mu_0$={mu0best.round(3)}')
-
-    plt.xlabel('load point displacement ($\mu$m)')
-    plt.ylabel('$\mu$')
-    plt.title(f'Posterior draws: Sample {gpl.section_id}')
-    plt.legend()
-
-    # plt.show()
+# def plot_results(x, mt, musims, mubest, params):
+#     abest, bbest, Dcbest, mu0best = params
+#     x = np.transpose(x)
+#
+#     plt.plot(x, musims, color='indianred', alpha=0.01)
+#     plt.plot(x, mt, 'k.', label='observed')
+#     plt.plot(x, mubest, color='red', label=f'best fit\n'
+#                                            f'a={abest.round(4)}\n'
+#                                            f'b={bbest.round(4)}\n'
+#                                            f'$D_c$={Dcbest.round(3)}\n'
+#                                            f'$\mu_0$={mu0best.round(3)}')
+#
+#     plt.xlabel('load point displacement ($\mu$m)')
+#     plt.ylabel('$\mu$')
+#     plt.title(f'Posterior draws: Sample {gpl.section_id}')
+#     plt.legend()
+#
+#     # plt.show()
 
 
 def write_best_estimates(bvars, lpbest):
@@ -143,20 +142,7 @@ def write_best_estimates(bvars, lpbest):
             f.write(f'{string}: {val}\n')
 
 
-def find_best_fit(logps):
-    a, b, Dc, mu0 = get_model_values()
 
-    sortedi = np.argsort(logps)
-
-    abest = a[sortedi[0]]
-    bbest = b[sortedi[0]]
-    Dcbest = Dc[sortedi[0]]
-    mu0best = mu0[sortedi[0]]
-    logpbest = logps[sortedi[0]]
-
-    mu_best = generate_rsf_data((abest, bbest, Dcbest, mu0best))
-
-    return [abest, bbest, Dcbest, mu0best], logpbest, mu_best
 
 
 def get_model_values():
@@ -219,16 +205,13 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 3).astype('float32')
     mu0 = np.round(mu0, 4).astype('float32')
 
-    pathname = os.path.join(parent_dir, f'musim_randdraws_p{gpl.section_id}')
+    pathname = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
     with Pool(processes=20, maxtasksperchild=1) as pool:
         outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
         op = np.array(outputs)
         np.save(pathname, op)
 
-    plotresults.pathname = pathname
-    plotresults.op_file = op
-    plotresults.plot_posterior_draws()
     print('done')
     # next(pathname, op)
 

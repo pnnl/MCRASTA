@@ -6,58 +6,101 @@ import matplotlib.pyplot as plt
 import arviz as az
 from gplot import gpl
 import posterior_draws
+import pandas as pd
 
 
-class Plot:
+def find_best_fit(logps):
+    a, b, Dc, mu0 = get_model_values()
 
-    def __init__(self):
-        self.pathname = None
-        self.op_file = None
+    sortedi = np.argsort(logps)
 
-    def plot_posterior_draws(self):
-        musims = self.get_npy_data(self.pathname, self.op_file)
-        logps1 = self.get_npy_data(self.pathname, f'logps_p{gpl.section_id}_0')
-        logps2 = self.get_npy_data(self.pathname, f'logps_p{gpl.section_id}_1')
+    abest = a[sortedi[0]]
+    bbest = b[sortedi[0]]
+    Dcbest = Dc[sortedi[0]]
+    mu0best = mu0[sortedi[0]]
+    logpbest = logps[sortedi[0]]
 
-        logps = np.concatenate((logps1, logps2))
+    mu_best = posterior_draws.generate_rsf_data((abest, bbest, Dcbest, mu0best))
 
-        params, logp, mubest = posterior_draws.find_best_fit(logps)
+    return [abest, bbest, Dcbest, mu0best], logpbest, mu_best
 
-        t, mutrue, vlps, x = posterior_draws.load_section_data()
 
-        self.plot_results(x, mutrue, musims, mubest, params)
-        self.save_figs()
+def get_model_values():
+    p = os.path.join(gpl.idata_location(), f'{gpl.sim_name}_idata')
+    idata = az.from_netcdf(p)
+    modelvals = az.extract(idata.posterior, combined=True)
 
-    def get_npy_data(self, p, f):
-        data = np.load(os.path.join(p, f'{f}.npy'))
+    a = modelvals.a.values
+    b = modelvals.b.values
+    Dc = modelvals.Dc.values
+    mu0 = modelvals.mu0.values
 
-        return data
+    return a, b, Dc, mu0
 
-    def plot_results(self, x, mt, musims, mubest, params):
-        abest, bbest, Dcbest, mu0best = params
-        x = np.transpose(x)
 
-        plt.plot(x, musims, color='indianred', alpha=0.01)
-        plt.plot(x, mt, 'k.', label='observed')
-        plt.plot(x, mubest, color='red', label=f'best fit\n'
-                                               f'a={abest.round(4)}\n'
-                                               f'b={bbest.round(4)}\n'
-                                               f'$D_c$={Dcbest.round(3)}\n'
-                                               f'$\mu_0$={mu0best.round(3)}')
+def get_npy_data(p, f):
+    data = np.load(os.path.join(p, f'{f}.npy'))
 
-        plt.xlabel('load point displacement ($\mu$m)')
-        plt.ylabel('$\mu$')
-        plt.title(f'Posterior draws: Sample {gpl.section_id}')
-        plt.legend()
+    return data
 
-    def save_figs(self):
-        # check if folder exists, make one if it doesn't
-        name = gpl.get_musim_storage_folder()
-        print(f'find figures and .out file here: {name}')
-        w = plt.get_fignums()
-        print('w = ', w)
-        for i in plt.get_fignums():
-            print('i = ', i)
-            plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
 
-plotresults = Plot()
+def plot_results(x, mt, musims, mubest, params):
+    abest, bbest, Dcbest, mu0best = params
+    x = np.transpose(x)
+
+    plt.plot(x, musims, color='indianred', alpha=0.01)
+    plt.plot(x, mt, 'k.', label='observed')
+    plt.plot(x, mubest, color='red', label=f'best fit\n'
+                                           f'a={abest.round(4)}\n'
+                                           f'b={bbest.round(4)}\n'
+                                           f'$D_c$={Dcbest.round(3)}\n'
+                                           f'$\mu_0$={mu0best.round(3)}')
+
+    plt.xlabel('load point displacement ($\mu$m)')
+    plt.ylabel('$\mu$')
+    plt.title(f'Posterior draws: Sample {gpl.section_id}')
+    plt.legend()
+
+
+def load_section_data():
+    section_data = pd.read_csv(os.path.join(gpl.idata_location(), 'section_data.csv'))
+    df = pd.DataFrame(section_data)
+    times = df['times'].to_numpy().round(2)
+    mutrue = df['mutrue'].to_numpy().round(3)
+    vlps = df['vlps'].to_numpy().round(2)
+    x = df['x'].to_numpy().round(2)
+
+    return times, mutrue, vlps, x
+
+
+def save_figs():
+    # check if folder exists, make one if it doesn't
+    name = gpl.get_musim_storage_folder()
+    print(f'find figures and .out file here: {name}')
+    w = plt.get_fignums()
+    print('w = ', w)
+    for i in plt.get_fignums():
+        print('i = ', i)
+        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
+
+
+def main():
+    parent_dir = gpl.get_musim_storage_folder()
+    rds = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
+
+    musims = get_npy_data(parent_dir, f'musim_rd_p{gpl.section_id}')
+    logps1 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_0')
+    logps2 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_1')
+
+    logps = np.concatenate((logps1, logps2))
+
+    params, logp, mubest = find_best_fit(logps)
+
+    t, mutrue, vlps, x = load_section_data()
+
+    plot_results(x, mutrue, musims, mubest, params)
+    save_figs()
+
+
+if __name__ == '__main__':
+    main()
