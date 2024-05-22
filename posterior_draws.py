@@ -10,7 +10,10 @@ import psutil
 from plotrsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
 
-''' this script takes random draws from the posterior distribution and plots the simulated friction values '''
+''' this script takes random draws from 
+the posterior distribution, runs the forward model for each set.
+It imports logp data and finds the best fit parameter set, then
+plots the best fit with the simulated friction values '''
 
 
 home = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
@@ -105,15 +108,18 @@ def generate_rsf_data(inputs):
     return mu_sim
 
 
-def plot_results(x, mutrue, musims, mubest, params):
+def plot_results(x, mt, musims, mubest, params):
     abest, bbest, Dcbest, mu0best = params
     x = np.transpose(x)
 
 
-    plt.plot(x, musims, color='red', alpha=0.01)
-
-    plt.gcf()
+    plt.plot(x, musims, color='indianred', alpha=0.01)
     plt.plot(x, mt, 'k.', label='observed')
+    plt.plot(x, mubest, color='red', label=f'best fit\n'
+                                           f'a={abest.round(4)}\n'
+                                           f'b={bbest.round(4)}\n'
+                                           f'$D_c$={Dcbest.round(3)}\n'
+                                           f'$\mu_0$={mu0best.round(3)}')
 
     plt.xlabel('load point displacement ($\mu$m)')
     plt.ylabel('$\mu$')
@@ -138,9 +144,6 @@ def write_best_estimates(bvars, lpbest):
 
 def find_best_fit(logps):
     a, b, Dc, mu0 = get_model_values()
-    # plt.plot(logps, '.')
-    # plt.ylim([-10, 0])
-    # plt.show()
 
     sortedi = np.argsort(logps)
 
@@ -202,17 +205,21 @@ def save_figs():
 
 def main(pathname, op_file):
     musims = get_npy_data(pathname, op_file)
-    logps = get_npy_data(pathname, f'logps_p{gpl.section_id}')
+    logps1 = get_npy_data(pathname, f'logps_p{gpl.section_id}_0')
+    logps2 = get_npy_data(pathname, f'logps_p{gpl.section_id}_1')
+
+    logps = np.concatenate((logps1, logps2))
 
     params, logp, mubest = find_best_fit(logps)
     plot_results(x, mutrue, musims, mubest, params)
+    save_figs()
 
 
 if __name__ == '__main__':
     t, mutrue, vlps, x = load_section_data()
     parent_dir = gpl.get_musim_storage_folder()
 
-    num_draws = 1000
+    num_draws = 10
     # a, b, Dc, mu0 = get_model_values(idata)
     drawed_vars = draw_from_posteriors(num_draws)
 
