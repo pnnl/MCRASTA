@@ -203,16 +203,16 @@ def save_figs():
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
 
 
-def next(pathname, op_file):
-    musims = get_npy_data(pathname, op_file)
-    logps1 = get_npy_data(pathname, f'logps_p{gpl.section_id}_0')
-    logps2 = get_npy_data(pathname, f'logps_p{gpl.section_id}_1')
-
-    logps = np.concatenate((logps1, logps2))
-
-    params, logp, mubest = find_best_fit(logps)
-    plot_results(x, mutrue, musims, mubest, params)
-    save_figs()
+# def next(pathname, op_file):
+#     musims = get_npy_data(pathname, op_file)
+#     logps1 = get_npy_data(pathname, f'logps_p{gpl.section_id}_0')
+#     logps2 = get_npy_data(pathname, f'logps_p{gpl.section_id}_1')
+#
+#     logps = np.concatenate((logps1, logps2))
+#
+#     params, logp, mubest = find_best_fit(logps)
+#     plot_results(x, mutrue, musims, mubest, params)
+#     save_figs()
 
 
 if __name__ == '__main__':
@@ -237,5 +237,5 @@ if __name__ == '__main__':
         op = np.array(outputs)
         np.save(pathname, op)
 
-    next(pathname, op)
+    # next(pathname, op)
 
