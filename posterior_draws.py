@@ -11,6 +11,8 @@ from plotrsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
 from plots import Plot
 
+plot = Plot()
+
 ''' this script takes random draws from 
 the posterior distribution, runs the forward model for each set.
 It imports logp data and finds the best fit parameter set, then
@@ -225,7 +227,9 @@ if __name__ == '__main__':
         op = np.array(outputs)
         np.save(pathname, op)
 
-    Plot().plot_posterior_draws()
+    plot.pathname = pathname
+    plot.op_file = op
+    plot.plot_posterior_draws()
     print('done')
     # next(pathname, op)
 
