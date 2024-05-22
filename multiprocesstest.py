@@ -228,14 +228,14 @@ if __name__ == '__main__':
     Dc = np.round(Dc, 3).astype('float32')
     mu0 = np.round(mu0, 4).astype('float32')
 
-    at = a[0:500000]
-    bt = b[0:500000]
-    Dct = Dc[0:500000]
-    mu0t = mu0[0:500000]
+    at = a[500000:2000000]
+    bt = b[500000:2000000]
+    Dct = Dc[500000:2000000]
+    mu0t = mu0[500000:2000000]
 
     # stepsize = 50000
 
-    pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}_0')
+    pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}_1')
 
     with Pool(processes=20, maxtasksperchild=1) as pool:
         outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
