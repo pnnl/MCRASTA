@@ -9,6 +9,7 @@ import plot_mcmc_results as pmr
 import psutil
 from plotrsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
+from plots import Plot
 
 ''' this script takes random draws from 
 the posterior distribution, runs the forward model for each set.
@@ -191,33 +192,15 @@ def save_stats(ens_mean, ens_stdev, bestfit):
     np.save(os.path.join(p, 'bestfit'), bestfit)
 
 
-def save_figs():
-    # check if folder exists, make one if it doesn't
-    name = gpl.get_musim_storage_folder()
-    print(f'find figures and .out file here: {name}')
-    w = plt.get_fignums()
-    print('w = ', w)
-    for i in plt.get_fignums():
-        print('i = ', i)
-        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
-
-
-class PlotDrawsBestFit:
-
-    def __init__(self):
-        self.pathname = pathname
-        self.op_file = op
-
-    def next(self):
-        musims = get_npy_data(self.pathname, self.op_file)
-        logps1 = get_npy_data(self.pathname, f'logps_p{gpl.section_id}_0')
-        logps2 = get_npy_data(self.pathname, f'logps_p{gpl.section_id}_1')
-
-        logps = np.concatenate((logps1, logps2))
-
-        params, logp, mubest = find_best_fit(logps)
-        plot_results(x, mutrue, musims, mubest, params)
-        save_figs()
+# def save_figs():
+#     # check if folder exists, make one if it doesn't
+#     name = gpl.get_musim_storage_folder()
+#     print(f'find figures and .out file here: {name}')
+#     w = plt.get_fignums()
+#     print('w = ', w)
+#     for i in plt.get_fignums():
+#         print('i = ', i)
+#         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
 
 
 if __name__ == '__main__':
@@ -242,8 +225,10 @@ if __name__ == '__main__':
         op = np.array(outputs)
         np.save(pathname, op)
 
-    PlotDrawsBestFit().pathname = pathname
-    PlotDrawsBestFit().op_file = op
-    PlotDrawsBestFit().next()
+    Plot().plot_posterior_draws()
     print('done')
     # next(pathname, op)
+
+
+
+
