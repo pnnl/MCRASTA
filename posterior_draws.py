@@ -15,7 +15,6 @@ the posterior distribution, runs the forward model for each set.
 It imports logp data and finds the best fit parameter set, then
 plots the best fit with the simulated friction values '''
 
-
 home = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles', 'mcmc_out')
 
 
@@ -34,6 +33,7 @@ def load_section_data():
     x = df['x'].to_numpy().round(2)
 
     return times, mutrue, vlps, x
+
 
 def get_constants(vlps):
     k = gpl.k
@@ -111,7 +111,6 @@ def generate_rsf_data(inputs):
 def plot_results(x, mt, musims, mubest, params):
     abest, bbest, Dcbest, mu0best = params
     x = np.transpose(x)
-
 
     plt.plot(x, musims, color='indianred', alpha=0.01)
     plt.plot(x, mt, 'k.', label='observed')
@@ -203,16 +202,22 @@ def save_figs():
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
 
 
-# def next(pathname, op_file):
-#     musims = get_npy_data(pathname, op_file)
-#     logps1 = get_npy_data(pathname, f'logps_p{gpl.section_id}_0')
-#     logps2 = get_npy_data(pathname, f'logps_p{gpl.section_id}_1')
-#
-#     logps = np.concatenate((logps1, logps2))
-#
-#     params, logp, mubest = find_best_fit(logps)
-#     plot_results(x, mutrue, musims, mubest, params)
-#     save_figs()
+class PlotDrawsBestFit:
+
+    def __init__(self):
+        self.pathname = pathname
+        self.op_file = op
+
+    def next(pathname, op_file):
+        musims = get_npy_data(pathname, op_file)
+        logps1 = get_npy_data(pathname, f'logps_p{gpl.section_id}_0')
+        logps2 = get_npy_data(pathname, f'logps_p{gpl.section_id}_1')
+
+        logps = np.concatenate((logps1, logps2))
+
+        params, logp, mubest = find_best_fit(logps)
+        plot_results(x, mutrue, musims, mubest, params)
+        save_figs()
 
 
 if __name__ == '__main__':
@@ -237,5 +242,5 @@ if __name__ == '__main__':
         op = np.array(outputs)
         np.save(pathname, op)
 
+    print('done')
     # next(pathname, op)
-
