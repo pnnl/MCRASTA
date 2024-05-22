@@ -48,9 +48,9 @@ def plot_results(x, mt, musims, mubest, params):
     abest, bbest, Dcbest, mu0best = params
     x = np.transpose(x)
 
-    plt.plot(x, musims, color='indianred', alpha=0.01)
-    plt.plot(x, mt, 'k.', label='observed')
-    plt.plot(x, mubest, color='red', label=f'best fit\n'
+    plt.plot(x, musims.T, color='indianred', alpha=0.01)
+    plt.plot(x, mt.T, 'k.', label='observed')
+    plt.plot(x, mubest.T, color='red', label=f'best fit\n'
                                            f'a={abest.round(4)}\n'
                                            f'b={bbest.round(4)}\n'
                                            f'$D_c$={Dcbest.round(3)}\n'
