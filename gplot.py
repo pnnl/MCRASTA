@@ -1,6 +1,5 @@
 import os
 import sys
-
 import numpy as np
 import pandas as pd
 import json
@@ -44,9 +43,6 @@ class Globals:
             # print(gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name))
             return gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
         else:
-            # print(gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name))
-            #TEMPORARY CHANGE AFTER NEWER P5894 IS DONE RUNNING
-            # return os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmc_rsf', gpl.sim_name)
             return gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
 
     def get_musim_storage_folder(self):

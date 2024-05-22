@@ -18,6 +18,9 @@ import pandas as pd
 import gc
 from memory_profiler import profile
 
+''' this script calculates and returns the goodness of fit 
+    metric (sum of squares) for all parameter estimates '''
+
 
 def determine_threshold(vlps, t):
     vlps0 = vlps / np.max(vlps)
@@ -81,35 +84,6 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     return k0, vlps0, vref0, t0
 
 
-def set_critical_times(vlps, t, threshold):
-    """
-    Calculates accelearation and thresholds based on that to find areas
-    that are likely problematic to integrate.
-
-    Parameters
-    ----------
-    threshold : float
-        When the absolute value of acceleration exceeds this value, the
-        time is marked as "critical" for integration.
-
-    Returns
-    -------
-    critical_times : list
-        List of time values at which integration care should be taken.
-    """
-    velocity_gradient = np.gradient(vlps)
-    time_gradient = np.gradient(t)
-    acceleration = velocity_gradient / time_gradient
-    critical_times = t[np.abs(acceleration) > threshold]
-
-    # nondimen
-    tcrit0 = critical_times * gpl.vmax / gpl.lc
-    tcrit = tcrit0 - t[0]
-    np.round(tcrit, 2)
-    np.save('tcrittest.npy', tcrit)
-    print('this should only print once')
-
-
 def get_posterior_data(modelvals, thin_data=False):
     if thin_data is False:
         gpl.nrstep = 1
@@ -129,6 +103,7 @@ def get_model_values(idata):
     a, b, Dc, mu0 = get_posterior_data(modelvals)
 
     return a, b, Dc, mu0
+
 
 def generate_rsf_data(inputs):
     gpl.read_from_json(gpl.idata_location())
@@ -216,7 +191,6 @@ def get_time(name):
 if __name__ == '__main__':
     comptime_start = get_time('start')
     parent_dir = gpl.get_musim_storage_folder()
-
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(idata_location)
     # determine_threshold(vlps, times)
@@ -241,33 +215,7 @@ if __name__ == '__main__':
         outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
 
     op = np.array(outputs)
-    # pool.close()
-    # pool.join()
-
     np.save(pathname, op)
-
-    # for k, i in enumerate(range(0, 500000, stepsize)):
-    #     print(f'***********************************************')
-    #     print(f'SOLVING FWD MODEL FOR SIMS: {i} - {i+stepsize}')
-    #     at = a[i:i+stepsize]
-    #     bt = b[i:i+stepsize]
-    #     Dct = Dc[i:i+stepsize]
-    #     mu0t = mu0[i:i+stepsize]
-    #
-    #     parallel_processing(zip(at, bt, Dct, mu0t))
-    #
-    #     # pool = Pool(processes=25, maxtasksperchild=1)
-    #     #
-    #     # outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
-    #     # op = np.array(outputs)
-    #     # time.sleep(0.01)
-    #     # pool.close()
-    #     # pool.join()
-    #     # pathname = gpl.make_path('musim_out', f'{gpl.samplename}', f'mu_simsp{gpl.section_id}_{snum}')
-    #     # np.save(pathname, op)
-    #     # gc.collect()
-    #     del at, bt, Dct, mu0t
-    #     gc.collect()
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start

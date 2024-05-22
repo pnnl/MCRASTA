@@ -7,7 +7,9 @@ import pandas as pd
 from gplot import gpl
 import plot_mcmc_results as pmr
 import psutil
-import split_musim_files
+from plotrsfmodel import rsf, staterelations
+from multiprocessing import Process, Queue, Pool
+
 
 # 1. read in .npy file
 # 2. calculate log(p) for each simulation
@@ -90,6 +92,57 @@ def calc_ensemble_stats(x, msims, ddof):
     return means
 
 
+def generate_rsf_data(inputs):
+    gpl.read_from_json(gpl.idata_location())
+    # print(f'self.threshold = {gpl.threshold}')
+    a, b, Dc, mu0 = inputs
+
+    # dimensional variables output from mcmc_rsf.py
+    times, mutrue, vlps, x = load_section_data()
+    k, vref = get_constants(vlps)
+    lc, vmax = get_vmax_l0(vlps)
+
+    mutrue.round(2).astype('float32')
+    vlps.round(2).astype('float32')
+
+    # time is the only variable that needs to be re-nondimensionalized...?
+    k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
+
+    # set up rsf model
+    model = rsf.Model()
+    model.k = k  # Normalized System stiffness (friction/micron)
+    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref  # Reference velocity, generally vlp(t=0)
+
+    state1 = staterelations.DieterichState()
+    state1.vmax = vmax.astype('float32')
+    state1.lc = gpl.lc
+
+    model.state_relations = [state1]  # Which state relation we want to use
+
+    model.time = np.round(t0, 2).astype('float32')
+
+    # Set the model load point velocity, must be same shape as model.model_time
+    model.loadpoint_velocity = vlps.astype('float32')
+
+    model.mu0 = mu0
+    model.a = a
+    state1.b = b
+    state1.Dc = Dc
+
+    model.solve(threshold=gpl.threshold)
+
+    mu_sim = model.results.friction.astype('float32')
+    # state_sim = model.results.states
+
+    resids = np.transpose(mutrue) - mu_sim
+    rsq = resids ** 2
+    srsq = np.nansum(rsq)
+    logp = np.abs(- 1 / 2 * srsq)
+
+    return logp
+
+
 def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
     abest, bbest, Dcbest, mu0best = bestvars
     sig_upper = means + stdevs
@@ -115,7 +168,7 @@ def plot_results(x, mt, means, stdevs, bestvars, bestmusim):
 
 def write_best_estimates(bvars, lpbest):
     a, b, Dc, mu0 = bvars
-    p = gpl.get_output_storage_folder()
+    p = gpl.get_musim_storage_folder()
     fname = os.path.join(p, 'param_estimates_best.txt')
 
     paramstrings = ['a', 'b', 'Dc', 'mu0', 'lpbest']
@@ -148,20 +201,29 @@ def find_best_fits(x, mt, msims, a, b, Dc, mu0):
     return [abest, bbest, Dcbest, mu0best], ms_best, logpbest
 
 
-def get_model_values(idata, start_idx, end_idx):
+def get_model_values(idata):
     modelvals = az.extract(idata.posterior, combined=True)
-    a, b, Dc, mu0 = get_posterior_data(modelvals, start_idx, end_idx)
+
+    a = modelvals.a.values
+    b = modelvals.b.values
+    Dc = modelvals.Dc.values
+    mu0 = modelvals.mu0.values
 
     return a, b, Dc, mu0
 
 
-def get_posterior_data(modelvals, start_idx, end_idx):
-    a = modelvals.a.values[start_idx: end_idx]
-    b = modelvals.b.values[start_idx: end_idx]
-    Dc = modelvals.Dc.values[start_idx: end_idx]
-    mu0 = modelvals.mu0.values[start_idx: end_idx]
+def draw_from_posteriors(idata, ndraws=1000):
+    # draw values from the 89% credible interval for each parameter
+    # then generate rsf data for draws
 
-    return a, b, Dc, mu0
+    a, b, Dc, mu0 = get_model_values(idata)
+
+    adraws = np.random.choice(a, ndraws)
+    bdraws = np.random.choice(b, ndraws)
+    Dcdraws = np.random.choice(Dc, ndraws)
+    mu0draws = np.random.choice(mu0, ndraws)
+
+    return adraws, bdraws, Dcdraws, mu0draws
 
 
 def calc_sums(msims):
@@ -176,7 +238,7 @@ def calc_sums(msims):
 
 
 def save_stats(ens_mean, ens_stdev, bestfit):
-    p = gpl.get_output_storage_folder()
+    p = gpl.get_postprocess_storage_folder()
     np.save(os.path.join(p, 'ens_mean'), ens_mean)
     np.save(os.path.join(p, 'ens_stdev'), ens_stdev)
     np.save(os.path.join(p, 'bestfit'), bestfit)
@@ -184,7 +246,7 @@ def save_stats(ens_mean, ens_stdev, bestfit):
 
 def save_figs():
     # check if folder exists, make one if it doesn't
-    name = gpl.get_output_storage_folder()
+    name = gpl.get_musim_storage_folder()
     print(f'find figures and .out file here: {name}')
     w = plt.get_fignums()
     print('w = ', w)
@@ -194,10 +256,7 @@ def save_figs():
 
 
 def main():
-    t, mutrue, vlps, x = load_section_data()
-    idata = pmr.load_inference_data()
 
-    # plot_results(x, mutrue, combined_means, stdevs_all, bvars, best_musim)
 
     num_file_subsets = 20
     num_chunks = 2000000 / 100000
@@ -273,4 +332,26 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    t, mutrue, vlps, x = load_section_data()
+    idata = pmr.load_inference_data()
+    parent_dir = gpl.get_musim_storage_folder()
+
+
+    num_draws = 1000
+    # a, b, Dc, mu0 = get_model_values(idata)
+    drawed_vars = draw_from_posteriors(idata, num_draws)
+
+    a, b, Dc, mu0 = drawed_vars
+
+    a = np.round(a, 6).astype('float32')
+    b = np.round(b, 6).astype('float32')
+    Dc = np.round(Dc, 3).astype('float32')
+    mu0 = np.round(mu0, 4).astype('float32')
+
+    pathname = os.path.join(parent_dir, f'musim_randdraws_p{gpl.section_id}')
+
+    with Pool(processes=20, maxtasksperchild=1) as pool:
+        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
+        op = np.array(outputs)
+        np.save(pathname, op)
+
