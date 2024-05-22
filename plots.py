@@ -88,7 +88,13 @@ def main():
     parent_dir = gpl.get_musim_storage_folder()
     rds = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
-    musims = get_npy_data(parent_dir, f'musim_rd_p{gpl.section_id}')
+    msims = get_npy_data(parent_dir, f'musim_rd_p{gpl.section_id}')
+
+    msims[msims < 0] = np.nan
+    msims[msims > 1.5] = np.nan
+    msims[msims == np.inf] = np.nan
+    msims[msims == -np.inf] = np.nan
+
     logps1 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_0')
     logps2 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_1')
 
@@ -98,7 +104,7 @@ def main():
 
     t, mutrue, vlps, x = load_section_data()
 
-    plot_results(x, mutrue, musims, mubest, params)
+    plot_results(x, mutrue, msims, mubest, params)
     save_figs()
 
 
