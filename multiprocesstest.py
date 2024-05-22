@@ -115,8 +115,8 @@ def generate_rsf_data(inputs):
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
-    mutrue.round(2).astype('float32')
-    vlps.round(2).astype('float32')
+    mutrue.astype('float32')
+    vlps.astype('float32')
 
     # time is the only variable that needs to be re-nondimensionalized...?
     k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
@@ -133,7 +133,7 @@ def generate_rsf_data(inputs):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = np.round(t0, 2).astype('float32')
+    model.time = t0.astype('float32')
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = vlps.astype('float32')
@@ -197,22 +197,22 @@ if __name__ == '__main__':
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0 = get_model_values(idata)
-    a = np.round(a, 6).astype('float32')
-    b = np.round(b, 6).astype('float32')
-    Dc = np.round(Dc, 3).astype('float32')
-    mu0 = np.round(mu0, 4).astype('float32')
-
-    at = a[500000:2000000]
-    bt = b[500000:2000000]
-    Dct = Dc[500000:2000000]
-    mu0t = mu0[500000:2000000]
+    a = a.astype('float32')
+    b = b.astype('float32')
+    Dc = Dc.astype('float32')
+    mu0 = mu0.astype('float32')
+    #
+    # at = a[500000:2000000]
+    # bt = b[500000:2000000]
+    # Dct = Dc[500000:2000000]
+    # mu0t = mu0[500000:2000000]
 
     # stepsize = 50000
 
-    pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}_1')
+    pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}')
 
     with Pool(processes=20, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, zip(at, bt, Dct, mu0t))
+        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
 
     op = np.array(outputs)
     np.save(pathname, op)
