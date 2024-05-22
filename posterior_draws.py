@@ -242,8 +242,8 @@ if __name__ == '__main__':
         op = np.array(outputs)
         np.save(pathname, op)
 
-    PlotDrawsBestFit.pathname = pathname
-    PlotDrawsBestFit.op_file = op
-    PlotDrawsBestFit.next()
+    PlotDrawsBestFit().pathname = pathname
+    PlotDrawsBestFit().op_file = op
+    PlotDrawsBestFit().next()
     print('done')
     # next(pathname, op)
