@@ -9,9 +9,8 @@ import plot_mcmc_results as pmr
 import psutil
 from plotrsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
-from plots import Plot
+from plots import plotresults
 
-plot = Plot()
 
 ''' this script takes random draws from 
 the posterior distribution, runs the forward model for each set.
@@ -227,9 +226,9 @@ if __name__ == '__main__':
         op = np.array(outputs)
         np.save(pathname, op)
 
-    plot.pathname = pathname
-    plot.op_file = op
-    plot.plot_posterior_draws()
+    plotresults.pathname = pathname
+    plotresults.op_file = op
+    plotresults.plot_posterior_draws()
     print('done')
     # next(pathname, op)
 

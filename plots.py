@@ -59,3 +59,5 @@ class Plot:
         for i in plt.get_fignums():
             print('i = ', i)
             plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
+
+plotresults = Plot()
