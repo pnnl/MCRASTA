@@ -168,7 +168,7 @@ def get_dataset():
     # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
     # 'old' data = had to fill in parameters manually
     # if there's no .json in the mcmc results folder, then the data is type 'old'
-    dataset_type = 'new'
+    dataset_type = 'old'
     if dataset_type == 'old':
         k, vref = get_constants(vlps)
     elif dataset_type == 'new':
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(gpl.idata_location())
-    # determine_threshold(vlps, times)
+    determine_threshold(vlps, times)
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0 = get_model_values(idata)
