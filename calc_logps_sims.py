@@ -16,7 +16,6 @@ import cProfile
 import arviz as az
 import pandas as pd
 import gc
-from memory_profiler import profile
 
 ''' this script calculates and returns the goodness of fit 
     metric (sum of squares) for all parameter estimates '''
@@ -61,15 +60,15 @@ def load_inference_data():
 
 
 def get_constants(vlps):
-    k = gpl.k
-    vref = vlps[0]
+    k = gpl.k.astype('float32')
+    vref = vlps[0].astype('float32')
 
     return k, vref
 
 
 def get_vmax_l0(vlps):
     l0 = gpl.lc
-    vmax = np.max(vlps)
+    vmax = np.max(vlps).astype('float32')
 
     return l0, vmax
 
@@ -192,7 +191,7 @@ if __name__ == '__main__':
     comptime_start = get_time('start')
     parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
-    # gpl.read_from_json(idata_location)
+    # gpl.read_from_json(gpl.idata_location())
     # determine_threshold(vlps, times)
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
