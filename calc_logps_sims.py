@@ -68,7 +68,7 @@ def get_constants(vlps):
 
 def get_vmax_l0(vlps):
     l0 = gpl.lc
-    vmax = np.max(vlps).astype('float32')
+    vmax = np.max(vlps)
 
     return l0, vmax
 
