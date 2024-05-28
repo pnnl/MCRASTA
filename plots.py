@@ -7,6 +7,81 @@ import arviz as az
 from gplot import gpl
 import posterior_draws
 import pandas as pd
+from plotrsfmodel import rsf, staterelations
+
+
+
+def get_constants(vlps):
+    k = gpl.k
+    vref = vlps[0]
+
+    return k, vref
+
+
+def get_vmax_l0(vlps):
+    l0 = gpl.lc
+    vmax = np.max(vlps)
+
+    return l0, vmax
+
+
+def nondimensionalize_parameters(vlps, vref, k, times, vmax):
+    k0 = gpl.k * gpl.lc
+    vlps0 = vlps / vmax
+    vref0 = vref / vmax
+    t0 = times * vmax / gpl.lc
+    t0 = t0 - t0[0]
+
+    return k0, vlps0, vref0, t0
+
+
+def generate_rsf_data(inputs):
+    gpl.read_from_json(gpl.idata_location())
+    # print(f'self.threshold = {gpl.threshold}')
+    a, b, Dc, mu0 = inputs
+
+    # dimensional variables output from mcmc_rsf.py
+    times, mutrue, vlps, x = load_section_data()
+    k, vref = get_constants(vlps)
+    lc, vmax = get_vmax_l0(vlps)
+
+    mutrue.astype('float32')
+    vlps.astype('float32')
+
+    k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
+
+    # set up rsf model
+    model = rsf.Model()
+    model.k = k  # Normalized System stiffness (friction/micron)
+    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref  # Reference velocity, generally vlp(t=0)
+
+    state1 = staterelations.DieterichState()
+    state1.vmax = vmax.astype('float32')
+    state1.lc = gpl.lc
+
+    model.state_relations = [state1]  # Which state relation we want to use
+
+    model.time = t0.astype('float32')
+
+    # Set the model load point velocity, must be same shape as model.model_time
+    model.loadpoint_velocity = vlps.astype('float32')
+
+    model.mu0 = mu0
+    model.a = a
+    state1.b = b
+    state1.Dc = Dc
+
+    model.solve(threshold=gpl.threshold)
+
+    mu_sim = model.results.friction.astype('float32')
+
+    # resids = np.transpose(mutrue) - mu_sim
+    # rsq = resids ** 2
+    # srsq = np.nansum(rsq)
+    # logp = np.abs(- 1 / 2 * srsq)
+
+    return mu_sim
 
 
 def find_best_fit(logps):
@@ -20,7 +95,12 @@ def find_best_fit(logps):
     mu0best = mu0[sortedi[0]]
     logpbest = logps[sortedi[0]]
 
-    mu_best = posterior_draws.generate_rsf_data((abest, bbest, Dcbest, mu0best))
+    # plt.plot(logps[sortedi])
+    # plt.ylim(0, 0.5)
+    # plt.show()
+
+    inputs = abest, bbest, Dcbest, mu0best
+    mu_best = generate_rsf_data(inputs)
 
     return [abest, bbest, Dcbest, mu0best], logpbest, mu_best
 
@@ -59,16 +139,19 @@ def plot_results(x, mt, musims, mubest, params):
     plt.xlabel('load point displacement ($\mu$m)')
     plt.ylabel('$\mu$')
     plt.title(f'Posterior draws: Sample {gpl.section_id}')
+    plt.ylim(0, 1)
     plt.legend()
+
+    plt.show()
 
 
 def load_section_data():
     section_data = pd.read_csv(os.path.join(gpl.idata_location(), 'section_data.csv'))
     df = pd.DataFrame(section_data)
-    times = df['times'].to_numpy().round(2)
-    mutrue = df['mutrue'].to_numpy().round(3)
-    vlps = df['vlps'].to_numpy().round(2)
-    x = df['x'].to_numpy().round(2)
+    times = df['times'].to_numpy()
+    mutrue = df['mutrue'].to_numpy()
+    vlps = df['vlps'].to_numpy()
+    x = df['x'].to_numpy()
 
     return times, mutrue, vlps, x
 
@@ -86,7 +169,7 @@ def save_figs():
 
 def main():
     parent_dir = gpl.get_musim_storage_folder()
-    rds = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
+    # rds = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
     msims = get_npy_data(parent_dir, f'musim_rd_p{gpl.section_id}')
 
@@ -95,10 +178,12 @@ def main():
     msims[msims == np.inf] = np.nan
     msims[msims == -np.inf] = np.nan
 
-    logps1 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_0')
-    logps2 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_1')
+    # logps1 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_0')
+    # logps2 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_1')
 
-    logps = np.concatenate((logps1, logps2))
+    # logps = np.concatenate((logps1, logps2))
+
+    logps = get_npy_data(parent_dir, f'logps_p{gpl.section_id}')
 
     params, logp, mubest = find_best_fit(logps)
 

@@ -28,10 +28,10 @@ def get_npy_data(p, f):
 def load_section_data():
     section_data = pd.read_csv(os.path.join(gpl.idata_location(), 'section_data.csv'))
     df = pd.DataFrame(section_data)
-    times = df['times'].to_numpy().round(2)
-    mutrue = df['mutrue'].to_numpy().round(3)
-    vlps = df['vlps'].to_numpy().round(2)
-    x = df['x'].to_numpy().round(2)
+    times = df['times'].to_numpy()
+    mutrue = df['mutrue'].to_numpy()
+    vlps = df['vlps'].to_numpy()
+    x = df['x'].to_numpy()
 
     return times, mutrue, vlps, x
 
@@ -70,8 +70,8 @@ def generate_rsf_data(inputs):
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
-    mutrue.round(2).astype('float32')
-    vlps.round(2).astype('float32')
+    mutrue.astype('float32')
+    vlps.astype('float32')
 
     k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
@@ -87,7 +87,7 @@ def generate_rsf_data(inputs):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = np.round(t0, 2).astype('float32')
+    model.time = t0.astype('float32')
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = vlps.astype('float32')
@@ -194,16 +194,16 @@ if __name__ == '__main__':
     t, mutrue, vlps, x = load_section_data()
     parent_dir = gpl.get_musim_storage_folder()
 
-    num_draws = 10
+    num_draws = 50
     # a, b, Dc, mu0 = get_model_values(idata)
-    drawed_vars = draw_from_posteriors(num_draws)
+    drawed_vars = draw_from_posteriors(ndraws=num_draws)
 
     a, b, Dc, mu0 = drawed_vars
 
-    a = np.round(a, 6).astype('float32')
-    b = np.round(b, 6).astype('float32')
-    Dc = np.round(Dc, 3).astype('float32')
-    mu0 = np.round(mu0, 4).astype('float32')
+    a.astype('float32')
+    b.astype('float32')
+    Dc.astype('float32')
+    mu0.astype('float32')
 
     pathname = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
