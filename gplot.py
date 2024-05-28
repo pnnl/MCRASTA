@@ -12,7 +12,7 @@ class Globals:
         self.maxtime = None
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = '5866002'
+        self.section_id = '5866001'
         self.k = 0.0005
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
@@ -27,7 +27,7 @@ class Globals:
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
         self.aminbmode = None
-        self.threshold = 0.23
+        self.threshold = 0.1
         self.nrstep = 1
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
         self.tcrit = None
@@ -120,7 +120,7 @@ class Globals:
             gpl.nch = js.get('n_chains')
             gpl.ntune = js.get('n_tune')
             vref = js.get('vref')
-            gpl.threshold = 0.23
+            gpl.threshold = 0.1
 
             priors_info = js.get('prior_mus_sigmas', 'priors info not available')
             mus = priors_info[0]
