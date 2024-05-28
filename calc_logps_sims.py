@@ -61,7 +61,7 @@ def load_inference_data():
 
 def get_constants(vlps):
     k = gpl.k
-    vref = vlps[0].astype('float32')
+    vref = vlps[0]
 
     return k, vref
 
