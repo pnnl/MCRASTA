@@ -164,12 +164,16 @@ def draw_from_posteriors(ndraws=1000):
 
     a, b, Dc, mu0 = get_model_values()
 
-    adraws = np.random.choice(a, ndraws)
-    bdraws = np.random.choice(b, ndraws)
-    Dcdraws = np.random.choice(Dc, ndraws)
-    mu0draws = np.random.choice(mu0, ndraws)
+    modelvals = np.column_stack((a, b, Dc, mu0))
 
-    return adraws, bdraws, Dcdraws, mu0draws
+    draws = modelvals[np.random.choice(modelvals.shape[0], ndraws, replace=False), :]
+
+    # adraws = np.random.choice(a, ndraws)
+    # bdraws = np.random.choice(b, ndraws)
+    # Dcdraws = np.random.choice(Dc, ndraws)
+    # mu0draws = np.random.choice(mu0, ndraws)
+
+    return draws
 
 
 def save_stats(ens_mean, ens_stdev, bestfit):
@@ -200,10 +204,10 @@ if __name__ == '__main__':
 
     a, b, Dc, mu0 = drawed_vars
 
-    a.astype('float32')
-    b.astype('float32')
-    Dc.astype('float32')
-    mu0.astype('float32')
+    ad = drawed_vars[:, 0].astype('float32')
+    bd = drawed_vars[:, 1].astype('float32')
+    Dcd = drawed_vars[:, 2].astype('float32')
+    mu0d = drawed_vars[:, 3].astype('float32')
 
     pathname = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
