@@ -168,11 +168,6 @@ def draw_from_posteriors(ndraws=1000):
 
     draws = modelvals[np.random.choice(modelvals.shape[0], ndraws, replace=False), :]
 
-    # adraws = np.random.choice(a, ndraws)
-    # bdraws = np.random.choice(b, ndraws)
-    # Dcdraws = np.random.choice(Dc, ndraws)
-    # mu0draws = np.random.choice(mu0, ndraws)
-
     return draws
 
 
