@@ -210,7 +210,7 @@ if __name__ == '__main__':
     pathname = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
     with Pool(processes=20, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
+        outputs = pool.map(generate_rsf_data, zip(ad, bd, Dcd, mu0d))
         op = np.array(outputs)
         np.save(pathname, op)
 
