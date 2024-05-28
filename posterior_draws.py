@@ -194,7 +194,7 @@ if __name__ == '__main__':
     t, mutrue, vlps, x = load_section_data()
     parent_dir = gpl.get_musim_storage_folder()
 
-    num_draws = 50
+    num_draws = 100
     # a, b, Dc, mu0 = get_model_values(idata)
     drawed_vars = draw_from_posteriors(ndraws=num_draws)
 
@@ -213,6 +213,7 @@ if __name__ == '__main__':
         np.save(pathname, op)
 
     print('done')
+    print(f'saved files are here: {pathname}')
     # next(pathname, op)
 
 
