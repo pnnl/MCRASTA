@@ -202,8 +202,6 @@ if __name__ == '__main__':
     # a, b, Dc, mu0 = get_model_values(idata)
     drawed_vars = draw_from_posteriors(ndraws=num_draws)
 
-    a, b, Dc, mu0 = drawed_vars
-
     ad = drawed_vars[:, 0].astype('float32')
     bd = drawed_vars[:, 1].astype('float32')
     Dcd = drawed_vars[:, 2].astype('float32')
