@@ -128,21 +128,26 @@ def plot_results(x, mt, musims, mubest, params):
     abest, bbest, Dcbest, mu0best = params
     x = np.transpose(x)
 
-    plt.plot(x, musims.T, color='indianred', alpha=0.01)
+    plt.plot(x, musims.T, color='indianred', alpha=0.02)
     plt.plot(x, mt.T, 'k.', label='observed')
     plt.plot(x, mubest.T, color='red', label=f'best fit\n'
-                                           f'a={abest.round(4)}\n'
-                                           f'b={bbest.round(4)}\n'
-                                           f'$D_c$={Dcbest.round(3)}\n'
-                                           f'$\mu_0$={mu0best.round(3)}')
+                                           f'a={abest}\n'
+                                           f'b={bbest}\n'
+                                           f'$D_c$={Dcbest}\n'
+                                           f'$\mu_0$={mu0best}')
+    # plt.plot(x, mubest.T, color='red', label=f'best fit\n'
+    #                                        f'a={abest.round(4)}\n'
+    #                                        f'b={bbest.round(4)}\n'
+    #                                        f'$D_c$={Dcbest.round(3)}\n'
+    #                                        f'$\mu_0$={mu0best.round(3)}')
 
     plt.xlabel('load point displacement ($\mu$m)')
     plt.ylabel('$\mu$')
     plt.title(f'Posterior draws: Sample {gpl.section_id}')
-    plt.ylim(0, 1)
-    plt.legend()
+    plt.ylim(np.mean(mubest) - 0.1, np.mean(mubest) + 0.1)
+    plt.legend(bbox_to_anchor=(1.01, 1))
 
-    plt.show()
+    # plt.show()
 
 
 def load_section_data():
@@ -187,6 +192,10 @@ def main():
 
     params, logp, mubest = find_best_fit(logps)
 
+    # params = [0.00629, 0.00655, 62.4856, 0.41]
+
+    # mubest = np.load(r'C:\Users\fich146\PycharmProjects\mcmcrsf_xfiles\postprocess_out\p5894\out_500000d4ch_5894001'
+    #                  r'\bestfit.npy')
     t, mutrue, vlps, x = load_section_data()
 
     plot_results(x, mutrue, msims, mubest, params)
