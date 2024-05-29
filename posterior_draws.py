@@ -146,7 +146,9 @@ def write_best_estimates(bvars, lpbest):
 
 
 def get_model_values():
-    p = os.path.join(gpl.idata_location(), f'{gpl.sim_name}_idata')
+    p = os.path.join(gpl.idata_location(), f'out_500000d4ch_{gpl.section_id}_idata')
+
+    # p = os.path.join(gpl.idata_location(), f'{gpl.sim_name}_idata')
     idata = az.from_netcdf(p)
     modelvals = az.extract(idata.posterior, combined=True)
 
