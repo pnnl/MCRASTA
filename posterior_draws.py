@@ -191,7 +191,7 @@ def save_stats(ens_mean, ens_stdev, bestfit):
 
 if __name__ == '__main__':
     t, mutrue, vlps, x = load_section_data()
-    parent_dir = gpl.get_musim_storage_folder()
+    parent_dir = gpl.cd()
 
     num_draws = 2000
     # a, b, Dc, mu0 = get_model_values(idata)

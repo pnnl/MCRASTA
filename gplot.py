@@ -24,7 +24,7 @@ class Globals:
         self.ntune = None
         self.ncores = 4
         # self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
-        self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
+        self.sim_name = f'~out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
         self.aminbmode = None
         self.threshold = 0.02
