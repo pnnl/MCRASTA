@@ -61,7 +61,7 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 
 
 def generate_rsf_data(inputs):
-    gpl.read_from_json(gpl.idata_location())
+    # gpl.read_from_json(gpl.idata_location())
     # print(f'self.threshold = {gpl.threshold}')
     a, b, Dc, mu0 = inputs
 
