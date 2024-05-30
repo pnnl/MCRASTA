@@ -557,7 +557,7 @@ def main():
         loglike = Loglike(t0, vlps0, k0, vref0, mutrue, vmax)
 
         # convert parameters to be estimated to tensor vector
-        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0])
+        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, s])
 
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))
