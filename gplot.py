@@ -7,27 +7,27 @@ import json
 
 class Globals:
     def __init__(self):
-        self.samplename = 'p5756'
+        self.samplename = 'p5894'
         self.mintime = None
         self.maxtime = None
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = '5756001'
-        self.k = 0.0021129
+        self.section_id = '5894001'
+        self.k = 0.00153
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
         self.vel_windowlen = None
         self.filter_windowlen = None
         self.q = None
         self.ndr = 500000
-        self.nch = 4
+        self.nch = 2
         self.ntune = None
         self.ncores = 4
         # self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
         self.aminbmode = None
-        self.threshold = 0.2
+        self.threshold = 17
         self.nrstep = 1
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
         self.tcrit = None
@@ -75,8 +75,8 @@ class Globals:
 
     def get_prior_parameters(self):
         # prior parameters for a, b, Dc, mu0 (in that order)
-        mus = [-5, -5, 3, -1]
-        sigmas = [0.8, 0.8, 0.3, 0.3]
+        mus = [-5, -5, 4, -1]
+        sigmas = [0.8, 0.8, 0.5, 0.3]
 
         return mus, sigmas
 
@@ -120,7 +120,7 @@ class Globals:
             gpl.nch = js.get('n_chains')
             gpl.ntune = js.get('n_tune')
             vref = js.get('vref')
-            gpl.threshold = 0.2
+            gpl.threshold = 17
 
             priors_info = js.get('prior_mus_sigmas', 'priors info not available')
             mus = priors_info[0]
