@@ -6,7 +6,7 @@ from globals import myglobals
 
 def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
     # unpack parameters
-    a, b, Dc, mu0 = theta
+    a, b, Dc, mu0, s = theta
 
     # initialize rsf model
     model = rsf.Model()
