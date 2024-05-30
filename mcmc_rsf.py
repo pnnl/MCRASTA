@@ -237,15 +237,11 @@ def get_obs_data():
 
     # convert to numpy arrays
     t = df['time_s'].to_numpy()
-    t = np.round(t, 2)
     mu = df['mu'].to_numpy()
-    mu = np.round(mu, 3)
     x = df['vdcdt_um'].to_numpy()
-    x = np.round(x, 2)
 
     # calculate loading velocities = dx/dt
     vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
-    vlps = np.round(vlps, 2)
 
     # filters and downsamples data
     f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
@@ -262,10 +258,10 @@ def get_obs_data():
     cleaned_data = remove_non_monotonic(t, sectioned_data, axis=0)
 
     # data for pymc
-    mutrue = np.round(cleaned_data[:, 0], 3)
+    mutrue = cleaned_data[:, 0]
     times = cleaned_data[:, 1]
-    vlps = np.round(cleaned_data[:, 2], 2)
-    x = np.round(cleaned_data[:, 3], 2)
+    vlps = cleaned_data[:, 2]
+    x = cleaned_data[:, 3]
 
     myglobals.set_disp_bounds(x)
     plotx = x * um_to_mm
@@ -444,7 +440,8 @@ def get_priors():
     #
     # check_priors(a, b, Dc, mu0, mus, sigmas)
 
-    return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)]
+    s = pm.HalfNormal('s', sigma=1)
+    return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
 
     # return a, b, Dc, mu0, mus, sigmas
 
@@ -526,8 +523,8 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 
     # then remove dimensions
     k0 = myglobals.k * myglobals.lc
-    vlps0 = np.round(vlps / vmax, 2)
-    vref0 = np.round(vref / vmax, 2)
+    vlps0 = vlps / vmax
+    vref0 = vref / vmax
 
     t0 = times * vmax / lc
     t0 = t0 - t0[0]
@@ -553,7 +550,7 @@ def main():
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters and non-dimensionalized constants
-        a, b, Dc, mu0 = get_priors()
+        [a, b, Dc, mu0], s = get_priors()
         k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)

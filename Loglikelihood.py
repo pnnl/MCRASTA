@@ -7,10 +7,6 @@ from globals import myglobals
 def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
     # unpack parameters
     a, b, Dc, mu0 = theta
-    a = np.round(a, 4)
-    b = np.round(b, 4)
-    Dc = np.round(Dc, 2)
-    mu0 = np.round(mu0, 3)
 
     # initialize rsf model
     model = rsf.Model()
@@ -35,7 +31,7 @@ def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = np.round(t0, 2)  # nondimensionalized time
+    model.time = np.round(t0, 6)  # nondimensionalized time
     lp_velocity = v0
 
     # Set the model load point velocity, must be same shape as model.model_time
@@ -71,13 +67,12 @@ class Loglike(tt.Op):
             b,
             Dc,
             mu0,
+            s,
         ) = theta
 
         y_pred = mcmc_rsf_sim(theta, self.times, self.vlps, self.k, self.vref, self.vmax)
         resids = (self.data - y_pred)
-        # myglobals.store_mu_sim(y_pred)
-        # YPREDS.append(y_pred)
-        logp = -1 / 2 * (np.sum(resids ** 2))
+        logp = -1 / (2 * (s ** 2)) * (np.sum(resids ** 2))
 
         return logp
 
