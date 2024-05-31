@@ -254,8 +254,6 @@ class Model(LoadingSystem):
         # Find any critical time points we need to let the integrator know about
         # print('forward model: Find any critical time points we need to let the integrator know about')
         self.critical_times = self._get_critical_times(threshold)
-        print('threshold = ', threshold)
-        print(self.critical_times)
 
         # Solve it
         wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
@@ -278,7 +276,8 @@ class Model(LoadingSystem):
              velocity_contribution) / self.a)
 
         # Calculate displacement from velocity and dt
-        self.results.loadpoint_displacement = self._calculateDiscreteDisplacement(self.loadpoint_velocity)
+        self.results.loadpoint_displacement = \
+            self._calculateDiscreteDisplacement(self.loadpoint_velocity)
 
         # Calculate the slider displacement
         self.results.slider_displacement = \
