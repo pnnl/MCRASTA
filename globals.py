@@ -17,9 +17,9 @@ class Globals:
         self.vel_windowlen = 40
         self.filter_windowlen = 10
         self.q = 5
-        self.ndr = 250000
-        self.nch = 2
-        self.ntune = 20000
+        self.ndr = 200000
+        self.nch = 1
+        self.ntune = 2000
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
@@ -56,19 +56,6 @@ class Globals:
     def set_disp_bounds(self, x):
         self.mindisp = x[0]
         self.maxdisp = x[-1]
-
-    def store_mu_sim(self, m):
-        print('aslkdjgah', id(self))
-
-        if self.mu_sim is not None:
-            self.mu_sim.append(m)
-        else:
-            self.mu_sim = [m]
-
-    def save_mu_sim(self):
-        print('saving', id(self))
-        p = os.path.join(self.rootpath, f'{os.getpid()}.y_preds.npy')
-        np.save(p, np.array(self.mu_sim))
 
 
 myglobals = Globals()

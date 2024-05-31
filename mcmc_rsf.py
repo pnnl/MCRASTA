@@ -65,20 +65,6 @@ def check_file_exist(p, filename):
         return filename
 
 
-# def get_storage_folder():
-#     print('checking if storage directory exists')
-#     outpath = myglobals.make_path('mcmc_out', f'{myglobals.samplename}', myglobals.get_sim_name())
-#     isExisting = os.path.exists(outpath)
-#     if isExisting is False:
-#         print(f'directory does not exist, creating new directory --> {outpath}')
-#         os.makedirs(outpath)
-#         return outpath
-#     elif isExisting is True:
-#         print(f'directory exists, all outputs will be saved to existing directory and any existing files will be '
-#               f'overwritten --> {outpath}')
-#         return outpath
-
-
 # POST MODEL-RUN OPERATIONS AND PLOTTING FUNCTIONS
 def save_trace(idata):
     # saves trace for post-processing
@@ -463,49 +449,6 @@ def check_priors(a, b, Dc, mu0, mus, sigmas):
     sys.exit()
 
 
-# forward RSF model - from Leeman (2016), uses the RSF toolkit from GitHub. rsf.py; state_relations.py; plot.py
-# returns simulated mu value for use in pymc
-# def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
-#     # unpack parameters
-#     a, b, Dc, mu0 = theta
-#
-#     # initialize rsf model
-#     model = rsf.Model()
-#
-#     # Size of dataset
-#     model.datalen = len(t0)
-#
-#     # Set initial conditions
-#     model.mu0 = mu0  # Friction initial (at the reference velocity)
-#     model.a = a  # Empirical coefficient for the direct effect
-#     model.k = k0  # Normalized System stiffness (friction/micron)
-#     model.v = v0[0]  # Initial slider velocity, generally is vlp(t=0)
-#     model.vref = vref0  # Reference velocity, generally vlp(t=0)
-#
-#     state1 = staterelations.DieterichState()
-#     state1.b = b  # Empirical coefficient for the evolution effect
-#     state1.Dc = Dc  # Critical slip distance
-#     # all other parameters are already nondimensionalized, but the state parameter is nd'd in staterelations.py,
-#     # so we need to pass characteristic velocity (vmax) and length (lc) into the fwd model
-#     state1.vmax = vmax
-#     state1.lc = myglobals.lc
-#
-#     model.state_relations = [state1]  # Which state relation we want to use
-#
-#     model.time = t0  # nondimensionalized time
-#     lp_velocity = v0
-#
-#     # Set the model load point velocity, must be same shape as model.model_time
-#     model.loadpoint_velocity = lp_velocity
-#
-#     # Run the model!
-#     model.solve()
-#
-#     mu_sim = model.results.friction
-#
-#     return mu_sim
-
-
 def get_vmax_lc(vlps):
     # define characteristic length and velocity
     # characteristic length = max grain size in gouge = 125 micrometers for most
@@ -523,7 +466,7 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 
     # then remove dimensions
     k0 = myglobals.k * myglobals.lc
-    vlps0 = vlps / vmax
+    vlps0 = (vlps / vmax)
     vref0 = vref / vmax
 
     t0 = times * vmax / lc
@@ -540,6 +483,7 @@ def main():
 
     # observed data
     mutrue, times, vlps, x = get_obs_data()
+    np.save('timetest.npy', times)
     vmax = myglobals.set_vch(vlps)
 
     k, vref = get_constants(vlps)
@@ -568,22 +512,16 @@ def main():
         chains = myglobals.nch
         cores = myglobals.ncores
 
+        # initvals = {'a': 0.005, 'b': 0.005, 'Dc': 50, 'mu0': 0.41}
+
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')
         idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(),
                           discard_tuned_samples=True)
         print(f'inference data = {idata}')
 
-
-        # out_name = f'{myglobals.sim_name}_ypred'
-        # p = myglobals.get_output_storage_folder()
-        # az.to_netcdf('y_pred', os.path.join(p, out_name), group='predicted')
-
         # create storage directory
         myglobals.get_output_storage_folder()
-
-        # m = myglobals.mu_sim
-        # print(id(myglobals), m)
 
         # save model parameter stats
         vsummary = save_stats(idata)

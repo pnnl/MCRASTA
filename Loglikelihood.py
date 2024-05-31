@@ -1,7 +1,10 @@
+import sys
+
 import numpy as np
 from rsfmodel import staterelations, rsf, plot
 import pytensor.tensor as tt
 from globals import myglobals
+import matplotlib.pyplot as plt
 
 
 def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
@@ -31,7 +34,8 @@ def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = np.round(t0, 6)  # nondimensionalized time
+    model.time = t0  # nondimensionalized time
+
     lp_velocity = v0
 
     # Set the model load point velocity, must be same shape as model.model_time
