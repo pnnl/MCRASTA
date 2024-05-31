@@ -17,7 +17,7 @@ class Globals:
         self.vel_windowlen = 40
         self.filter_windowlen = 10
         self.q = 5
-        self.ndr = 500000
+        self.ndr = 250000
         self.nch = 2
         self.ntune = 20000
         self.ncores = 4
