@@ -18,7 +18,7 @@ class Globals:
         self.filter_windowlen = 10
         self.q = 5
         self.ndr = 200000
-        self.nch = 1
+        self.nch = 4
         self.ntune = 2000
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
