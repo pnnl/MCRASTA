@@ -75,6 +75,10 @@ class Loglike(tt.Op):
         ) = theta
 
         y_pred = mcmc_rsf_sim(theta, self.times, self.vlps, self.k, self.vref, self.vmax)
+        if np.any(np.isneginf(y_pred)):
+            # print('infinity working')
+            return -np.inf
+
         resids = (self.data - y_pred)
         logp = (-1 / (2 * (s ** 2))) * (np.sum(resids ** 2))
 

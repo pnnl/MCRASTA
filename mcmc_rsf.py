@@ -517,12 +517,12 @@ def main():
         chains = myglobals.nch
         cores = myglobals.ncores
 
-        # initvals = {'a': 0.005, 'b': 0.005, 'Dc': 50, 'mu0': 0.41}
+        initvals = {'a': 0.005, 'b': 0.005, 'Dc': 50, 'mu0': 0.41}
 
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')
         idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(),
-                          discard_tuned_samples=True)
+                          initvals=initvals, discard_tuned_samples=True)
         print(f'inference data = {idata}')
 
         # create storage directory

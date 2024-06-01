@@ -10,6 +10,10 @@ import time
 import matplotlib.pyplot as plt
 
 
+class IntegrationStop(Exception):
+    pass
+
+
 class IncompleteModelError(Exception):
     """
     Special error case for trying to run the model with inadequate information.
@@ -155,7 +159,8 @@ class Model(LoadingSystem):
         flag = system.velocity_evolution()
 
         if flag == 'badsample':
-            self.stop_integration()
+            raise IntegrationStop()
+            # self.stop_integration()
 
         # Find the loadpoint_velocity corresponding to the most recent time
         # <= the current time.
@@ -169,19 +174,6 @@ class Model(LoadingSystem):
             step_results.append(dtheta_dt)
 
         return step_results
-
-    def stop_integration(self):
-        # sends infinity array back to pymc to reject the sample immediately instead of struggling through
-        friction = np.ones_like(self.time)
-        states = np.ones_like(self.time)
-        self.results.friction = np.inf * friction
-        self.results.states = np.inf * states
-
-        # self.results.friction = wsol[:, 0]
-        # self.results.states = wsol[:, 1:]
-        self.results.time = self.time
-
-        return self.results
 
     def readyCheck(self):
         """
@@ -271,9 +263,19 @@ class Model(LoadingSystem):
         self.critical_times = self._get_critical_times(threshold)
 
         # Solve it
-        wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
-                                                  full_output=True, tcrit=self.critical_times,
-                                                  args=(self,), **odeint_kwargs)
+        try:
+            wsol, self.solver_info = integrate.odeint(self._integrationStep, w0, self.time,
+                                                      full_output=True, tcrit=self.critical_times,
+                                                      args=(self,), **odeint_kwargs)
+        except IntegrationStop as e:
+            # print('integration stopped')
+            # sends infinity array back to pymc to reject the sample immediately instead of struggling through
+            friction = np.ones_like(self.time)
+            states = np.ones_like(self.time)
+            self.results.friction = np.inf * -friction
+            self.results.states = np.inf * -states
+            self.results.time = self.time
+            return self.results
 
         self.results.friction = wsol[:, 0]
         self.results.states = wsol[:, 1:]
