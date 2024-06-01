@@ -1,7 +1,9 @@
 import sys
-
+import warnings
 import numpy as np
 from math import log
+from rsfmodel import rsf
+
 
 class StateRelation(object):
     """
@@ -23,6 +25,7 @@ class StateRelation(object):
         self.state = None
         self.vmax = None
         self.lc = None
+        self.vcomp = None
 
     def velocity_component(self, system):
         """
@@ -33,25 +36,15 @@ class StateRelation(object):
         .. math::
             V_\\text{contribution} = b \\text{ln}\\left(\\frac{V_0 \\theta}{D_c}\\right)
         """
-        # print('look at these variables and see which is causing v contribution to explode')
-        # print(f'b = {self.b}')
-        # print(f'vref = {system.vref}')
-        # print(f'state = {self.state}')
-        # print(f'Dc = {self.Dc}')
-        with np.errstate(invalid='raise'):
-            try:
-                vcomp = self.b * np.log(system.vref * self.state / self.Dc)
-            except FloatingPointError as exc:
-                pass
-                # print(exc)
-                # print('log error, here are the vars that caused it')
-                # print('b = ', self.b)
-                # print('vref = ', system.vref)
-                # print('state = ', self.state)
-                # print('Dc = ', self.Dc)
-                # print(f'system.v={system.v}')
-        # print(f'vcomp = {vcomp}')
-        return self.b * np.log(system.vref * self.state / self.Dc)
+        logcomp = system.vref * self.state / self.Dc
+        if isinstance(logcomp, np.float64):
+            if logcomp < 0 or logcomp == np.inf:
+                return 99999
+            else:
+                self.vcomp = self.b * np.log(system.vref * self.state / self.Dc)
+                return self.vcomp
+        else:
+            return self.b * np.log(system.vref * self.state / self.Dc)
 
 
 class DieterichState(StateRelation):
@@ -75,6 +68,7 @@ class DieterichState(StateRelation):
 
     def set_steady_state(self, system):
         # print(f'SETTING STEADY STATE STATE')
+        state = self.Dc/system.vref
         self.state = self.Dc/system.vref
 
     def evolve_state(self, system):

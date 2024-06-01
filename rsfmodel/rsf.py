@@ -40,29 +40,23 @@ class LoadingSystem(object):
         self.k = None
         self.time = None  # List of times we want answers at
         self.loadpoint_velocity = None  # Matching list of velocities
-        # self.tc = None  # nondimensionalized
 
     def velocity_evolution(self):
         v_contribution = 0
         for state in self.state_relations:
             v_contribution += state.velocity_component(self)
+        ratio = (self.mu - self.mu0 - v_contribution) / self.a
+        if ratio > 10.0:
+            return 'badsample'
+
         try:
             self.v = self.vref * exp((self.mu - self.mu0 - v_contribution) / self.a)
         except OverflowError as exc:
             pass
-            # print(exc)
-            # print('overflow error, here are the vars that caused it')
-            # print('a = ', self.a)
-            # print('vref = ', self.vref)
-            # print('mu = ', self.mu)
-            # print('mu0 = ', self.mu0)
-            # print(f'velocity component = {state.velocity_component(self)}')
-            # print('v_contribution = ', v_contribution)
-            # print('end')
 
     def friction_evolution(self, loadpoint_vel):
+        dmudt = self.k * (loadpoint_vel - self.v)
         return self.k * (loadpoint_vel - self.v)
-        # return self.tc * self.k * (loadpoint_vel - self.v)
 
 
 class Model(LoadingSystem):
@@ -96,6 +90,8 @@ class Model(LoadingSystem):
         self.current_GMT = time.gmtime()
         self.time_stamp = calendar.timegm(self.current_GMT)
         self.homefolder = os.path.expanduser('~')
+        self.new_state = None
+        self.old_state = None
 
     def savetxt(self, fname, line_ending='\n'):
         """ Save the output of the model to a csv file.
@@ -149,11 +145,17 @@ class Model(LoadingSystem):
         step_results : list
         Results of the integration step. dmu/dt first, followed by dtheta/dt for state variables.
         """
-
         system.mu = w[0]
         for i, state_variable in enumerate(system.state_relations):
-            state_variable.state = w[i + 1]
-            system.velocity_evolution()
+            self.new_state = w[i + 1]
+            if np.isinf(self.new_state):
+                self.new_state = 100000
+            state_variable.state = self.new_state
+
+        flag = system.velocity_evolution()
+
+        if flag == 'badsample':
+            self.stop_integration()
 
         # Find the loadpoint_velocity corresponding to the most recent time
         # <= the current time.
@@ -167,6 +169,19 @@ class Model(LoadingSystem):
             step_results.append(dtheta_dt)
 
         return step_results
+
+    def stop_integration(self):
+        # sends infinity array back to pymc to reject the sample immediately instead of struggling through
+        friction = np.ones_like(self.time)
+        states = np.ones_like(self.time)
+        self.results.friction = np.inf * friction
+        self.results.states = np.inf * states
+
+        # self.results.friction = wsol[:, 0]
+        # self.results.states = wsol[:, 1:]
+        self.results.time = self.time
+
+        return self.results
 
     def readyCheck(self):
         """
@@ -264,30 +279,30 @@ class Model(LoadingSystem):
         self.results.states = wsol[:, 1:]
         self.results.time = self.time
 
-        # Calculate slider velocity after we have solved everything
-        velocity_contribution = 0
-        for i, state_variable in enumerate(self.state_relations):
-            # print('forward model: define state_variable.state from soln')
-            state_variable.state = wsol[:, i + 1]
-            velocity_contribution += state_variable.velocity_component(self)
-
-        self.results.slider_velocity = self.vref * np.exp(
-            (self.results.friction - self.mu0 -
-             velocity_contribution) / self.a)
-
-        # Calculate displacement from velocity and dt
-        self.results.loadpoint_displacement = \
-            self._calculateDiscreteDisplacement(self.loadpoint_velocity)
-
-        # Calculate the slider displacement
-        self.results.slider_displacement = \
-            self._calculateContinuousDisplacement(self.results.slider_velocity)
-
-        # Check slider displacement for accumulated error and warn
-        if not self._check_slider_displacement():
-            warnings.warn("Slider displacement differs from prediction by over "
-                          "1%. Smaller requested time resolution should be used "
-                          "If you intend to use the slider displacement output.")
+        # # Calculate slider velocity after we have solved everything
+        # velocity_contribution = 0
+        # for i, state_variable in enumerate(self.state_relations):
+        #     # print('forward model: define state_variable.state from soln')
+        #     state_variable.state = wsol[:, i + 1]
+        #     velocity_contribution += state_variable.velocity_component(self)
+        #
+        # self.results.slider_velocity = self.vref * np.exp(
+        #     (self.results.friction - self.mu0 -
+        #      velocity_contribution) / self.a)
+        #
+        # # Calculate displacement from velocity and dt
+        # self.results.loadpoint_displacement = \
+        #     self._calculateDiscreteDisplacement(self.loadpoint_velocity)
+        #
+        # # Calculate the slider displacement
+        # self.results.slider_displacement = \
+        #     self._calculateContinuousDisplacement(self.results.slider_velocity)
+        #
+        # # Check slider displacement for accumulated error and warn
+        # # if not self._check_slider_displacement():
+        # #     warnings.warn("Slider displacement differs from prediction by over "
+        # #                   "1%. Smaller requested time resolution should be used "
+        # #                   "If you intend to use the slider displacement output.")
 
         return self.results
 
@@ -310,7 +325,10 @@ class Model(LoadingSystem):
         for state_relation in self.state_relations:
             a_minus_b -= state_relation.b
 
-        dmu = a_minus_b * np.log(self.results.slider_velocity[-1] / self.vref)
+        if self.results.slider_velocity[-1] <= 0:
+            dmu = 0
+        else:
+            dmu = a_minus_b * np.log(self.results.slider_velocity[-1] / self.vref)
         dx = -dmu / self.k
 
         predicted_slider_displacement = self.results.loadpoint_displacement[-1] + dx
