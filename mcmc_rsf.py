@@ -198,10 +198,12 @@ def calc_derivative(y, x, window_len=None):
         dydx_smooth = savgol_filter(dydx,
                                     window_length=window_len,
                                     polyorder=1)
+        dydx_smooth[dydx_smooth < 0] = 0.0001
         return dydx_smooth
     else:
         print(f'calculating derivative using gradient because window_len= {window_len}')
         dydx = np.gradient(y, x)
+        dydx[dydx < 0] = 0
         return dydx
 
 
@@ -471,6 +473,7 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 
     t0 = times * vmax / lc
     t0 = t0 - t0[0]
+    # t0 = np.round(t0, 6)
 
     return k0, vlps0, vref0, t0
 
@@ -483,8 +486,10 @@ def main():
 
     # observed data
     mutrue, times, vlps, x = get_obs_data()
-    np.save('timetest.npy', times)
     vmax = myglobals.set_vch(vlps)
+    # plt.figure(100)
+    # plt.plot(x, vlps)
+    # plt.show()
 
     k, vref = get_constants(vlps)
     print(f'k = {k}; vref = {vref}')

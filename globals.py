@@ -17,13 +17,13 @@ class Globals:
         self.vel_windowlen = 40
         self.filter_windowlen = 10
         self.q = 5
-        self.ndr = 200000
-        self.nch = 4
-        self.ntune = 2000
+        self.ndr = 100
+        self.nch = 2
+        self.ntune = 2
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
-        self.threshold = 17
+        self.threshold = 0.23
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)

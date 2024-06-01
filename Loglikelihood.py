@@ -26,7 +26,7 @@ def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
 
     state1 = staterelations.DieterichState()
     state1.b = b  # Empirical coefficient for the evolution effect
-    state1.Dc = Dc / myglobals.lc  # Critical slip distance
+    state1.Dc = Dc / myglobals.lc  # Critical slip distance non-dimensionalized
     # all other parameters are already nondimensionalized, but the state parameter is nd'd in staterelations.py,
     # so we need to pass characteristic velocity (vmax) and length (lc) into the fwd model
     state1.vmax = vmax
