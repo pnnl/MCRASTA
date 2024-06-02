@@ -8,6 +8,7 @@ from gplot import gpl
 import plot_mcmc_results as pmr
 import psutil
 from plotrsfmodel import rsf, staterelations
+# from rsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
 
 ''' this script takes random draws from 
@@ -62,7 +63,7 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 def generate_rsf_data(inputs):
     gpl.read_from_json(gpl.idata_location())
     # print(f'self.threshold = {gpl.threshold}')
-    a, b, Dc, mu0 = inputs
+    a, b, Dc, mu0, s = inputs
 
     # dimensional variables output from mcmc_rsf.py
     times, mutrue, vlps, x = load_section_data()
@@ -71,6 +72,8 @@ def generate_rsf_data(inputs):
 
     mutrue.astype('float32')
     vlps.astype('float32')
+    if np.any(vlps < 0):
+        print('velocities less than 0, check')
 
     k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
@@ -86,7 +89,7 @@ def generate_rsf_data(inputs):
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t0.astype('float32')
+    model.time = times.astype('float32')
 
     # Set the model load point velocity, must be same shape as model.model_time
     model.loadpoint_velocity = vlps.astype('float32')
