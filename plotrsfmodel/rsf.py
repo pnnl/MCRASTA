@@ -163,7 +163,7 @@ class Model(LoadingSystem):
         step_results = [self.dmu_dt]
 
         for state_variable in system.state_relations:
-            dtheta_dt = state_variable.evolve_state(self.v)
+            dtheta_dt = state_variable.evolve_state(self)
             step_results.append(dtheta_dt)
 
         return step_results
