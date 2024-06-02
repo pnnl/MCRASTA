@@ -155,17 +155,18 @@ def get_model_values():
     b = modelvals.b.values
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
+    s = modelvals.s.values
 
-    return a, b, Dc, mu0
+    return a, b, Dc, mu0, s
 
 
 def draw_from_posteriors(ndraws=1000):
     # draw values from the 89% credible interval for each parameter
     # then generate rsf data for draws
 
-    a, b, Dc, mu0 = get_model_values()
+    a, b, Dc, mu0, s = get_model_values()
 
-    modelvals = np.column_stack((a, b, Dc, mu0))
+    modelvals = np.column_stack((a, b, Dc, mu0, s))
 
     draws = modelvals[np.random.choice(modelvals.shape[0], ndraws, replace=False), :]
 
@@ -202,11 +203,12 @@ if __name__ == '__main__':
     bd = drawed_vars[:, 1].astype('float32')
     Dcd = drawed_vars[:, 2].astype('float32')
     mu0d = drawed_vars[:, 3].astype('float32')
+    sd = drawed_vars[:, 4].astype('float32')
 
     pathname = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
     with Pool(processes=20, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, zip(ad, bd, Dcd, mu0d))
+        outputs = pool.map(generate_rsf_data, zip(ad, bd, Dcd, mu0d, sd))
         op = np.array(outputs)
         np.save(pathname, op)
 
