@@ -10,7 +10,6 @@ import psutil
 from plotrsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
 
-
 ''' this script takes random draws from 
 the posterior distribution, runs the forward model for each set.
 It imports logp data and finds the best fit parameter set, then
@@ -142,9 +141,6 @@ def write_best_estimates(bvars, lpbest):
             f.write(f'{string}: {val}\n')
 
 
-
-
-
 def get_model_values():
     # p = os.path.join(gpl.idata_location(), f'out_500000d4ch_{gpl.section_id}_idata')
 
@@ -195,7 +191,7 @@ if __name__ == '__main__':
     t, mutrue, vlps, x = load_section_data()
     parent_dir = gpl.get_musim_storage_folder()
 
-    num_draws = 4000
+    num_draws = 2000
     # a, b, Dc, mu0 = get_model_values(idata)
     drawed_vars = draw_from_posteriors(ndraws=num_draws)
 
@@ -214,7 +210,3 @@ if __name__ == '__main__':
     print('done')
     print(f'saved files are here: {pathname}')
     # next(pathname, op)
-
-
-
-

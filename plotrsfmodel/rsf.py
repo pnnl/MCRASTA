@@ -261,27 +261,27 @@ class Model(LoadingSystem):
         self.results.time = self.time
 
         # Calculate slider velocity after we have solved everything
-        velocity_contribution = 0
-        for i, state_variable in enumerate(self.state_relations):
-            state_variable.state = wsol[:, i + 1]
-            velocity_contribution += state_variable.velocity_component(self)
+        # velocity_contribution = 0
+        # for i, state_variable in enumerate(self.state_relations):
+        #     state_variable.state = wsol[:, i + 1]
+        #     velocity_contribution += state_variable.velocity_component(self)
 
-        self.results.slider_velocity = self.vref * np.exp(
-            (self.results.friction - self.mu0 -
-             velocity_contribution) / self.a)
+        # self.results.slider_velocity = self.vref * np.exp(
+        #     (self.results.friction - self.mu0 -
+        #      velocity_contribution) / self.a)
 
-        # Calculate displacement from velocity and dt
-        self.results.loadpoint_displacement = self._calculateDiscreteDisplacement(self.loadpoint_velocity)
-
-        # Calculate the slider displacement
-        self.results.slider_displacement = \
-            self._calculateContinuousDisplacement(self.results.slider_velocity)
-
-        # Check slider displacement for accumulated error and warn
-        if not self._check_slider_displacement():
-            warnings.warn("Slider displacement differs from prediction by over "
-                          "1%. Smaller requested time resolution should be used "
-                          "If you intend to use the slider displacement output.")
+        # # Calculate displacement from velocity and dt
+        # self.results.loadpoint_displacement = self._calculateDiscreteDisplacement(self.loadpoint_velocity)
+        #
+        # # Calculate the slider displacement
+        # self.results.slider_displacement = \
+        #     self._calculateContinuousDisplacement(self.results.slider_velocity)
+        #
+        # # Check slider displacement for accumulated error and warn
+        # if not self._check_slider_displacement():
+        #     warnings.warn("Slider displacement differs from prediction by over "
+        #                   "1%. Smaller requested time resolution should be used "
+        #                   "If you intend to use the slider displacement output.")
 
         return self.results
 

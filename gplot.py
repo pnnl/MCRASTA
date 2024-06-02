@@ -19,15 +19,15 @@ class Globals:
         self.vel_windowlen = None
         self.filter_windowlen = None
         self.q = None
-        self.ndr = 500000
-        self.nch = 2
+        self.ndr = 100000
+        self.nch = 4
         self.ntune = None
         self.ncores = 4
         # self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
         self.aminbmode = None
-        self.threshold = 17
+        self.threshold = 0.23
         self.nrstep = 1
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
         self.tcrit = None
@@ -87,19 +87,6 @@ class Globals:
         self.mindisp = x[0]
         self.maxdisp = x[-1]
 
-    def store_mu_sim(self, m):
-        print('aslkdjgah', id(self))
-
-        if self.mu_sim is not None:
-            self.mu_sim.append(m)
-        else:
-            self.mu_sim = [m]
-
-    def save_mu_sim(self):
-        print('saving', id(self))
-        p = os.path.join(self.rootpath, f'{os.getpid()}.y_preds.npy')
-        np.save(p, np.array(self.mu_sim))
-
     def read_from_json(self, dirpath):
         jpath = os.path.join(dirpath, 'out.json')
         with open(jpath, 'r') as rfile:
@@ -120,7 +107,7 @@ class Globals:
             gpl.nch = js.get('n_chains')
             gpl.ntune = js.get('n_tune')
             vref = js.get('vref')
-            gpl.threshold = 17
+            gpl.threshold = js.get('threshold')
 
             priors_info = js.get('prior_mus_sigmas', 'priors info not available')
             mus = priors_info[0]
