@@ -187,14 +187,13 @@ def calc_derivative(y, x, window_len=None):
         # dydx = np.gradient(y_smooth,x_smooth)
         dxdN = savgol_filter(x,
                              window_length=window_len,
-                             polyorder=1,
+                             polyorder=3,
                              deriv=1)
         dydN = savgol_filter(y,
                              window_length=window_len,
-                             polyorder=1,
+                             polyorder=3,
                              deriv=1)
         dydx = dydN / dxdN
-
         dydx_smooth = savgol_filter(dydx,
                                     window_length=window_len,
                                     polyorder=1)
@@ -228,35 +227,36 @@ def get_obs_data():
     mu = df['mu'].to_numpy()
     x = df['vdcdt_um'].to_numpy()
 
-    # calculate loading velocities = dx/dt
-    vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
-
     # filters and downsamples data
-    f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
+    f_ds, mu_f = downsample_dataset(mu, t, x)
 
-    # sections data - make this into a loop to run multiple sections one after another
+    # sections data
     sectioned_data, start_idx, end_idx = section_data(f_ds)
 
     # need to check that time vals are monotonically increasing after being processed
     t = sectioned_data[:, 1]
+    x = sectioned_data[:, 2]
     print('checking that time series is monotonic after processing')
-    print(isMonotonic(t))
+    print(f'times monotonic: {isMonotonic(t)}')
+    print(f'x monotonic: {isMonotonic(x)}')
 
     # remove non-monotonically increasing time indices if necessary
-    cleaned_data = remove_non_monotonic(t, sectioned_data, axis=0)
+    cleaned_data = remove_non_monotonic(t, x, sectioned_data, axis=0)
 
     # data for pymc
     mutrue = cleaned_data[:, 0]
-    times = cleaned_data[:, 1]
-    vlps = cleaned_data[:, 2]
-    x = cleaned_data[:, 3]
+    t = cleaned_data[:, 1]
+    x = cleaned_data[:, 2]
+
+    # calculate loading velocities = dx/dt
+    vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
 
     myglobals.set_disp_bounds(x)
     plotx = x * um_to_mm
     # plot raw data section with filtered/downsampled for reference
     df_raw = df[(df['vdcdt_um'] > myglobals.mindisp) & (df['vdcdt_um'] < myglobals.maxdisp)]
     plt.figure(1)
-    plt.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.2, label='raw data')
+    plt.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.5, label='raw data')
     plt.plot(plotx, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
     plt.xlabel('displacement (mm)')
     plt.ylabel('mu')
@@ -265,7 +265,7 @@ def get_obs_data():
     plt.legend()
     # plt.show()
 
-    return mutrue, times, vlps, x
+    return mutrue, t, vlps, x
 
 
 def isMonotonic(A):
@@ -273,18 +273,27 @@ def isMonotonic(A):
             all(A[i] >= A[i + 1] for i in range(len(A) - 1)))
 
 
-def remove_non_monotonic(times, data, axis=0):
-    # this may have only been an issue before removing mu values < 0 from the dataset, keeping it in just in case
+def remove_non_monotonic(times, x, data, axis=0):
+    nmi = []
     if not np.all(np.diff(times) >= 0):
         print('time series can become non-monotonic after downsampling which is an issue for the sampler')
-        print('now removing non-monotonic t and mu values from dataset')
+        print('now removing non-monotonic t indices from (t, mu, x) dataset')
         print(f'input downsampled data shape = {data.shape}')
         # Find the indices where the array is not monotonically increasing
-        non_monotonic_indices = np.where(np.diff(times) < 0)[0]
+        nmi_t = np.where(np.diff(times) < 0)[0]
+        nmi.append(nmi_t)
         # print(f'non monotonic time indices = {non_monotonic_indices}')
 
+    if not np.all(np.diff(x) >= 0):
+        print('displacement series can become non-monotonic after downsampling which is an issue for the sampler')
+        print('now removing non-monotonic x indices from (t, mu, x) dataset')
+        print(f'input downsampled data shape = {data.shape}')
+        nmi_x = np.where(np.diff(x) < 0)[0]
+        nmi.append(nmi_x)
+
+    if nmi:
         # Remove the non-monotonic data points
-        cleaned_data = np.delete(data, non_monotonic_indices, axis)
+        cleaned_data = np.delete(data, nmi, axis)
         print('removed bad data? should be True')
         print(isMonotonic(cleaned_data[:, 1]))
         return cleaned_data
@@ -324,12 +333,12 @@ def read_hdf(fullpath):
     return df, names
 
 
-def downsample_dataset(mu, t, vlps, x):
+def downsample_dataset(mu, t, x):
     # low pass filter
-    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=1, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=3, mode='mirror')
 
     # stack time and mu arrays to sample together
-    f_data = np.column_stack((mu_f, t, vlps, x))
+    f_data = np.column_stack((mu_f, t, x))
 
     # downsamples to every qth sample after applying low-pass filter along columns
     f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
@@ -344,7 +353,7 @@ def downsample_dataset(mu, t, vlps, x):
 def section_data(data):
     df0 = pd.DataFrame(data)
     # changing column names
-    df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
+    df = df0.set_axis(['mu', 't', 'x'], axis=1)
 
     # cut off first 100 points to avoid sectioning mistakes
     df = df.iloc[100:]
@@ -487,9 +496,9 @@ def main():
     # observed data
     mutrue, times, vlps, x = get_obs_data()
     vmax = myglobals.set_vch(vlps)
-    # plt.figure(100)
-    # plt.plot(x, vlps)
-    # plt.show()
+
+    if np.any(vlps < 0):
+        print('NEGATIVE VELOCITIES - FIX!')
 
     k, vref = get_constants(vlps)
     print(f'k = {k}; vref = {vref}')
@@ -517,12 +526,12 @@ def main():
         chains = myglobals.nch
         cores = myglobals.ncores
 
-        initvals = {'a': 0.005, 'b': 0.005, 'Dc': 50, 'mu0': 0.41}
+        # initvals = {'a': 0.005, 'b': 0.005, 'Dc': 50, 'mu0': 0.41}
 
         print(f'num draws = {draws}; num chains = {chains}')
         print('starting sampler')
         idata = pm.sample(draws=draws, tune=tune, chains=chains, cores=cores, step=pm.Metropolis(),
-                          initvals=initvals, discard_tuned_samples=True)
+                          discard_tuned_samples=True)
         print(f'inference data = {idata}')
 
         # create storage directory
@@ -548,7 +557,7 @@ def main():
                      file_name=f'{myglobals.samplename}_proc.hdf5',
                      times=times)
 
-    plt.show()
+    # plt.show()
 
     print('simulation complete')
 

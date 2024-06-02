@@ -14,8 +14,8 @@ class Globals:
         self.k = 0.00153
         self.lc = 125
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
-        self.vel_windowlen = 40
-        self.filter_windowlen = 10
+        self.vel_windowlen = 10
+        self.filter_windowlen = 20
         self.q = 5
         self.ndr = 100000
         self.nch = 4
@@ -23,7 +23,7 @@ class Globals:
         self.ncores = 4
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
-        self.threshold = 0.23
+        self.threshold = 0.1
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
