@@ -437,7 +437,7 @@ def get_priors():
     #
     # check_priors(a, b, Dc, mu0, mus, sigmas)
 
-    s = pm.HalfNormal('s', sigma=1)
+    s = pm.HalfNormal('s', sigma=0.1)
     return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
 
     # return a, b, Dc, mu0, mus, sigmas
