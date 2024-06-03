@@ -16,12 +16,12 @@ myglobals = globals.Globals()
 um_to_mm = 0.001
 
 
-def downsample_dataset(mu, t, vlps, x):
+def downsample_dataset(mu, t, x):
     # low pass filter
-    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=1, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=3, mode='mirror')
 
     # stack time and mu arrays to sample together
-    f_data = np.column_stack((mu_f, t, vlps, x))
+    f_data = np.column_stack((mu_f, t, x))
 
     # downsamples to every qth sample after applying low-pass filter along columns
     f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
@@ -38,7 +38,7 @@ def downsample_dataset(mu, t, vlps, x):
 def section_data(data):
     df0 = pd.DataFrame(data)
     # changing column names
-    df = df0.set_axis(['mu', 't', 'vlps', 'x'], axis=1)
+    df = df0.set_axis(['mu', 't', 'x'], axis=1)
 
     # cut off first 100 points to avoid sectioning mistakes
     df = df.iloc[100:]
@@ -107,18 +107,27 @@ def isMonotonic(A):
             all(A[i] >= A[i + 1] for i in range(len(A) - 1)))
 
 
-def remove_non_monotonic(times, data, axis=0):
-    # this may have only been an issue before removing mu values < 0 from the dataset, keeping it in just in case
+def remove_non_monotonic(times, x, data, axis=0):
+    nmi = []
     if not np.all(np.diff(times) >= 0):
         print('time series can become non-monotonic after downsampling which is an issue for the sampler')
-        print('now removing non-monotonic t and mu values from dataset')
+        print('now removing non-monotonic t indices from (t, mu, x) dataset')
         print(f'input downsampled data shape = {data.shape}')
         # Find the indices where the array is not monotonically increasing
-        non_monotonic_indices = np.where(np.diff(times) < 0)[0]
+        nmi_t = np.where(np.diff(times) < 0)[0]
+        nmi.append(nmi_t)
         # print(f'non monotonic time indices = {non_monotonic_indices}')
 
+    if not np.all(np.diff(x) >= 0):
+        print('displacement series can become non-monotonic after downsampling which is an issue for the sampler')
+        print('now removing non-monotonic x indices from (t, mu, x) dataset')
+        print(f'input downsampled data shape = {data.shape}')
+        nmi_x = np.where(np.diff(x) < 0)[0]
+        nmi.append(nmi_x)
+
+    if nmi:
         # Remove the non-monotonic data points
-        cleaned_data = np.delete(data, non_monotonic_indices, axis)
+        cleaned_data = np.delete(data, nmi, axis)
         print('removed bad data? should be True')
         print(isMonotonic(cleaned_data[:, 1]))
         return cleaned_data
@@ -138,17 +147,22 @@ def calc_derivative(y, x, window_len=None):
         # dydx = np.gradient(y_smooth,x_smooth)
         dxdN = savgol_filter(x,
                              window_length=window_len,
-                             polyorder=1,
+                             polyorder=3,
                              deriv=1)
+        # plt.plot(x, dxdN)
+        # plt.show()
+
         dydN = savgol_filter(y,
                              window_length=window_len,
-                             polyorder=1,
+                             polyorder=3,
                              deriv=1)
         dydx = dydN / dxdN
 
         dydx_smooth = savgol_filter(dydx,
                                     window_length=window_len,
                                     polyorder=1)
+
+        dydx_smooth[dydx_smooth < 0] = 0.0001
         return dydx_smooth
     else:
         print(f'calculating derivative using gradient because window_len= {window_len}')
@@ -207,16 +221,36 @@ def get_obs_data(samplename):
     df, names = read_hdf(fullpath)
 
     # comment this in when deciding which displacement sections to use
-    preplot(df, names)
+    # preplot(df, names)
 
     # first remove any mu < 0 data from experiment
     df = df[(df['mu'] > 0)]
 
     # convert to numpy arrays
     t = df['time_s'].to_numpy()
-    t = np.round(t, 2)
     mu = df['mu'].to_numpy()
     x = df['vdcdt_um'].to_numpy()
+
+    # filters and downsamples data
+    f_ds, mu_f = downsample_dataset(mu, t, x)
+
+    # sections data - make this into a loop to run multiple sections one after another
+    sectioned_data, start_idx, end_idx = section_data(f_ds)
+
+    # need to check that time vals are monotonically increasing after being processed
+    t = sectioned_data[:, 1]
+    x = sectioned_data[:, 2]
+    print('checking that time series is monotonic after processing')
+    print(isMonotonic(t))
+    print(isMonotonic(x))
+
+    # remove non-monotonically increasing time indices if necessary
+    cleaned_data = remove_non_monotonic(t, x, sectioned_data, axis=0)
+
+    # data for pymc
+    mutrue = cleaned_data[:, 0]
+    t = cleaned_data[:, 1]
+    x = cleaned_data[:, 2]
 
     # calculate loading velocities = dx/dt
     vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
@@ -226,27 +260,7 @@ def get_obs_data(samplename):
     plt.ylabel('velocity (um/s)')
     # plt.show()
 
-    # filters and downsamples data
-    f_ds, mu_f = downsample_dataset(mu, t, vlps, x)
-
-    # sections data - make this into a loop to run multiple sections one after another
-    sectioned_data, start_idx, end_idx = section_data(f_ds)
-
-    # need to check that time vals are monotonically increasing after being processed
-    t = sectioned_data[:, 1]
-    print('checking that time series is monotonic after processing')
-    print(isMonotonic(t))
-
-    # remove non-monotonically increasing time indices if necessary
-    cleaned_data = remove_non_monotonic(t, sectioned_data, axis=0)
-
-    # data for pymc
-    mutrue = cleaned_data[:, 0]
-    times = cleaned_data[:, 1]
-    vlps = cleaned_data[:, 2]
-    x = cleaned_data[:, 3]
-
-    determine_threshold(vlps, times)
+    determine_threshold(vlps, t)
 
     myglobals.set_disp_bounds(x)
     print(myglobals.mindisp)
@@ -271,7 +285,7 @@ def get_obs_data(samplename):
     plt.legend()
     plt.show()
 
-    return mutrue, times, vlps, x, sample_name
+    return mutrue, t, vlps, x, sample_name
 
 
 def main():
