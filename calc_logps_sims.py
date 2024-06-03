@@ -9,7 +9,7 @@ from gplot import gpl
 import plot_mcmc_results as pmr
 import itertools
 import numpy as np
-from plotrsfmodel import rsf, staterelations
+from rsfmodel import rsf, staterelations
 import matplotlib.pyplot as plt
 import os
 import cProfile
@@ -167,7 +167,7 @@ def get_dataset():
     # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
     # 'old' data = had to fill in parameters manually
     # if there's no .json in the mcmc results folder, then the data is type 'old'
-    dataset_type = 'old'
+    dataset_type = 'new'
     if dataset_type == 'old':
         k, vref = get_constants(vlps)
     elif dataset_type == 'new':
@@ -191,21 +191,14 @@ if __name__ == '__main__':
     parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(gpl.idata_location())
-    determine_threshold(vlps, times)
+    # determine_threshold(vlps, times)
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0, s = get_model_values(idata)
-    a = a
-    b = b
+    # a = a
+    # b = b
     Dc = Dc / gpl.lc
-    mu0 = mu0
-    #
-    # at = a[500000:2000000]
-    # bt = b[500000:2000000]
-    # Dct = Dc[500000:2000000]
-    # mu0t = mu0[500000:2000000]
-
-    # stepsize = 50000
+    # mu0 = mu0
 
     pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}')
 
