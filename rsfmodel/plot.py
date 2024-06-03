@@ -130,14 +130,14 @@ def dispPlot(system):
     ax4 = plt.subplot(414, sharex=ax1)
     ax1.plot(system.results.loadpoint_displacement, system.results.friction, color='k')
     ax2.plot(system.results.loadpoint_displacement, system.results.states, color='k')
-    ax3.plot(system.results.loadpoint_displacement, system.results.slider_velocity, color='k')
-    ax4.plot(system.results.loadpoint_displacement, system.loadpoint_velocity, color='k')
+    # ax3.plot(system.results.loadpoint_displacement, system.results.slider_velocity, color='k')
+    # ax4.plot(system.results.loadpoint_displacement, system.loadpoint_velocity, color='k')
     ax1.set_ylabel('Friction')
     ax2.set_ylabel('State')
     ax3.set_ylabel('Slider Velocity')
     ax4.set_ylabel('Loadpoint Velocity')
     ax4.set_xlabel('Displacement')
-    # plt.show()
+    plt.show()
     return fig, ax1, ax2, ax3, ax4
 
 def timePlot(system):
@@ -175,5 +175,5 @@ def timePlot(system):
     ax3.set_ylabel('Slider Velocity')
     ax4.set_ylabel('Loadpoint Velocity')
     ax4.set_xlabel('Time')
-    # plt.show()
+    plt.show()
     return fig, ax1, ax2, ax3, ax4
