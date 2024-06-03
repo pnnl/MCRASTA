@@ -11,3 +11,4 @@ customdist_test.py
 .npy
 phdtest.py
 .idea
+testing.py
