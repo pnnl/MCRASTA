@@ -2,20 +2,14 @@ import sys
 from datetime import datetime
 import time
 from multiprocessing import Process, Queue, Pool
-
-import psutil
-
 from gplot import gpl
-import plot_mcmc_results as pmr
-import itertools
 import numpy as np
 from rsfmodel import rsf, staterelations
 import matplotlib.pyplot as plt
 import os
-import cProfile
 import arviz as az
 import pandas as pd
-import gc
+
 
 ''' this script calculates and returns the goodness of fit 
     metric (sum of squares) for all parameter estimates '''
