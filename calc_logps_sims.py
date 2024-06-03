@@ -115,7 +115,6 @@ def generate_rsf_data(inputs):
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
-    # time is the only variable that needs to be re-nondimensionalized...?
     k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
     # set up rsf model
@@ -191,7 +190,7 @@ if __name__ == '__main__':
     parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(gpl.idata_location())
-    # determine_threshold(vlps, times)
+    determine_threshold(vlps, times)
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0, s = get_model_values(idata)
