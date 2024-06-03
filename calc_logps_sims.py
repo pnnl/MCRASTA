@@ -191,7 +191,7 @@ if __name__ == '__main__':
 
     pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}')
 
-    with Pool(processes=20, maxtasksperchild=1) as pool:
+    with Pool(processes=30, maxtasksperchild=1) as pool:
         outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0, s))
 
     op = np.array(outputs)
