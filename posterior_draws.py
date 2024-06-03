@@ -5,9 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from gplot import gpl
-import plot_mcmc_results as pmr
-import psutil
-# from plotrsfmodel import rsf, staterelations
 from rsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
 
