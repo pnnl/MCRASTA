@@ -193,7 +193,7 @@ if __name__ == '__main__':
     t, mutrue, vlps, x = load_section_data()
     parent_dir = gpl.get_musim_storage_folder()
 
-    num_draws = 2000
+    num_draws = 4000
     # a, b, Dc, mu0 = get_model_values(idata)
     drawed_vars = draw_from_posteriors(ndraws=num_draws)
 
