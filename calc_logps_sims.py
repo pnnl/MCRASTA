@@ -195,10 +195,6 @@ if __name__ == '__main__':
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0, s = get_model_values(idata)
-    # a = a
-    # b = b
-    Dc = Dc / gpl.lc
-    # mu0 = mu0
 
     pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}')
 
