@@ -70,8 +70,8 @@ def generate_rsf_data(inputs):
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
-    mutrue.astype('float32')
-    vlps.astype('float32')
+    mutrue
+    vlps
     if np.any(vlps < 0):
         print('velocities less than 0, check')
 
@@ -84,24 +84,24 @@ def generate_rsf_data(inputs):
     model.vref = vref0  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
-    state1.vmax = vmax.astype('float32')
+    state1.vmax = vmax
     state1.lc = gpl.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t0.astype('float32')
+    model.time = t0
 
     # Set the model load point velocity, must be same shape as model.model_time
-    model.loadpoint_velocity = vlps.astype('float32')
+    model.loadpoint_velocity = vlps0
 
     model.mu0 = mu0
     model.a = a
     state1.b = b
-    state1.Dc = Dc
+    state1.Dc = Dc / gpl.lc
 
     model.solve(threshold=gpl.threshold)
 
-    mu_sim = model.results.friction.astype('float32')
+    mu_sim = model.results.friction
 
     # resids = np.transpose(mutrue) - mu_sim
     # rsq = resids ** 2
@@ -199,11 +199,11 @@ if __name__ == '__main__':
     # a, b, Dc, mu0 = get_model_values(idata)
     drawed_vars = draw_from_posteriors(ndraws=num_draws)
 
-    ad = drawed_vars[:, 0].astype('float32')
-    bd = drawed_vars[:, 1].astype('float32')
-    Dcd = drawed_vars[:, 2].astype('float32')
-    mu0d = drawed_vars[:, 3].astype('float32')
-    sd = drawed_vars[:, 4].astype('float32')
+    ad = drawed_vars[:, 0]
+    bd = drawed_vars[:, 1]
+    Dcd = drawed_vars[:, 2]
+    mu0d = drawed_vars[:, 3]
+    sd = drawed_vars[:, 4]
 
     pathname = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
