@@ -50,7 +50,7 @@ class LoadingSystem(object):
         for state in self.state_relations:
             v_contribution += state.velocity_component(self)
         ratio = (self.mu - self.mu0 - v_contribution) / self.a
-        if ratio > 10.0:
+        if np.abs(ratio) > 10.0:
             return 'badsample'
 
         try:
@@ -91,46 +91,7 @@ class Model(LoadingSystem):
         self.results = namedtuple("results", ["time", "loadpoint_displacement",
                                               "slider_velocity", "friction",
                                               "states", "slider_displacement"])
-        self.current_GMT = time.gmtime()
-        self.time_stamp = calendar.timegm(self.current_GMT)
-        self.homefolder = os.path.expanduser('~')
         self.new_state = None
-        self.old_state = None
-
-    def savetxt(self, fname, line_ending='\n'):
-        """ Save the output of the model to a csv file.
-        """
-        print('TEST TO SEE IF THIS GETS CALLED')
-        with open(fname, 'w') as f:
-            # Model Properties
-            f.write(f'mu0 = {self.mu0}{line_ending}')
-            f.write(f'a = {self.a}{line_ending}')
-            f.write(f'vref = {self.vref}{line_ending}')
-            f.write(f'k = {self.k}{line_ending}')
-            for i, state in enumerate(self.state_relations):
-                f.write(f'State {i + 1}{line_ending}')
-                f.write(str(state))
-
-            # Header
-            f.write('Time,Loadpoint_Displacement,Slider_Velocity,Friction,')
-            f.write(f'Slider_Displacement')
-            for i, state in enumerate(self.state_relations):
-                f.write(f',State_{i + 1}')
-            f.write(line_ending)
-
-            # Data
-            i = 0
-            for row in zip(self.results.time,
-                           self.results.loadpoint_displacement,
-                           self.results.slider_velocity,
-                           self.results.friction,
-                           self.results.slider_displacement):
-                t, lp_disp, s_vel, fric, s_disp = row
-                f.write(f'{t},{lp_disp},{s_vel},{fric},{s_disp}')
-                for state in self.state_relations:
-                    f.write(f',{state.state[i]}')
-                f.write(f'{line_ending}')
-                i += 1
 
     def _integrationStep(self, w, t, system):
         """ Do the calculation for a time-step
@@ -160,7 +121,6 @@ class Model(LoadingSystem):
 
         if flag == 'badsample':
             raise IntegrationStop()
-            # self.stop_integration()
 
         # Find the loadpoint_velocity corresponding to the most recent time
         # <= the current time.
@@ -244,22 +204,17 @@ class Model(LoadingSystem):
         # print('FORWARD MODEL BEGIN MODEL.SOLVE')
         odeint_kwargs = dict(rtol=1e-3, atol=1e-3, mxstep=1000)
         odeint_kwargs.update(kwargs)
-        # print('forward model: odeint_kwargs')
 
         # Make sure we have everything set before we try to run
         self.readyCheck()
 
         # Initial conditions at t = 0
-        # print('forward model: set initial conditions at t=0')
         w0 = [self.mu0]
         for state_variable in self.state_relations:
-            # print('forward model: set state var')
             state_variable.set_steady_state(self)
-            # print('forward model: append state var')
             w0.append(state_variable.state)
 
         # Find any critical time points we need to let the integrator know about
-        # print('forward model: Find any critical time points we need to let the integrator know about')
         self.critical_times = self._get_critical_times(threshold)
 
         # Solve it
@@ -268,8 +223,8 @@ class Model(LoadingSystem):
                                                       full_output=True, tcrit=self.critical_times,
                                                       args=(self,), **odeint_kwargs)
         except IntegrationStop as e:
-            # print('integration stopped')
-            # sends infinity array back to pymc to reject the sample immediately instead of struggling through
+            # sends negative infinity array back to pymc (via Loglikelihood) to reject the sample immediately instead
+            # of struggling through the rest of the integration
             friction = np.ones_like(self.time)
             states = np.ones_like(self.time)
             self.results.friction = np.inf * -friction
@@ -281,100 +236,4 @@ class Model(LoadingSystem):
         self.results.states = wsol[:, 1:]
         self.results.time = self.time
 
-        # # Calculate slider velocity after we have solved everything
-        # velocity_contribution = 0
-        # for i, state_variable in enumerate(self.state_relations):
-        #     # print('forward model: define state_variable.state from soln')
-        #     state_variable.state = wsol[:, i + 1]
-        #     velocity_contribution += state_variable.velocity_component(self)
-        #
-        # self.results.slider_velocity = self.vref * np.exp(
-        #     (self.results.friction - self.mu0 -
-        #      velocity_contribution) / self.a)
-        #
-        # # Calculate displacement from velocity and dt
-        # self.results.loadpoint_displacement = \
-        #     self._calculateDiscreteDisplacement(self.loadpoint_velocity)
-        #
-        # # Calculate the slider displacement
-        # self.results.slider_displacement = \
-        #     self._calculateContinuousDisplacement(self.results.slider_velocity)
-        #
-        # # Check slider displacement for accumulated error and warn
-        # # if not self._check_slider_displacement():
-        # #     warnings.warn("Slider displacement differs from prediction by over "
-        # #                   "1%. Smaller requested time resolution should be used "
-        # #                   "If you intend to use the slider displacement output.")
-
         return self.results
-
-    def _check_slider_displacement(self, tol=0.05):
-        """
-        Checks that the slider displacement total is within a given tolerance
-        of the prediction from steady-state theory. Defaults to 1%.
-
-        Parameters
-        ----------
-        tol : float
-            Maximum error tolerated before returns False.
-
-        Returns
-        -------
-        Is Within Tolerance : boolean
-            False if out of tolerance, true if in tolerance.
-        """
-        a_minus_b = self.a
-        for state_relation in self.state_relations:
-            a_minus_b -= state_relation.b
-
-        if self.results.slider_velocity[-1] <= 0:
-            dmu = 0
-        else:
-            dmu = a_minus_b * np.log(self.results.slider_velocity[-1] / self.vref)
-        dx = -dmu / self.k
-
-        predicted_slider_displacement = self.results.loadpoint_displacement[-1] + dx
-        actual_slider_diaplacement = self.results.slider_displacement[-1]
-
-        difference = np.abs(predicted_slider_displacement - actual_slider_diaplacement) / predicted_slider_displacement
-
-        if difference > tol:
-            return False
-        else:
-            return True
-
-    def _calculateContinuousDisplacement(self, velocity):
-        """
-        Calculate the displacement of the slider by integrating the velocity.
-
-        Parameters
-        ----------
-        velocity : list
-            List of velocity values.
-
-        Returns
-        -------
-        displacement : ndarray
-            List of displacement values.
-        """
-        return integrate.cumtrapz(velocity, self.time, initial=0)
-
-    def _calculateDiscreteDisplacement(self, velocity):
-        """
-        Calculate displacement in a discrete way that returns an equal size
-        result.
-
-        Parameters
-        ----------
-        velocity : list
-            List of velocity values.
-
-        Returns
-        -------
-        displacement : ndarray
-            List of displacement values.
-        """
-        dt = np.ediff1d(self.results.time)
-        displacement = np.cumsum(velocity[:-1] * dt)
-        displacement = np.insert(displacement, 0, 0)
-        return displacement
