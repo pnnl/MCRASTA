@@ -7,8 +7,8 @@ import pandas as pd
 from gplot import gpl
 import plot_mcmc_results as pmr
 import psutil
-from plotrsfmodel import rsf, staterelations
-# from rsfmodel import rsf, staterelations
+# from plotrsfmodel import rsf, staterelations
+from rsfmodel import rsf, staterelations
 from multiprocessing import Process, Queue, Pool
 
 ''' this script takes random draws from 
@@ -70,8 +70,6 @@ def generate_rsf_data(inputs):
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
-    mutrue
-    vlps
     if np.any(vlps < 0):
         print('velocities less than 0, check')
 
