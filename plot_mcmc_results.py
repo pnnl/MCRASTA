@@ -182,7 +182,7 @@ def generate_rsf_data(idata, nrplot=gpl.nrplot):
     modelvals = get_model_vals(idata, combined=True)
     a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
 
-    # dimensional variables output from mcmc_rsf.py
+    # dimensional variables output from mcrasta.py
     times, mutrue, vlps, x = load_section_data()
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
@@ -304,7 +304,7 @@ def save_figs(out_folder):
 def plot_priors_posteriors(modelvals):
     color = 'firebrick'
     posts = get_posterior_data(modelvals, return_aminb=False, thin_data=False)
-    # define priors same as in mcmc_rsf.py - get this info from out file
+    # define priors same as in mcrasta.py - get this info from out file
     mus, sigmas = gpl.get_prior_parameters()
     xmaxs = [0.05, 0.05, 180, 1.25, 5]
 
@@ -317,7 +317,7 @@ def plot_priors_posteriors(modelvals):
     mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
     s = pm.HalfNormal.dist(sigma=0.1)
 
-    # take same number of draws as in mcmc_rsf.py
+    # take same number of draws as in mcrasta.py
     vpriors = pm.draw([a, b, Dc, mu0, s], draws=gpl.ndr * gpl.nch)
 
     for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', f'{Dclabel}', f'{mu0label}', r'$\sigma$'), xmaxs)):

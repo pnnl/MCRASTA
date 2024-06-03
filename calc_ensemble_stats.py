@@ -97,7 +97,7 @@ def generate_rsf_data(inputs):
     # print(f'self.threshold = {gpl.threshold}')
     a, b, Dc, mu0 = inputs
 
-    # dimensional variables output from mcmc_rsf.py
+    # dimensional variables output from mcrasta.py
     times, mutrue, vlps, x = load_section_data()
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
