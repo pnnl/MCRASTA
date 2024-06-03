@@ -27,7 +27,7 @@ class Globals:
         self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
         self.mu_sim = None
         self.aminbmode = None
-        self.threshold = 0.23
+        self.threshold = 0.1
         self.nrstep = 1
         self.nrplot = self.nch * self.ndr / self.nrstep   # nch * ndr / nrstep
         self.tcrit = None
