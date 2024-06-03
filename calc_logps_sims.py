@@ -190,7 +190,7 @@ if __name__ == '__main__':
     parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(gpl.idata_location())
-    determine_threshold(vlps, times)
+    # determine_threshold(vlps, times)
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0, s = get_model_values(idata)
