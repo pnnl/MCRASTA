@@ -5,11 +5,10 @@ import json
 import matplotlib.pyplot as plt
 import arviz as az
 from gplot import gpl
-import posterior_draws
 import pandas as pd
-from plotrsfmodel import rsf, staterelations
+from rsfmodel import rsf, staterelations
 
-
+um_to_mm = 0.001
 
 def get_constants(vlps):
     k = gpl.k
@@ -36,45 +35,42 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 
 
 def generate_rsf_data(inputs):
-    gpl.read_from_json(gpl.idata_location())
+    # gpl.read_from_json(gpl.idata_location())
     # print(f'self.threshold = {gpl.threshold}')
-    a, b, Dc, mu0 = inputs
+    a, b, Dc, mu0, s = inputs
 
     # dimensional variables output from mcmc_rsf.py
     times, mutrue, vlps, x = load_section_data()
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
-    mutrue.astype('float32')
-    vlps.astype('float32')
-
     k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
     # set up rsf model
     model = rsf.Model()
-    model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref  # Reference velocity, generally vlp(t=0)
+    model.k = k0  # Normalized System stiffness (friction/micron)
+    model.v = vlps0[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref0  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
-    state1.vmax = vmax.astype('float32')
+    state1.vmax = vmax
     state1.lc = gpl.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t0.astype('float32')
+    model.time = t0
 
     # Set the model load point velocity, must be same shape as model.model_time
-    model.loadpoint_velocity = vlps.astype('float32')
+    model.loadpoint_velocity = vlps0
 
     model.mu0 = mu0
     model.a = a
     state1.b = b
-    state1.Dc = Dc
+    state1.Dc = Dc / gpl.lc
 
     model.solve(threshold=gpl.threshold)
 
-    mu_sim = model.results.friction.astype('float32')
+    mu_sim = model.results.friction
 
     # resids = np.transpose(mutrue) - mu_sim
     # rsq = resids ** 2
@@ -85,37 +81,63 @@ def generate_rsf_data(inputs):
 
 
 def find_best_fit(logps):
-    a, b, Dc, mu0 = get_model_values()
+    a, b, Dc, mu0, s = get_model_values()
 
-    sortedi = np.argsort(logps)
+    sortedi = np.argsort(np.abs(logps))
 
     abest = a[sortedi[0]]
     bbest = b[sortedi[0]]
     Dcbest = Dc[sortedi[0]]
     mu0best = mu0[sortedi[0]]
+    sbest = s[sortedi[0]]
     logpbest = logps[sortedi[0]]
 
-    # plt.plot(logps[sortedi])
-    # plt.ylim(0, 0.5)
-    # plt.show()
+    num = 100
+    plt.figure(num=num)
+    plt.plot(Dc[sortedi], logps[sortedi], '.', alpha=0.1)
+    plt.xlabel('sorted Dc')
+    plt.ylabel('sorted logps')
 
-    inputs = abest, bbest, Dcbest, mu0best
+    plt.figure(num=num+1)
+    plt.plot(s[sortedi], logps[sortedi], '.', alpha=0.1)
+    plt.xlabel('sorted sigma')
+    plt.ylabel('sorted logps')
+
+    aminb = a[sortedi] - b[sortedi]
+    plt.figure(num=num + 2)
+    plt.plot(aminb, logps[sortedi], '.', alpha=0.1)
+    plt.xlabel('sorted (a-b)')
+    plt.ylabel('sorted logps')
+
+    plt.figure(num=num+3)
+    plt.plot(mu0[sortedi], logps[sortedi], '.', alpha=0.1)
+    plt.xlabel('sorted mu0')
+    plt.ylabel('sorted logps')
+    plt.show()
+
+
+    inputs = abest, bbest, Dcbest, mu0best, sbest
     mu_best = generate_rsf_data(inputs)
 
-    return [abest, bbest, Dcbest, mu0best], logpbest, mu_best
+    return [abest, bbest, Dcbest, mu0best, sbest], logpbest, mu_best
 
 
 def get_model_values():
     p = os.path.join(gpl.idata_location(), f'{gpl.sim_name}_idata')
     idata = az.from_netcdf(p)
+
+    acc_rate = np.mean(idata.sample_stats['accepted'])
+    print(acc_rate)
+
     modelvals = az.extract(idata.posterior, combined=True)
 
     a = modelvals.a.values
     b = modelvals.b.values
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
+    s = modelvals.s.values
 
-    return a, b, Dc, mu0
+    return a, b, Dc, mu0, s
 
 
 def get_npy_data(p, f):
@@ -124,27 +146,28 @@ def get_npy_data(p, f):
     return data
 
 
-def plot_results(x, mt, musims, mubest, params):
-    abest, bbest, Dcbest, mu0best = params
+def plot_results(x, mt, musims, params, mubest):
+    abest, bbest, Dcbest, mu0best, sbest = params
     x = np.transpose(x)
 
-    plt.plot(x, musims.T, color='indianred', alpha=0.02)
-    plt.plot(x, mt.T, 'k.', label='observed')
-    plt.plot(x, mubest.T, color='red', label=f'best fit\n'
-                                           f'a={abest}\n'
-                                           f'b={bbest}\n'
-                                           f'$D_c$={Dcbest}\n'
-                                           f'$\mu_0$={mu0best}')
-    # plt.plot(x, mubest.T, color='red', label=f'best fit\n'
-    #                                        f'a={abest.round(4)}\n'
-    #                                        f'b={bbest.round(4)}\n'
-    #                                        f'$D_c$={Dcbest.round(3)}\n'
-    #                                        f'$\mu_0$={mu0best.round(3)}')
+    plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.02)
+    plt.plot(x * um_to_mm, mt.T, 'k.', label='observed')
+    # plt.plot(x * um_to_mm, mubest.T, color='lightseagreen', label=f'best fit\n'
+    #                                        f'a={abest}\n'
+    #                                        f'b={bbest}\n'
+    #                                        f'$D_c$={Dcbest}\n'
+    #                                        f'$\mu_0$={mu0best}')
+    plt.plot(x * um_to_mm, mubest.T, color='lightseagreen', label=f'best fit\n'
+                                           f'a={abest.round(4)}\n'
+                                           f'b={bbest.round(4)}\n'
+                                           f'$D_c$={Dcbest.round(3)}\n'
+                                           f'$\mu_0$={mu0best.round(3)}\n'
+                                           f'$\sigma$={sbest.round(3)}')
 
-    plt.xlabel('load point displacement ($\mu$m)')
+    plt.xlabel('Loadpoint displacement (mm)')
     plt.ylabel('$\mu$')
-    plt.title(f'Posterior draws: Sample {gpl.section_id}')
-    plt.ylim(np.mean(mubest) - 0.1, np.mean(mubest) + 0.1)
+    plt.title(f'Posterior draws: Sample p{gpl.section_id}')
+    plt.ylim(np.mean(mt) - 0.07, np.mean(mt) + 0.07)
     plt.legend(bbox_to_anchor=(1.01, 1))
 
     # plt.show()
@@ -169,36 +192,30 @@ def save_figs():
     print('w = ', w)
     for i in plt.get_fignums():
         print('i = ', i)
-        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
+        plt.figure(i).savefig(os.path.join(name, f'newfig{i}.png'), dpi=300, bbox_inches='tight')
 
 
 def main():
     parent_dir = gpl.get_musim_storage_folder()
-    # rds = os.path.join(parent_dir, f'musim_rd_p{gpl.section_id}')
 
     msims = get_npy_data(parent_dir, f'musim_rd_p{gpl.section_id}')
 
-    msims[msims < 0] = np.nan
-    msims[msims > 1.5] = np.nan
-    msims[msims == np.inf] = np.nan
-    msims[msims == -np.inf] = np.nan
-
-    # logps1 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_0')
-    # logps2 = get_npy_data(parent_dir, f'logps_p{gpl.section_id}_1')
-
-    # logps = np.concatenate((logps1, logps2))
+    # msims[msims < 0] = np.nan
+    # msims[msims > 1.5] = np.nan
+    # msims[msims == np.inf] = np.nan
+    # msims[msims == -np.inf] = np.nan
 
     logps = get_npy_data(parent_dir, f'logps_p{gpl.section_id}')
 
     params, logp, mubest = find_best_fit(logps)
 
-    # params = [0.00629, 0.00655, 62.4856, 0.41]
+    mubest = generate_rsf_data(params)
 
-    # mubest = np.load(r'C:\Users\fich146\PycharmProjects\mcmcrsf_xfiles\postprocess_out\p5894\out_500000d4ch_5894001'
-    #                  r'\bestfit.npy')
     t, mutrue, vlps, x = load_section_data()
+    if np.any(vlps < 0):
+        print('velocities less than 0, check')
 
-    plot_results(x, mutrue, msims, mubest, params)
+    plot_results(x, mutrue, msims, params, mubest)
     save_figs()
 
 

@@ -6,15 +6,11 @@ import pymc as pm
 import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
-from plotrsfmodel import staterelations, rsf, plot
+from rsfmodel import staterelations, rsf, plot
 import sys
 from scipy.stats import lognorm, mode, skew, kurtosis
-from scipy import signal
 import seaborn as sns
-import globals
 import arviz.labels as azl
-from random import sample
-from multiprocessing import Process
 from gplot import gpl
 
 home = os.path.expanduser('~')
@@ -58,9 +54,14 @@ def plot_trace(idata, chain):
     chain_prop = {'color': ['rosybrown', 'firebrick', 'red', 'maroon'], 'linestyle': ['solid', 'dotted', 'dashed', 'dashdot']}
     backend_kwargs = {'layout': 'tight'}
     plot_kwargs = {'textsize': 16}
-    labeller = azl.MapLabeller(var_name_map={'a': 'a', 'b': 'b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
+    labeller = azl.MapLabeller(
+        var_name_map={'a': 'a',
+                      'b': 'b',
+                      'Dc': r'$D_{c}$ ($\mu$m)',
+                      'mu0': r'$\mu_{0}$',
+                      's': r'$\sigma$'})
     ax = az.plot_trace(idata,
-                       var_names=['a', 'b', 'Dc', 'mu0'],
+                       var_names=['a', 'b', 'Dc', 'mu0', 's'],
                        labeller=labeller,
                        combined=False,
                        plot_kwargs=plot_kwargs,
@@ -107,8 +108,8 @@ def plot_pairs(idata, modes, chain=None):
         # reference_values_kwargs=reference_values_kwargs
     )
 
-    ax[0][0].set_xlim(-0.05, 0.05)
-    ax[1][1].set_xlim(0, 80)
+    ax[0][0].set_xlim(-0.03, 0.03)
+    ax[1][1].set_xlim(0, 180)
 
 
 def get_model_vals(idata, combined=True):
@@ -140,12 +141,13 @@ def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
     b = modelvals.b.values[0::gpl.nrstep]
     Dc = modelvals.Dc.values[0::gpl.nrstep]
     mu0 = modelvals.mu0.values[0::gpl.nrstep]
+    s = modelvals.s.values[0::gpl.nrstep]
 
     if return_aminb is True:
         a_min_b = modelvals.a_min_b.values[0::gpl.nrstep]
-        return a_min_b, a, b, Dc, mu0
+        return a_min_b, a, b, Dc, mu0, s
     elif return_aminb is False:
-        return a, b, Dc, mu0
+        return a, b, Dc, mu0, s
 
 
 def get_thinned_idata_original(modelvals):
@@ -299,30 +301,12 @@ def save_figs(out_folder):
         plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
 
 
-def plot_lognormal(mu, sigma, xmax):
-    # Generate data points for the x-axis
-    x = np.linspace(0, xmax, 10000)
-
-    # Calculate the corresponding y-axis values using the lognormal distribution
-    y = lognorm.pdf(x, s=np.exp(sigma), scale=np.exp(mu))
-
-    # Plot the lognormal distribution
-    plt.figure(figsize=(10, 6))
-    plt.plot(x, y, label=f'mu={mu}, sigma={sigma}')
-    plt.title('Lognormal Distribution')
-    plt.xlabel('x')
-    plt.ylabel('Probability Density')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-
 def plot_priors_posteriors(modelvals):
     color = 'firebrick'
     posts = get_posterior_data(modelvals, return_aminb=False, thin_data=False)
     # define priors same as in mcmc_rsf.py - get this info from out file
     mus, sigmas = gpl.get_prior_parameters()
-    xmaxs = [0.05, 0.05, 60, 1.25]
+    xmaxs = [0.05, 0.05, 180, 1.25, 5]
 
     # for mu, sigma, xmax in zip(mus, sigmas, xmaxs):
     #     plot_lognormal(mu, sigma, xmax)
@@ -331,27 +315,38 @@ def plot_priors_posteriors(modelvals):
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
     Dc = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
+    s = pm.HalfNormal.dist(sigma=0.1)
 
     # take same number of draws as in mcmc_rsf.py
-    vpriors = pm.draw([a, b, Dc, mu0], draws=gpl.ndr)
+    vpriors = pm.draw([a, b, Dc, mu0, s], draws=gpl.ndr * gpl.nch)
 
-    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', f'{Dclabel}', f'{mu0label}'), xmaxs)):
-        num = plt.gcf().number + 1
-        plt.figure(num=num, figsize=(3.25, 3))
-        sns.histplot(prior, stat='probability', label=f'M={mus[i]}\n$\sigma$={sigmas[i]}', color=color)
+    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', f'{Dclabel}', f'{mu0label}', r'$\sigma$'), xmaxs)):
+        df1 = pd.DataFrame({'data': prior, 'label': 'prior'})
+        df2 = pd.DataFrame({'data': post, 'label': 'post'})
+
+        df = pd.concat((df1, df2), axis='rows')
+        # data = prior.append(post)
+        # df = pd.DataFrame({'data': data, })
+        # num = plt.gcf().number + 1
+        # plt.figure(num=num)
+        sns.displot(data=(prior, post), kind='kde')
+        # ax2 = sns.displot(post, kind='kde', label='posterior', color='salmon')
+        # sns.histplot(post, stat='density', label=f'posterior')
         # sns.kdeplot(prior, color='b', common_norm=False, bw_method=0.1)
         # line2 = sns.kdeplot(post, color='g', common_norm=False)
+
         plt.gca().set_xlim(0, xmax)
-        plt.title('Prior Distribution', fontsize=fontsize)
-        plt.xlabel(f'{label}', fontsize=fontsize)
-        plt.ylabel('Probability Density', fontsize=fontsize)
-        plt.legend(fontsize=fontsize)
+        plt.title('Prior and Posterior PDFs')
+        plt.xlabel(f'{label}')
+        plt.ylabel('Probability Density')
         plt.grid(True)
         # plt.gca().set_legend([line1, line2], ['priors', 'posteriors'])
 
+    # plt.show()
+
 
 def get_modes(modelvals):
-    aminb, a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=True, thin_data=False)
+    aminb, a, b, Dc, mu0, s = get_posterior_data(modelvals, return_aminb=True, thin_data=False)
 
     amode = az.plots.plot_utils.calculate_point_estimate('mode', a)
     bmode = az.plots.plot_utils.calculate_point_estimate('mode', b, )
@@ -391,14 +386,6 @@ def calc_logp(mutrue, mu_sims, nr):
     plt.plot(logps)
     plt.show()
     return logps
-
-
-def calc_expected_vals(modelvar):
-    n = len(modelvar)
-    muhat = np.sum(np.log(modelvar)) / n
-    sigmahat = np.sqrt((np.sum((modelvar - muhat) ** 2)) / (n - 1))
-
-    return muhat, sigmahat
 
 
 def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
@@ -484,12 +471,18 @@ def plot_a_minus_b(idata):
     b = modelvals.b.values
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
+    s = modelvals.s.values
 
-    labeller = azl.MapLabeller(var_name_map={'a_min_b': 'a-b', 'Dc': r'$D_{c}$ ($\mu$m)', 'mu0': r'$\mu_{0}$'})
+    labeller = azl.MapLabeller(
+        var_name_map={'a_min_b': 'a-b',
+                      'Dc': r'$D_{c}$ ($\mu$m)',
+                      'mu0': r'$\mu_{0}$',
+                      's': r'$\sigma$'}
+                            )
     color = 'firebrick'
 
     a_min_b = a - b
-    datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
+    datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0, 's': s}
     ab_idata = az.convert_to_inference_data(datadict, group='posterior')
     hdi_prob = 0.89
 
@@ -536,7 +529,8 @@ def plot_a_minus_b(idata):
                             hdi_prob=hdi_prob,
                             color=color)
     ax3.set_title(f'$D_c$ ($\mu$m) posterior distribution, {gpl.samplename}')
-    ax3.set_xlim(0, 60)
+    ax3.set_xlim(0, 150)
+    # plt.show()
 
     plt.figure(num + 5)
     ax4 = az.plot_posterior(idata,
@@ -547,12 +541,21 @@ def plot_a_minus_b(idata):
                             color=color)
     ax4.set_title(f'$\mu_0$ posterior distribution, {gpl.samplename}')
 
+    plt.figure(num + 6)
+    ax4 = az.plot_posterior(idata,
+                            var_names=['s'],
+                            point_estimate='mode',
+                            round_to=4,
+                            hdi_prob=hdi_prob,
+                            color=color)
+    ax4.set_title(f'$\sigma$ posterior distribution, {gpl.samplename}')
+
     fill_kwargs = {'alpha': 0.5}
     marginal_kwargs = {'color': color, 'quantiles': [0.11, 0.89], 'fill_kwargs': fill_kwargs}
     kde_kwargs = {'hdi_probs': [0.10, 0.25, 0.50, 0.75, 0.89, 0.94]}
     ax = az.plot_pair(
         ab_idata,
-        var_names=['a_min_b', 'Dc', 'mu0'],
+        var_names=['a_min_b', 'Dc', 'mu0', 's'],
         kind=["scatter", "kde"],
         marginals=True,
         scatter_kwargs={'color': 'firebrick', 'alpha': 0.01},
@@ -563,8 +566,9 @@ def plot_a_minus_b(idata):
         textsize=18,
     )
 
-    ax[0][0].set_xlim(-0.05, 0.05)
-    ax[1][1].set_xlim(0, 80)
+    ax[0][0].set_xlim(-0.03, 0.03)
+    ax[1][1].set_xlim(0, 180)
+    ax[2][2].set_xlim(0.3, 0.53)
 
     return ab_idata
 
@@ -624,17 +628,29 @@ def main():
     times, mutrue, vlps, x = load_section_data()
     idata = load_inference_data()
 
+    ess = az.ess(idata)
+    az.plot_ess(idata)
+
+    rhat = az.rhat(idata)
+    az.plot_forest(idata, r_hat=True, ess=True)
+
+    # plt.show()
+
+    modelvals = get_model_vals(idata, combined=True)
+
+    plot_priors_posteriors(modelvals)
+
     # first plot: mcmc trace with all original data
     plot_trace(idata, chain=None)
 
     # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
     # 'old' data = had to fill in parameters manually
     # if there's no .json in the mcmc results folder, then the data is type 'old'
-    dataset_type = 'new'
-    if dataset_type == 'old':
-        k, vref = get_constants(vlps)
-    elif dataset_type == 'new':
-        vref, mus, sigmas = gpl.read_from_json(gpl.idata_location())
+    # dataset_type = 'new'
+    # if dataset_type == 'old':
+    #     k, vref = get_constants(vlps)
+    # elif dataset_type == 'new':
+    #     vref, mus, sigmas = gpl.read_from_json(gpl.idata_location())
 
     # calc_rsf_results(x, mutrue, idata)
 
@@ -646,6 +662,7 @@ def main():
     # instead of a and b individually
     ab_idata = plot_a_minus_b(idata)
     modelvals = get_model_vals(ab_idata, combined=True)
+
     modes, hdis = get_modes(modelvals)
 
     write_model_info(modes, hdis)
@@ -661,7 +678,7 @@ def main():
     # plot_individual_chains(modelvals, vlps, xax=x, plot_flag='no')
 
     # plot the priors and posteriors for comparison
-    plot_priors_posteriors(modelvals)
+    # plot_priors_posteriors(modelvals)
 
     # save all figures
     save_figs(out_folder)

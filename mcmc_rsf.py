@@ -432,12 +432,10 @@ def get_priors():
 
     return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
 
-    # return a, b, Dc, mu0, mus, sigmas
 
-
-def check_priors(a, b, Dc, mu0, mus, sigmas):
-    vpriors = pm.draw([a, b, Dc, mu0], draws=500000)
-    names = ['a', 'b', 'Dc', 'mu0']
+def check_priors(a, b, Dc, mu0, s, mus, sigmas):
+    vpriors = pm.draw([a, b, Dc, mu0, s], draws=myglobals.ndr)
+    names = ['a', 'b', 'Dc', 'mu0', 's']
 
     for i, name in enumerate(names):
         print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')

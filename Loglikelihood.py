@@ -1,10 +1,7 @@
-import sys
-
 import numpy as np
 from rsfmodel import staterelations, rsf, plot
 import pytensor.tensor as tt
 from globals import myglobals
-import matplotlib.pyplot as plt
 
 
 def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
