@@ -93,64 +93,63 @@ def get_posterior_data(modelvals, thin_data=False):
     b = modelvals.b.values[0::gpl.nrstep]
     Dc = modelvals.Dc.values[0::gpl.nrstep]
     mu0 = modelvals.mu0.values[0::gpl.nrstep]
+    s = modelvals.s.values[0::gpl.nrstep]
 
-    return a, b, Dc, mu0
+    return a, b, Dc, mu0, s
 
 
 def get_model_values(idata):
     modelvals = az.extract(idata.posterior, combined=True)
-    a, b, Dc, mu0 = get_posterior_data(modelvals)
+    a, b, Dc, mu0, s = get_posterior_data(modelvals)
 
-    return a, b, Dc, mu0
+    return a, b, Dc, mu0, s
 
 
 def generate_rsf_data(inputs):
     gpl.read_from_json(gpl.idata_location())
     # print(f'self.threshold = {gpl.threshold}')
-    a, b, Dc, mu0 = inputs
+    a, b, Dc, mu0, s = inputs
 
     # dimensional variables output from mcmc_rsf.py
     times, mutrue, vlps, x = load_section_data()
     k, vref = get_constants(vlps)
     lc, vmax = get_vmax_l0(vlps)
 
-    mutrue.astype('float32')
-    vlps.astype('float32')
-
     # time is the only variable that needs to be re-nondimensionalized...?
     k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
     # set up rsf model
     model = rsf.Model()
-    model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref  # Reference velocity, generally vlp(t=0)
+    model.k = k0  # Normalized System stiffness (friction/micron)
+    model.v = vlps0[0]  # Initial slider velocity, generally is vlp(t=0)
+    model.vref = vref0  # Reference velocity, generally vlp(t=0)
 
     state1 = staterelations.DieterichState()
-    state1.vmax = vmax.astype('float32')
+    state1.vmax = vmax
     state1.lc = gpl.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
-    model.time = t0.astype('float32')
+    model.time = t0
 
     # Set the model load point velocity, must be same shape as model.model_time
-    model.loadpoint_velocity = vlps.astype('float32')
+    model.loadpoint_velocity = vlps0
 
     model.mu0 = mu0
     model.a = a
     state1.b = b
-    state1.Dc = Dc
+    state1.Dc = Dc / gpl.lc
 
     model.solve(threshold=gpl.threshold)
 
-    mu_sim = model.results.friction.astype('float32')
+    mu_sim = model.results.friction
     # state_sim = model.results.states
 
     resids = np.transpose(mutrue) - mu_sim
     rsq = resids ** 2
-    srsq = np.nansum(rsq)
-    logp = np.abs(- 1 / 2 * srsq)
+    # srsq = np.nansum(rsq)
+    # logp = np.abs(- 1 / 2 * srsq)
+    logp = (-1 / (2 * (s ** 2))) * (np.sum(rsq))
 
     return logp
     # return mu_sim
@@ -192,14 +191,14 @@ if __name__ == '__main__':
     parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(gpl.idata_location())
-    # determine_threshold(vlps, times)
+    determine_threshold(vlps, times)
     gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
-    a, b, Dc, mu0 = get_model_values(idata)
-    a = a.astype('float32')
-    b = b.astype('float32')
-    Dc = Dc.astype('float32')
-    mu0 = mu0.astype('float32')
+    a, b, Dc, mu0, s = get_model_values(idata)
+    a = a
+    b = b
+    Dc = Dc / gpl.lc
+    mu0 = mu0
     #
     # at = a[500000:2000000]
     # bt = b[500000:2000000]
@@ -211,7 +210,7 @@ if __name__ == '__main__':
     pathname = os.path.join(parent_dir, f'logps_p{gpl.section_id}')
 
     with Pool(processes=20, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
+        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0, s))
 
     op = np.array(outputs)
     np.save(pathname, op)
