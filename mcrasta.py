@@ -425,7 +425,7 @@ def get_constants(vlps):
 def get_priors():
     mus, sigmas = myglobals.get_prior_parameters()
     labels = ['a', 'b', 'Dc', 'mu0']
-    s = pm.HalfNormal('s', sigma=0.05)
+    s = pm.HalfNormal('s', sigma=0.01)
 
     return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
 
