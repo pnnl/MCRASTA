@@ -5,9 +5,10 @@ import pymc as pm
 import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
+import yaml
+
 from rsfmodel import staterelations, rsf, plot
 import pytensor as pt
-import pytensor.tensor as tt
 import sys
 import h5py
 import scipy as sp
@@ -15,9 +16,7 @@ from scipy.signal import savgol_filter
 from datetime import datetime
 import time
 import seaborn as sns
-import globals
 from globals import myglobals
-import cProfile
 
 
 p = myglobals.get_output_storage_folder()
@@ -477,15 +476,22 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     return k0, vlps0, vref0, t0
 
 
+def create_file_structure():
+    with open('config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+
+
 # MAIN - CALLS ALL FUNCTIONS AND IMPLEMENTS MCMC MODEL RUN
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
+    create_file_structure()
+
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
 
     # observed data
     mutrue, times, vlps, x = get_obs_data()
-    vmax = myglobals.set_vch(vlps)
+    vmax = np.max(vlps)
 
     if np.any(vlps < 0):
         print('NEGATIVE VELOCITIES - FIX!')
