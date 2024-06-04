@@ -260,7 +260,7 @@ def get_obs_data():
     plt.title('Observed data section (def get_obs_data)')
     plt.ylim([np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
     plt.legend()
-    # plt.show()
+    plt.show()
 
     return mutrue, t, vlps, x
 
@@ -425,7 +425,7 @@ def get_constants(vlps):
 def get_priors():
     mus, sigmas = myglobals.get_prior_parameters()
     labels = ['a', 'b', 'Dc', 'mu0']
-    s = pm.HalfNormal('s', sigma=0.1)
+    s = pm.HalfNormal('s', sigma=0.05)
 
     return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
 
