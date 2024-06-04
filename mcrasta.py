@@ -474,16 +474,9 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     return k0, vlps0, vref0, t0
 
 
-def create_file_structure():
-    with open('config.yaml', 'r') as file:
-        config = yaml.safe_load(file)
-
-
 # MAIN - CALLS ALL FUNCTIONS AND IMPLEMENTS MCMC MODEL RUN
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
-    create_file_structure()
-
     # so I can figure out how long it's taking when I inevitably forget to check
     comptime_start = get_time('start')
 
