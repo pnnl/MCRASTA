@@ -11,8 +11,8 @@ import arviz as az
 import pandas as pd
 
 
-''' this script calculates and returns the goodness of fit 
-    metric (sum of squares) for all parameter estimates '''
+''' calculates and returns the goodness of fit 
+    metric (log-likelihood) for all parameter estimates '''
 
 
 def determine_threshold(vlps, t):
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     idata, mutrue, vlps, times = get_dataset()
     # gpl.read_from_json(gpl.idata_location())
     # determine_threshold(vlps, times)
-    gpl.set_vch(vlps)
+    # gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
     a, b, Dc, mu0, s = get_model_values(idata)
 
