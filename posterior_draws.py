@@ -1,12 +1,10 @@
 import os
-import sys
 import arviz as az
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 from gplot import gpl
 from rsfmodel import rsf, staterelations
-from multiprocessing import Process, Queue, Pool
+from multiprocessing import Pool
 
 ''' this script takes random draws from 
 the posterior distribution, runs the forward model for each set.
