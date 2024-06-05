@@ -5,6 +5,7 @@ import json
 
 
 class ConfigPlot:
+    variable_names = ('a', 'b', 'Dc', 'mu0', 's')
 
     def __init__(self, path=None):
         self.samplename = None
@@ -32,6 +33,7 @@ class ConfigPlot:
         self.nrstep = None
         self.sim_name = None
         self.num_posterior_draws = None
+        self.ab_pairlim = None
 
         if path is None:
             path = 'configplot.yaml'
@@ -45,13 +47,18 @@ class ConfigPlot:
 
         with open(path, 'r') as rfile:
             cfg = yaml.safe_load(rfile)
-            attrs = ('samplename', 'section_id', 'ndr', 'nch', 'nrstep', 'num_posterior_draws', 'output_postprocess_dir')
+            attrs = ('samplename', 'section_id', 'ndr', 'nch', 'nrstep',
+                     'num_posterior_draws', 'output_postprocess_dir', 'ab_pairlim')
             for a in attrs:
                 if a not in cfg:
                     print(f'Warning: {a} not in cfg')
                     print(cfg)
                     sys.exit()
                 setattr(self, a, cfg.get(a))
+
+            for v in self.variable_names:
+                v = f'{v}lims'
+                setattr(self, v, PlotLims(cfg.get(v)))
 
         self.sim_name = f"out_{self.ndr}d{self.nch}ch_{self.section_id}"
 
@@ -60,6 +67,8 @@ class ConfigPlot:
         self._create_directory(cfg['output_postprocess_dir'])
 
         self.set_vars()
+
+        # load plot axis lims
 
     def _create_directory(self, dname):
         p = self.make_path(dname, self.samplename, self.sim_name)
@@ -72,6 +81,23 @@ class ConfigPlot:
         #       f'overwritten: {p}')
 
         self.postprocess_out_dir = p
+
+    def get_plot_lims(self, figtype=None):
+        prpolims = []
+        postlims = []
+        for v in self.variable_names:
+            lim = getattr(self, f'{v}lims')
+            prpolims.append(lim.pr_po)
+            postlims.append(lim.post)
+
+        if figtype is not None:
+            if figtype == 'pr_po':
+                return prpolims
+            if figtype == 'post':
+                return postlims
+
+
+        return prpolims, postlims
 
     def set_vars(self):
         jpath = os.path.join(self.mcmc_out_dir, 'out.json')
@@ -109,6 +135,17 @@ class ConfigPlot:
     #         self.idata_path = self.make_path('mcmc_out', 'linux_runs_all', self.samplename, self.sim_name)
     #     else:
     #         self.idata_path = self.make_path('mcmc_out', self.samplename, self.sim_name)
+
+
+class PlotLims:
+
+    def __init__(self, obj):
+        try:
+            self.pr_po = obj['pr_po']
+            self.post = obj['post']
+        except KeyError as e:
+            print('Using default axis limits')
+            pass
 
 
 cplot = ConfigPlot()

@@ -7,3 +7,24 @@ nch: 4
 nrstep: 1
 num_posterior_draws: 4000
 output_postprocess_dir: 'postprocess_out'
+
+ab_pairlim: [-0.02, 0.02]
+
+# trace plot axis limits
+alims:
+  pr_po: [0, 0.05]
+  post: [0, 0.02]
+blims:
+  pr_po: [0, 0.05]
+  post: [0, 0.02]
+Dclims:
+  pr_po: [0, 200]
+  post: [0, 200]
+mu0lims:
+  pr_po: [0, 1]
+  post: [0.530, 0.555]
+slims:
+  pr_po: [0, 0.3]
+  post: [0.04, 0.28]
+
+

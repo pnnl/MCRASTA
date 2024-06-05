@@ -25,7 +25,7 @@ def write_model_info(modes, hdis):
     ahdi, bhdi, Dchdi, mu0hdi, aminbhdi, shdi = hdis
 
     col = [f'{cplot.section_id}', aminbmode, aminbhdi, Dcmode, Dchdi, mu0mode, mu0hdi,
-            amode, ahdi, bmode, bhdi, smode, shdi]
+           amode, ahdi, bmode, bhdi, smode, shdi]
     df = pd.DataFrame(col)
 
     row = df.T
@@ -41,7 +41,9 @@ def load_inference_data():
 
 
 def plot_trace(idata):
-    chain_prop = {'color': ['rosybrown', 'firebrick', 'red', 'maroon'], 'linestyle': ['solid', 'dotted', 'dashed', 'dashdot']}
+    print('Plotting MCMC trace')
+    chain_prop = {'color': ['rosybrown', 'firebrick', 'red', 'maroon'],
+                  'linestyle': ['solid', 'dotted', 'dashed', 'dashdot']}
     backend_kwargs = {'layout': 'tight'}
     plot_kwargs = {'textsize': 16}
     labeller = azl.MapLabeller(
@@ -60,10 +62,20 @@ def plot_trace(idata):
                        )
 
     kwargs = {'color': 'firebrick'}
-    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0', 's'], point_estimate='mode', round_to=3, **kwargs)
-    ax2[0][0].set_xlim(0, 0.02)
-    ax2[0][1].set_xlim(0, 0.12)
-    ax2[0][2].set_xlim(0, 180)
+
+    print('Plotting standalone posteriors w/HDI data on single figure')
+    ax2 = az.plot_posterior(idata,
+                            var_names=['a', 'b', 'Dc', 'mu0', 's'],
+                            point_estimate='mode',
+                            round_to=3,
+                            labeller=labeller,
+                            **kwargs)
+    lims = cplot.get_plot_lims(figtype='post')
+    ax2[0][0].set_xlim(lims[0])
+    ax2[0][1].set_xlim(lims[1])
+    ax2[0][2].set_xlim(lims[2])
+    ax2[1][0].set_xlim(lims[3])
+    ax2[1][1].set_xlim(lims[4])
 
 
 def plot_pairs(idata, modes, chain=None):
@@ -149,27 +161,28 @@ def save_figs(out_folder):
 
 
 def plot_priors_posteriors(modelvals):
+    print('Plotting priors and posteriors for each model variable')
     posts = get_posterior_data(modelvals, return_aminb=False, thin_data=False)
 
     # define priors same as in mcrasta.py - get this info from json file
     mus = cplot.mus
     sigmas = cplot.sigmas
-    xmaxs = [0.05, 0.05, 180, 1.25, 5]
+    xlims = cplot.get_plot_lims(figtype='pr_po')
 
     a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
     Dc = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
-
-    # s = pm.HalfNormal.dist(sigma=sigmas[4])
-    s = pm.HalfNormal.dist(sigma=0.01)
+    s = pm.HalfNormal.dist(sigma=sigmas[4])
+    # s = pm.HalfNormal.dist(sigma=0.1)
 
     # take same number of draws as in mcrasta.py
     vpriors = pm.draw([a, b, Dc, mu0, s], draws=cplot.ndr * cplot.nch)
 
-    for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', f'{Dclabel}', f'{mu0label}', r'$\sigma$'), xmaxs)):
+    for i, (prior, post, label, xlim) in enumerate(
+            zip(vpriors, posts, ('a', 'b', f'{Dclabel}', f'{mu0label}', r'$\sigma$'), xlims)):
         sns.displot(data=(prior, post), kind='kde')
-        plt.gca().set_xlim(0, xmax)
+        plt.gca().set_xlim(xlim)
         plt.title('Prior and Posterior PDFs')
         plt.xlabel(f'{label}')
         plt.ylabel('Probability Density')
@@ -218,18 +231,22 @@ def plot_a_minus_b(idata):
     mu0 = modelvals.mu0.values
     s = modelvals.s.values
 
+    xlims = cplot.get_plot_lims(figtype='post')
+
     labeller = azl.MapLabeller(
         var_name_map={'a_min_b': 'a-b',
                       'Dc': r'$D_{c}$ ($\mu$m)',
                       'mu0': r'$\mu_{0}$',
                       's': r'$\sigma$'}
-                            )
+    )
     color = 'firebrick'
 
     a_min_b = a - b
     datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0, 's': s}
     ab_idata = az.convert_to_inference_data(datadict, group='posterior')
     hdi_prob = 0.89
+
+    print('Plotting standalone posteriors, separate figures')
 
     num = plt.gcf().number
     plt.figure(num + 1)
@@ -239,7 +256,7 @@ def plot_a_minus_b(idata):
                            round_to=4,
                            hdi_prob=hdi_prob,
                            color=color)
-    ax.set_xlim(-0.05, 0.05)
+    ax.set_xlim(cplot.ab_pairlim)
     ax.set_title(f'(a-b) posterior distribution, {cplot.samplename}')
     mab = az.plots.plot_utils.calculate_point_estimate('mode', a_min_b)
     cplot.aminbmode = mab
@@ -252,9 +269,8 @@ def plot_a_minus_b(idata):
                             hdi_prob=hdi_prob,
                             color=color)
     ax1.set_title(f'a posterior distribution, {cplot.samplename}')
-    ax1.set_xlim(0, 0.04)
+    ax1.set_xlim(xlims[0])
     ma = az.plots.plot_utils.calculate_point_estimate('mode', a)
-
 
     plt.figure(num + 3)
     ax2 = az.plot_posterior(idata,
@@ -264,7 +280,7 @@ def plot_a_minus_b(idata):
                             hdi_prob=hdi_prob,
                             color=color)
     ax2.set_title(f'b posterior distribution, {cplot.samplename}')
-    ax2.set_xlim(0, 0.05)
+    ax2.set_xlim(xlims[1])
 
     plt.figure(num + 4)
     ax3 = az.plot_posterior(idata,
@@ -274,7 +290,7 @@ def plot_a_minus_b(idata):
                             hdi_prob=hdi_prob,
                             color=color)
     ax3.set_title(f'$D_c$ ($\mu$m) posterior distribution, {cplot.samplename}')
-    ax3.set_xlim(0, 150)
+    ax3.set_xlim(xlims[2])
     # plt.show()
 
     plt.figure(num + 5)
@@ -285,16 +301,19 @@ def plot_a_minus_b(idata):
                             hdi_prob=hdi_prob,
                             color=color)
     ax4.set_title(f'$\mu_0$ posterior distribution, {cplot.samplename}')
+    ax4.set_xlim(xlims[3])
 
     plt.figure(num + 6)
-    ax4 = az.plot_posterior(idata,
+    ax5 = az.plot_posterior(idata,
                             var_names=['s'],
                             point_estimate='mode',
                             round_to=4,
                             hdi_prob=hdi_prob,
                             color=color)
-    ax4.set_title(f'$\sigma$ posterior distribution, {cplot.samplename}')
+    ax5.set_title(f'$\sigma$ posterior distribution, {cplot.samplename}')
+    ax5.set_xlim(xlims[4])
 
+    print('Plotting pairs plot')
     fill_kwargs = {'alpha': 0.5}
     marginal_kwargs = {'color': color, 'quantiles': [0.11, 0.89], 'fill_kwargs': fill_kwargs}
     kde_kwargs = {'hdi_probs': [0.10, 0.25, 0.50, 0.75, 0.89, 0.94]}
@@ -311,14 +330,20 @@ def plot_a_minus_b(idata):
         textsize=18,
     )
 
-    ax[0][0].set_xlim(-0.03, 0.03)
-    ax[1][1].set_xlim(0, 180)
-    ax[2][2].set_xlim(0.3, 0.53)
+    ax[0][0].set_xlim(cplot.ab_pairlim)
+    ax[1][1].set_xlim(xlims[2])
+    ax[2][2].set_xlim(xlims[3])
+    ax[3][3].set_xlim(xlims[4])
+
+    ax[1][0].set_ylim(xlims[2])
+    ax[2][0].set_ylim(xlims[3])
+    ax[3][0].set_ylim(xlims[4])
 
     return ab_idata
 
 
 def plot_observed_and_vlps(mutrue, vlps, xax):
+    print('Plotting friction vs. velocity with velocity steps')
     num = plt.gcf().number + 1
     fig, axs = plt.subplots(2, 1, sharex='all', num=num, gridspec_kw={'height_ratios': [2, 1]})
     fig.subplots_adjust(hspace=0.05)
@@ -345,13 +370,13 @@ def main():
     times, mutrue, vlps, x = load_section_data()
     idata = load_inference_data()
 
-    ess = az.ess(idata)
-    az.plot_ess(idata)
-    print(f'ESS: {ess}')
-
-    rhat = az.rhat(idata)
-    print(f'rhat: {rhat}')
-    az.plot_forest(idata, r_hat=True, ess=True)
+    # ess = az.ess(idata)
+    # az.plot_ess(idata)
+    # print(f'ESS: {ess}')
+    #
+    # rhat = az.rhat(idata)
+    # print(f'rhat: {rhat}')
+    # az.plot_forest(idata, r_hat=True, ess=True)
 
     # plt.show()
 
@@ -371,7 +396,7 @@ def main():
     write_model_info(modes, hdis)
 
     # plots thinned data pairs for a-b, Dc, mu0
-    plot_pairs_thinned_idata(modelvals)
+    # plot_pairs_thinned_idata(modelvals)
 
     # plot observed data section and velocity steps
     plot_observed_and_vlps(mutrue, vlps, xax=x)
@@ -381,7 +406,6 @@ def main():
     plt.close()
 
     print('END PLOT_MCMC_RESULTS.PY')
-
 
 
 if __name__ == '__main__':
