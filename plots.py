@@ -1,42 +1,41 @@
 import os
 import sys
 import numpy as np
-import json
 import matplotlib.pyplot as plt
 import arviz as az
-from gplot import gpl
+from configplot import cplot
 import pandas as pd
 from rsfmodel import rsf, staterelations
 
 um_to_mm = 0.001
 
 def get_constants(vlps):
-    k = gpl.k
+    k = cplot.k
     vref = vlps[0]
 
     return k, vref
 
 
 def get_vmax_l0(vlps):
-    l0 = gpl.lc
+    l0 = cplot.lc
     vmax = np.max(vlps)
 
     return l0, vmax
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
-    k0 = gpl.k * gpl.lc
+    k0 = cplot.k * cplot.lc
     vlps0 = vlps / vmax
     vref0 = vref / vmax
-    t0 = times * vmax / gpl.lc
+    t0 = times * vmax / cplot.lc
     t0 = t0 - t0[0]
 
     return k0, vlps0, vref0, t0
 
 
 def generate_rsf_data(inputs):
-    # gpl.read_from_json(gpl.idata_location())
-    # print(f'self.threshold = {gpl.threshold}')
+    # cplot.read_from_json(cplot.idata_location())
+    # print(f'self.threshold = {cplot.threshold}')
     a, b, Dc, mu0, s = inputs
 
     # dimensional variables output from mcrasta.py
@@ -54,7 +53,7 @@ def generate_rsf_data(inputs):
 
     state1 = staterelations.DieterichState()
     state1.vmax = vmax
-    state1.lc = gpl.lc
+    state1.lc = cplot.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
@@ -66,9 +65,9 @@ def generate_rsf_data(inputs):
     model.mu0 = mu0
     model.a = a
     state1.b = b
-    state1.Dc = Dc / gpl.lc
+    state1.Dc = Dc / cplot.lc
 
-    model.solve(threshold=gpl.threshold)
+    model.solve(threshold=cplot.threshold)
 
     mu_sim = model.results.friction
 
@@ -115,7 +114,6 @@ def find_best_fit(logps):
     plt.ylabel('sorted logps')
     plt.show()
 
-
     inputs = abest, bbest, Dcbest, mu0best, sbest
     mu_best = generate_rsf_data(inputs)
 
@@ -123,11 +121,11 @@ def find_best_fit(logps):
 
 
 def get_model_values():
-    p = os.path.join(gpl.idata_location(), f'{gpl.sim_name}_idata')
+    p = os.path.join(cplot.mcmc_out_dir, f'{cplot.sim_name}_idata')
     idata = az.from_netcdf(p)
 
     acc_rate = np.mean(idata.sample_stats['accepted'])
-    print(acc_rate)
+    print(f'acceptance rate = {acc_rate}')
 
     modelvals = az.extract(idata.posterior, combined=True)
 
@@ -152,11 +150,6 @@ def plot_results(x, mt, musims, params, mubest):
 
     plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.02)
     plt.plot(x * um_to_mm, mt.T, 'k.', label='observed')
-    # plt.plot(x * um_to_mm, mubest.T, color='lightseagreen', label=f'best fit\n'
-    #                                        f'a={abest}\n'
-    #                                        f'b={bbest}\n'
-    #                                        f'$D_c$={Dcbest}\n'
-    #                                        f'$\mu_0$={mu0best}')
     plt.plot(x * um_to_mm, mubest.T, color='lightseagreen', label=f'best fit\n'
                                            f'a={abest.round(4)}\n'
                                            f'b={bbest.round(4)}\n'
@@ -166,7 +159,7 @@ def plot_results(x, mt, musims, params, mubest):
 
     plt.xlabel('Loadpoint displacement (mm)')
     plt.ylabel('$\mu$')
-    plt.title(f'Posterior draws: Sample p{gpl.section_id}')
+    plt.title(f'Posterior draws: Sample p{cplot.section_id}')
     plt.ylim(np.mean(mt) - 0.07, np.mean(mt) + 0.07)
     plt.legend(bbox_to_anchor=(1.01, 1))
 
@@ -174,7 +167,7 @@ def plot_results(x, mt, musims, params, mubest):
 
 
 def load_section_data():
-    section_data = pd.read_csv(os.path.join(gpl.idata_location(), 'section_data.csv'))
+    section_data = pd.read_csv(os.path.join(cplot.idata_location(), 'section_data.csv'))
     df = pd.DataFrame(section_data)
     times = df['times'].to_numpy()
     mutrue = df['mutrue'].to_numpy()
@@ -186,7 +179,7 @@ def load_section_data():
 
 def save_figs():
     # check if folder exists, make one if it doesn't
-    name = gpl.get_musim_storage_folder()
+    name = cplot.get_musim_storage_folder()
     print(f'find figures and .out file here: {name}')
     w = plt.get_fignums()
     print('w = ', w)
@@ -196,26 +189,21 @@ def save_figs():
 
 
 def main():
-    parent_dir = gpl.get_musim_storage_folder()
-
-    msims = get_npy_data(parent_dir, f'musim_rd_p{gpl.section_id}')
+    msims = get_npy_data(cplot.postprocess_out_dir, f'musim_rd_p{cplot.section_id}')
+    logps = get_npy_data(cplot.postprocess_out_dir, f'logps_p{cplot.section_id}')
 
     # msims[msims < 0] = np.nan
     # msims[msims > 1.5] = np.nan
     # msims[msims == np.inf] = np.nan
     # msims[msims == -np.inf] = np.nan
 
-    logps = get_npy_data(parent_dir, f'logps_p{gpl.section_id}')
-
-    params, logp, mubest = find_best_fit(logps)
-
-    mubest = generate_rsf_data(params)
+    bestparams, logp, mubest = find_best_fit(logps)
 
     t, mutrue, vlps, x = load_section_data()
     if np.any(vlps < 0):
         print('velocities less than 0, check')
 
-    plot_results(x, mutrue, msims, params, mubest)
+    plot_results(x, mutrue, msims, bestparams, mubest)
     save_figs()
 
 

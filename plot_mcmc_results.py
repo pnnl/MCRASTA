@@ -1,17 +1,12 @@
-import json
-import math
 import os
 import numpy as np
 import pymc as pm
 import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
-from rsfmodel import staterelations, rsf, plot
-import sys
-from scipy.stats import lognorm, mode, skew, kurtosis
 import seaborn as sns
 import arviz.labels as azl
-from gplot import gpl
+from configplot import cplot
 
 home = os.path.expanduser('~')
 
@@ -23,34 +18,29 @@ fontsize = 12
 
 def write_model_info(modes, hdis):
     headers = ['sampleID', 'aminbmode', 'aminbhdi', 'Dcmode', 'Dchdi', 'mu0mode', 'mu0hdi',
-               'amode', 'ahdi', 'bmode', 'bhdi']
-    p = gpl.make_path('postprocess_out')
-    fname = os.path.join(p, 'posterior_stats.csv')
+               'amode', 'ahdi', 'bmode', 'bhdi', 'smode', 'shdi']
+    fname = os.path.join(cplot.postprocess_out_dir, 'posterior_stats.csv')
 
-    amode, bmode, Dcmode, mu0mode, aminbmode = modes
-    ahdi, bhdi, Dchdi, mu0hdi, aminbhdi = hdis
+    amode, bmode, Dcmode, mu0mode, aminbmode, smode = modes
+    ahdi, bhdi, Dchdi, mu0hdi, aminbhdi, shdi = hdis
 
-    col = [f'{gpl.section_id}', aminbmode, aminbhdi, Dcmode, Dchdi, mu0mode, mu0hdi,
-            amode, ahdi, bmode, bhdi]
+    col = [f'{cplot.section_id}', aminbmode, aminbhdi, Dcmode, Dchdi, mu0mode, mu0hdi,
+            amode, ahdi, bmode, bhdi, smode, shdi]
     df = pd.DataFrame(col)
 
     row = df.T
-    # row.columns = ['sampleID', 'aminbmode', 'aminbhdi', 'Dcmode', 'Dchdi', 'mu0mode', 'mu0hdi',
-    #                'amode', 'ahdi', 'bmode', 'bhdi']
 
     row.to_csv(fname, ',', header=False, index=False, index_label=False, mode='a')
 
-    # sys.exit()
-
 
 def load_inference_data():
-    p = os.path.join(gpl.idata_location(), f'{gpl.sim_name}_idata')
+    p = os.path.join(cplot.mcmc_out_dir, f'{cplot.sim_name}_idata')
     trace = az.from_netcdf(p)
 
     return trace
 
 
-def plot_trace(idata, chain):
+def plot_trace(idata):
     chain_prop = {'color': ['rosybrown', 'firebrick', 'red', 'maroon'], 'linestyle': ['solid', 'dotted', 'dashed', 'dashdot']}
     backend_kwargs = {'layout': 'tight'}
     plot_kwargs = {'textsize': 16}
@@ -69,20 +59,11 @@ def plot_trace(idata, chain):
                        chain_prop=chain_prop,
                        )
 
-    # ax[0][1].set_xlim(200000, 205000)
-    # ax[1][1].set_xlim(200000, 205000)
-    # ax[2][1].set_xlim(200000, 205000)
-    # ax[3][1].set_xlim(200000, 205000)
-
-    # p = gpl.get_output_storage_folder()
-    # plt.gcf().savefig(os.path.join(p, f'fig_zoom_trace.png'), dpi=300, bbox_inches='tight')
-
     kwargs = {'color': 'firebrick'}
-    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0'], point_estimate='mode', round_to=3, **kwargs)
-    print(ax2)
-    ax2[0].set_xlim(0, 0.08)
-    ax2[1].set_xlim(0, 0.12)
-    ax2[2].set_xlim(0, 100)
+    ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0', 's'], point_estimate='mode', round_to=3, **kwargs)
+    ax2[0][0].set_xlim(0, 0.08)
+    ax2[0][1].set_xlim(0, 0.12)
+    ax2[0][2].set_xlim(0, 180)
 
 
 def plot_pairs(idata, modes, chain=None):
@@ -103,9 +84,6 @@ def plot_pairs(idata, modes, chain=None):
         kde_kwargs=kde_kwargs,
         marginal_kwargs=marginal_kwargs,
         textsize=18,
-
-        # reference_values=reference_values,
-        # reference_values_kwargs=reference_values_kwargs
     )
 
     ax[0][0].set_xlim(-0.03, 0.03)
@@ -118,158 +96,27 @@ def get_model_vals(idata, combined=True):
     return modelvals
 
 
-def main_get_posterior_data(modelvals, return_aminb=False, step=1):
-    a = modelvals.a.values[0::step]
-    b = modelvals.b.values[0::step]
-    Dc = modelvals.Dc.values[0::step]
-    mu0 = modelvals.mu0.values[0::step]
-
-    if return_aminb is True:
-        a_min_b = modelvals.a_min_b.values[0::step]
-        return a_min_b, a, b, Dc, mu0
-    elif return_aminb is False:
-        return a, b, Dc, mu0
-
-
 def get_posterior_data(modelvals, return_aminb=False, thin_data=False):
     if thin_data is False:
-        gpl.nrstep = 1
+        cplot.nrstep = 1
     elif thin_data is True:
-        gpl.nrstep = gpl.nrstep
+        cplot.nrstep = cplot.nrstep
 
-    a = modelvals.a.values[0::gpl.nrstep]
-    b = modelvals.b.values[0::gpl.nrstep]
-    Dc = modelvals.Dc.values[0::gpl.nrstep]
-    mu0 = modelvals.mu0.values[0::gpl.nrstep]
-    s = modelvals.s.values[0::gpl.nrstep]
+    a = modelvals.a.values[0::cplot.nrstep]
+    b = modelvals.b.values[0::cplot.nrstep]
+    Dc = modelvals.Dc.values[0::cplot.nrstep]
+    mu0 = modelvals.mu0.values[0::cplot.nrstep]
+    s = modelvals.s.values[0::cplot.nrstep]
 
     if return_aminb is True:
-        a_min_b = modelvals.a_min_b.values[0::gpl.nrstep]
+        a_min_b = modelvals.a_min_b.values[0::cplot.nrstep]
         return a_min_b, a, b, Dc, mu0, s
     elif return_aminb is False:
         return a, b, Dc, mu0, s
 
 
-def get_thinned_idata_original(modelvals):
-    a = modelvals.a.values[0::gpl.nrstep]
-    b = modelvals.b.values[0::gpl.nrstep]
-    Dc = modelvals.Dc.values[0::gpl.nrstep]
-    mu0 = modelvals.mu0.values[0::gpl.nrstep]
-
-    datadict = {'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
-    new_idata = az.convert_to_inference_data(datadict)
-
-    return new_idata
-
-
-def get_trace_variables(modelvals, chain):
-    a = modelvals.a.values[0::gpl.nrstep]
-    b = modelvals.b.values[0::gpl.nrstep]
-    Dc = modelvals.Dc.values[0::gpl.nrstep]
-    mu0 = modelvals.mu0.values[0::gpl.nrstep]
-
-    return a, b, Dc, mu0
-
-
-def get_constants(vlps):
-    k = gpl.k
-    vref = vlps[0]
-
-    return k, vref
-
-
-def generate_rsf_data(idata, nrplot=gpl.nrplot):
-    modelvals = get_model_vals(idata, combined=True)
-    a, b, Dc, mu0 = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
-
-    # dimensional variables output from mcrasta.py
-    times, mutrue, vlps, x = load_section_data()
-    k, vref = get_constants(vlps)
-    lc, vmax = get_vmax_l0(vlps)
-
-    # time is the only variable that needs to be re-nondimensionalized...?
-    k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
-
-    # set up rsf model
-    model = rsf.Model()
-    model.k = k  # Normalized System stiffness (friction/micron)
-    model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
-    model.vref = vref  # Reference velocity, generally vlp(t=0)
-
-    state1 = staterelations.DieterichState()
-    state1.vmax = vmax
-    state1.lc = gpl.lc
-
-    model.state_relations = [state1]  # Which state relation we want to use
-
-    model.time = t0
-
-    # Set the model load point velocity, must be same shape as model.model_time
-    model.loadpoint_velocity = vlps
-
-    # pre-allocate array
-    nobs = len(t0)
-    mu_sims = np.ones((nobs, nrplot))
-    print(f'mu_sims.shape = {mu_sims.shape}')
-
-    logps = []
-    j = 0
-    for i in np.arange(nrplot):
-        if i % 100 == 0:
-            print(f'solving for realization {i}')
-        # print(f'solving for realization {i}')
-
-        # Set model initial conditions
-        model.mu0 = mu0[i]  # Friction initial (at the reference velocity)
-        model.a = a[i]  # Empirical coefficient for the direct effect
-        state1.b = b[i]  # Empirical coefficient for the evolution effect
-        state1.Dc = Dc[i]  # Critical slip distance
-
-        # Run the model!
-        model.solve(threshold=gpl.threshold)
-
-        mu_sim = model.results.friction
-        state_sim = model.results.states
-
-        resids = mutrue - mu_sim
-        logp = -1 / 2 * np.sum(resids ** 2)
-        logps.append(logp)
-
-        # attempt at storing results to save time - seems like it's just too much data
-        mu_sims[:, j] = mu_sim
-
-        # save the max logp, "map" solution, "map" vars
-        if logp == np.nanmax(logps):
-            map_vars = a[i], b[i], Dc[i], mu0[i]
-            map_mu_sim = mu_sim
-            maxlogp = logp
-
-        j += 1
-
-    return mu_sims, logps, map_vars, map_mu_sim, maxlogp
-
-
-def get_vmax_l0(vlps):
-    l0 = gpl.lc
-    vmax = np.max(vlps)
-
-    return l0, vmax
-
-
-def plot_simulated_mus(x, times, mu_sims, mutrue, nr, chain):
-    plt.figure(chain)
-    plt.plot(x * um_to_mm, mu_sims, alpha=0.1)
-    plt.plot(x * um_to_mm, mutrue, '.', label='observed')
-    # plt.plot(x * um_to_mm, mu_95, 'r-', label='95% cred. interval')
-    plt.xlabel('displacement (mm)')
-    plt.ylabel('mu')
-    plt.title(f'Simulated mu values, {nr} realizations')
-    plt.show()
-    sys.exit()
-
-
 def load_section_data():
-    section_data = pd.read_csv(os.path.join(gpl.idata_location(), 'section_data.csv'))
+    section_data = pd.read_csv(os.path.join(cplot.mcmc_out_dir, 'section_data.csv'))
     df = pd.DataFrame(section_data)
     times = df['times'].to_numpy()
     mutrue = df['mutrue'].to_numpy()
@@ -280,9 +127,9 @@ def load_section_data():
 
 
 def plot_pairs_thinned_idata(modelvals):
-    a_min_b, a, b, Dc, mu0 = main_get_posterior_data(modelvals, return_aminb=True, step=100)
+    a_min_b, a, b, Dc, mu0, s = get_posterior_data(modelvals, return_aminb=True, thin_data=True)
 
-    datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0}
+    datadict = {'a_min_b': a_min_b, 'a': a, 'b': b, 'Dc': Dc, 'mu0': mu0, 's': s}
     new_idata = az.convert_to_inference_data(datadict)
 
     modes = get_modes(modelvals)
@@ -302,45 +149,29 @@ def save_figs(out_folder):
 
 
 def plot_priors_posteriors(modelvals):
-    color = 'firebrick'
     posts = get_posterior_data(modelvals, return_aminb=False, thin_data=False)
-    # define priors same as in mcrasta.py - get this info from out file
-    mus, sigmas = gpl.get_prior_parameters()
-    xmaxs = [0.05, 0.05, 180, 1.25, 5]
 
-    # for mu, sigma, xmax in zip(mus, sigmas, xmaxs):
-    #     plot_lognormal(mu, sigma, xmax)
+    # define priors same as in mcrasta.py - get this info from json file
+    mus = cplot.mus
+    sigmas = cplot.sigmas
+    xmaxs = [0.05, 0.05, 180, 1.25, 5]
 
     a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
     Dc = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
-    s = pm.HalfNormal.dist(sigma=0.1)
+    s = pm.HalfNormal.dist(sigma=sigmas[4])
 
     # take same number of draws as in mcrasta.py
-    vpriors = pm.draw([a, b, Dc, mu0, s], draws=gpl.ndr * gpl.nch)
+    vpriors = pm.draw([a, b, Dc, mu0, s], draws=cplot.ndr * cplot.nch)
 
     for i, (prior, post, label, xmax) in enumerate(zip(vpriors, posts, ('a', 'b', f'{Dclabel}', f'{mu0label}', r'$\sigma$'), xmaxs)):
-        df1 = pd.DataFrame({'data': prior, 'label': 'prior'})
-        df2 = pd.DataFrame({'data': post, 'label': 'post'})
-
-        df = pd.concat((df1, df2), axis='rows')
-        # data = prior.append(post)
-        # df = pd.DataFrame({'data': data, })
-        # num = plt.gcf().number + 1
-        # plt.figure(num=num)
         sns.displot(data=(prior, post), kind='kde')
-        # ax2 = sns.displot(post, kind='kde', label='posterior', color='salmon')
-        # sns.histplot(post, stat='density', label=f'posterior')
-        # sns.kdeplot(prior, color='b', common_norm=False, bw_method=0.1)
-        # line2 = sns.kdeplot(post, color='g', common_norm=False)
-
         plt.gca().set_xlim(0, xmax)
         plt.title('Prior and Posterior PDFs')
         plt.xlabel(f'{label}')
         plt.ylabel('Probability Density')
         plt.grid(True)
-        # plt.gca().set_legend([line1, line2], ['priors', 'posteriors'])
 
     # plt.show()
 
@@ -353,116 +184,28 @@ def get_modes(modelvals):
     Dcmode = az.plots.plot_utils.calculate_point_estimate('mode', Dc)
     mu0mode = az.plots.plot_utils.calculate_point_estimate('mode', mu0)
     aminbmode = az.plots.plot_utils.calculate_point_estimate('mode', aminb)
+    smode = az.plots.plot_utils.calculate_point_estimate('mode', s)
 
     ahdi = az.hdi(a, hdi_prob=0.89)
     bhdi = az.hdi(b, hdi_prob=0.89)
     Dchdi = az.hdi(Dc, hdi_prob=0.89)
     mu0hdi = az.hdi(mu0, hdi_prob=0.89)
     aminbhdi = az.hdi(aminb, hdi_prob=0.89)
+    shdi = az.hdi(s, hdi_prob=0.89)
 
-    hdis = [ahdi, bhdi, Dchdi, mu0hdi, aminbhdi]
+    hdis = [ahdi, bhdi, Dchdi, mu0hdi, aminbhdi, shdi]
 
-    return [amode, bmode, Dcmode, mu0mode, aminbmode], hdis
+    return [amode, bmode, Dcmode, mu0mode, aminbmode, smode], hdis
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
-    k0 = gpl.k * gpl.lc
+    k0 = cplot.k * cplot.lc
     vlps0 = vlps / vmax
     vref0 = vref / vmax
-    t0 = times * vmax / gpl.lc
+    t0 = times * vmax / cplot.lc
     t0 = t0 - t0[0]
 
     return k0, vlps0, vref0, t0
-
-
-def calc_logp(mutrue, mu_sims, nr):
-    # nr = 1000
-    logps = []
-    for real in np.arange(nr):
-        resids = (mutrue - mu_sims[real, :])
-        logp = -1 / 2 * np.sum(resids ** 2)
-        logps.append(logp)
-
-    plt.plot(logps)
-    plt.show()
-    return logps
-
-
-def plot_individual_chains(modelvals, vlps, xax, plot_flag='no'):
-    fig, axs = plt.subplots(2, 1, sharex='all', num=1000, gridspec_kw={'height_ratios': [2, 1]})
-
-    map_mu_sims = []
-    logps_all = []
-    map_vars_all = []
-    maxlogps = []
-
-    for chain in np.arange(gpl.nch):
-        # get posteriors and plot them
-        # get posteriors from model trace
-        apost, bpost, Dcpost, mu0post = get_posterior_data(modelvals, return_aminb=False, thin_data=True)
-        modes = get_modes(modelvals, chain)
-
-        vars_all = apost, bpost, Dcpost, mu0post
-        names = ['a', 'b', 'Dc', 'mu0']
-
-        # this is to double-check sampler is sampling appropriate range
-        for modelvar, name in zip(vars_all, names):
-            print(f'model parameter = {name}')
-            mi = np.min(modelvar)
-            mx = np.max(modelvar)
-            print(f'min = {mi}')
-            print(f'max = {mx}')
-
-        # this generates the rsf data using parameter draws, calc logp vals, and plots the best fit with observed
-        # data for each chain
-
-        idata = load_inference_data()
-
-        plot_flag = plot_flag
-        if plot_flag == 'yes':
-            # necessary variables are nondimensionalized in this function for comparison to observed data
-            # generates rsf sim
-            mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata)
-            map_mu_sims.append(map_mu_sim)
-            logps_all.append(logps)
-            map_vars_all.append(map_vars)
-            maxlogps.append(maxlogp)
-
-            # plot_hdi_mu_sims(mu_sims)
-
-            ahat, bhat, Dchat, mu0hat = map_vars  # parameter vals which resulted in highest logp val
-
-            aminb_hat = ahat - bhat
-
-            # plot all the stuff
-            axs[0].plot(xax * um_to_mm, map_mu_sim, label=f'chain {chain};'
-            # f'max logp = {round(maxlogp, 4)} \n '
-                                                          f'a-b={round(aminb_hat, 4)} \n '
-            # f'a={round(ahat, 4)}; '
-            # f'b={round(bhat, 4)}; '
-                                                          f'Dc={round(Dchat, 2)}; '
-                                                          f'mu0={round(mu0hat, 3)}')
-
-            axs[1].plot(xax * um_to_mm, vlps, 'k')
-            axs[1].set(ylabel=r'Velocity ($\mu$m/s)')
-            plt.xlabel(r'Loadpoint Displacement ($\mu$m)')
-
-            pos = axs[0].get_position()
-            axs[0].set_position([pos.x0, pos.y0, pos.width * 0.9, pos.height])
-            axs[0].legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='x-small')
-
-            pos1 = axs[1].get_position()
-            axs[1].set_position([pos1.x0, pos1.y0, pos1.width * 0.9, pos1.height])
-
-            # plot logp vals as sanity check
-            plt.figure(71)
-            logps = np.sort(logps)
-            plt.plot(logps, '.')
-            plt.ylabel('logp values')
-            plt.xlabel('realization no.')
-            plt.title('logp vals')
-        elif plot_flag == 'no':
-            print('skipping plotting observed data with realizations')
 
 
 def plot_a_minus_b(idata):
@@ -495,9 +238,9 @@ def plot_a_minus_b(idata):
                            hdi_prob=hdi_prob,
                            color=color)
     ax.set_xlim(-0.05, 0.05)
-    ax.set_title(f'(a-b) posterior distribution, {gpl.samplename}')
+    ax.set_title(f'(a-b) posterior distribution, {cplot.samplename}')
     mab = az.plots.plot_utils.calculate_point_estimate('mode', a_min_b)
-    gpl.aminbmode = mab
+    cplot.aminbmode = mab
 
     plt.figure(num + 2)
     ax1 = az.plot_posterior(idata,
@@ -506,7 +249,7 @@ def plot_a_minus_b(idata):
                             round_to=4,
                             hdi_prob=hdi_prob,
                             color=color)
-    ax1.set_title(f'a posterior distribution, {gpl.samplename}')
+    ax1.set_title(f'a posterior distribution, {cplot.samplename}')
     ax1.set_xlim(0, 0.04)
     ma = az.plots.plot_utils.calculate_point_estimate('mode', a)
 
@@ -518,7 +261,7 @@ def plot_a_minus_b(idata):
                             round_to=4,
                             hdi_prob=hdi_prob,
                             color=color)
-    ax2.set_title(f'b posterior distribution, {gpl.samplename}')
+    ax2.set_title(f'b posterior distribution, {cplot.samplename}')
     ax2.set_xlim(0, 0.05)
 
     plt.figure(num + 4)
@@ -528,7 +271,7 @@ def plot_a_minus_b(idata):
                             round_to=4,
                             hdi_prob=hdi_prob,
                             color=color)
-    ax3.set_title(f'$D_c$ ($\mu$m) posterior distribution, {gpl.samplename}')
+    ax3.set_title(f'$D_c$ ($\mu$m) posterior distribution, {cplot.samplename}')
     ax3.set_xlim(0, 150)
     # plt.show()
 
@@ -539,7 +282,7 @@ def plot_a_minus_b(idata):
                             round_to=4,
                             hdi_prob=hdi_prob,
                             color=color)
-    ax4.set_title(f'$\mu_0$ posterior distribution, {gpl.samplename}')
+    ax4.set_title(f'$\mu_0$ posterior distribution, {cplot.samplename}')
 
     plt.figure(num + 6)
     ax4 = az.plot_posterior(idata,
@@ -548,7 +291,7 @@ def plot_a_minus_b(idata):
                             round_to=4,
                             hdi_prob=hdi_prob,
                             color=color)
-    ax4.set_title(f'$\sigma$ posterior distribution, {gpl.samplename}')
+    ax4.set_title(f'$\sigma$ posterior distribution, {cplot.samplename}')
 
     fill_kwargs = {'alpha': 0.5}
     marginal_kwargs = {'color': color, 'quantiles': [0.11, 0.89], 'fill_kwargs': fill_kwargs}
@@ -573,32 +316,6 @@ def plot_a_minus_b(idata):
     return ab_idata
 
 
-def plot_hdi_mu_sims(mu_sims):
-    az.plot_hdi(mu_sims, mu_sims)
-
-
-def save_data(logps, map_vars, map_mu_sims, maxlogps, out_folder):
-    # mu_sims = np.array(mu_sims)
-    logps = np.array(logps)
-    map_vars = np.array(map_vars)
-    map_mu_sims = np.array(map_mu_sims)
-    # maxlogps = np.array(maxlogps)
-
-    data = logps, map_vars, map_mu_sims
-    names = ['logps', 'map_vars', 'map_mu_sims']
-
-    p = gpl.make_path('postprocess_out', gpl.samplename, gpl.sim_name)
-
-    for d, name in zip(data, names):
-        f = os.path.join(p, f'{name}.gz')
-        np.savetxt(f, d)
-
-
-# def calc_rsf_results(x, mutrue, idata):
-#     mu_sims, logps, map_vars, map_mu_sim, maxlogp = generate_rsf_data(idata, gpl.nrplot)  # generates rsf sim
-#     plot_ensemble_hdi(logps, mu_sims, mutrue, x, map_mu_sim)
-
-
 def plot_observed_and_vlps(mutrue, vlps, xax):
     num = plt.gcf().number + 1
     fig, axs = plt.subplots(2, 1, sharex='all', num=num, gridspec_kw={'height_ratios': [2, 1]})
@@ -621,42 +338,25 @@ def plot_observed_and_vlps(mutrue, vlps, xax):
 
 
 def main():
-    # setup output directory
-    out_folder = gpl.get_postprocess_storage_folder()
-
     # load observed section data and mcmc inference data
     times, mutrue, vlps, x = load_section_data()
     idata = load_inference_data()
 
     ess = az.ess(idata)
     az.plot_ess(idata)
+    print(f'ESS: {ess}')
 
     rhat = az.rhat(idata)
+    print(f'rhat: {rhat}')
     az.plot_forest(idata, r_hat=True, ess=True)
 
     # plt.show()
 
     modelvals = get_model_vals(idata, combined=True)
-
     plot_priors_posteriors(modelvals)
 
     # first plot: mcmc trace with all original data
-    plot_trace(idata, chain=None)
-
-    # 'new' data = I started storing model parameters so I could read them in instead of manually filling them out
-    # 'old' data = had to fill in parameters manually
-    # if there's no .json in the mcmc results folder, then the data is type 'old'
-    # dataset_type = 'new'
-    # if dataset_type == 'old':
-    #     k, vref = get_constants(vlps)
-    # elif dataset_type == 'new':
-    #     vref, mus, sigmas = gpl.read_from_json(gpl.idata_location())
-
-    # calc_rsf_results(x, mutrue, idata)
-
-    # this function takes random sample from posterior of each variable, then evaluates the draw in the rsf model
-    # a manual "posterior predictive check" of sorts
-    # draw_from_posteriors(idata, mutrue, x)
+    plot_trace(idata)
 
     # this plots posteriors and pair plot for (a-b) dataset
     # instead of a and b individually
@@ -668,20 +368,13 @@ def main():
     write_model_info(modes, hdis)
 
     # plots thinned data pairs for a-b, Dc, mu0
-    modelvals = get_model_vals(ab_idata)
     plot_pairs_thinned_idata(modelvals)
 
     # plot observed data section and velocity steps
     plot_observed_and_vlps(mutrue, vlps, xax=x)
 
-    # this plots individual chains - keeping for now but don't see a particular need for it
-    # plot_individual_chains(modelvals, vlps, xax=x, plot_flag='no')
-
-    # plot the priors and posteriors for comparison
-    # plot_priors_posteriors(modelvals)
-
     # save all figures
-    save_figs(out_folder)
+    save_figs(cplot.postprocess_out_dir)
 
 
 if __name__ == '__main__':

@@ -1,13 +1,7 @@
-import os
-import h5py
 import numpy as np
 from scipy import integrate
 from math import exp
 from collections import namedtuple
-import warnings
-import calendar
-import time
-import matplotlib.pyplot as plt
 
 
 class IntegrationStop(Exception):

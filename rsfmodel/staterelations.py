@@ -1,8 +1,5 @@
-import sys
-import warnings
 import numpy as np
 from math import log
-from rsfmodel import rsf
 
 
 class StateRelation(object):
