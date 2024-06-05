@@ -2,29 +2,23 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import sys
 import h5py
 import scipy as sp
 from scipy.signal import savgol_filter
-from datetime import datetime
-import time
-import seaborn as sns
-import globals
-
-myglobals = globals.Globals()
+from config import cfig
 
 um_to_mm = 0.001
 
 
 def downsample_dataset(mu, t, x):
     # low pass filter
-    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=3, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=cfig.filter_windowlen, polyorder=3, mode='mirror')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, x))
 
     # downsamples to every qth sample after applying low-pass filter along columns
-    f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
+    f_ds = sp.signal.decimate(f_data, cfig.q, ftype='fir', axis=0)
 
     print(len(f_ds))
 
@@ -43,8 +37,8 @@ def section_data(data):
     # cut off first 100 points to avoid sectioning mistakes
     df = df.iloc[100:]
 
-    start_idx = np.argmax(df['t'] > myglobals.mintime)
-    end_idx = np.argmax(df['t'] > myglobals.maxtime)
+    start_idx = np.argmax(df['t'] > cfig.mintime)
+    end_idx = np.argmax(df['t'] > cfig.maxtime)
 
     df_section = df.iloc[start_idx:end_idx]
 
@@ -119,7 +113,7 @@ def remove_non_monotonic(times, x, data, axis=0):
         # print(f'non monotonic time indices = {non_monotonic_indices}')
 
     if not np.all(np.diff(x) >= 0):
-        print('displacement series can become non-monotonic after downsampling which is an issue for the sampler')
+        print('displacement series can become non-monotonic after downsampling which is an issue for derivative calcs')
         print('now removing non-monotonic x indices from (t, mu, x) dataset')
         print(f'input downsampled data shape = {data.shape}')
         nmi_x = np.where(np.diff(x) < 0)[0]
@@ -167,16 +161,17 @@ def calc_derivative(y, x, window_len=None):
     else:
         print(f'calculating derivative using gradient because window_len= {window_len}')
         dydx = np.gradient(y, x)
+        dydx[dydx < 0] = 0
         return dydx
 
 
 def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     # define characteristic length and velocity for nondimensionalizing
-    lc = myglobals.lc
+    lc = cfig.lc
     vmax = np.max(vlps)
 
     # then remove dimensions
-    k0 = myglobals.k * myglobals.lc
+    k0 = cfig.k * cfig.lc
     vlps0 = vlps / vmax
     vref0 = vref / vmax
 
@@ -188,16 +183,16 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 
 def determine_threshold(vlps, t):
     vlps0 = vlps / np.max(vlps)
-    t0 = t * np.max(vlps) / myglobals.lc
+    t0 = t * np.max(vlps) / cfig.lc
     t0 = t0 - t0[0]
     t0 = np.round(t0, 2)
     velocity_gradient = np.gradient(vlps0)
     time_gradient = np.gradient(t0)
     acceleration = velocity_gradient / time_gradient
 
-    critical_times = t0[np.abs(acceleration) > myglobals.threshold]
+    critical_times = t0[np.abs(acceleration) > cfig.threshold]
 
-    threshold_line = myglobals.threshold * np.ones_like(acceleration)
+    threshold_line = cfig.threshold * np.ones_like(acceleration)
 
     n = plt.gcf().number
     plt.figure(n + 1)
@@ -253,7 +248,7 @@ def get_obs_data(samplename):
     x = cleaned_data[:, 2]
 
     # calculate loading velocities = dx/dt
-    vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
+    vlps = calc_derivative(x, t, window_len=cfig.vel_windowlen)
 
     plt.plot(t, vlps)
     plt.xlabel('time (s)')
@@ -262,12 +257,12 @@ def get_obs_data(samplename):
 
     determine_threshold(vlps, t)
 
-    myglobals.set_disp_bounds(x)
-    print(myglobals.mindisp)
-    print(myglobals.maxdisp)
+    cfig.set_disp_bounds(x)
+    print(cfig.mindisp)
+    print(cfig.maxdisp)
 
     # plot raw data section with filtered/downsampled for reference
-    df_raw = df[(df['vdcdt_um'] > myglobals.mindisp) & (df['vdcdt_um'] < myglobals.maxdisp)]
+    df_raw = df[(df['vdcdt_um'] > cfig.mindisp) & (df['vdcdt_um'] < cfig.maxdisp)]
 
     xax = x
 
@@ -290,7 +285,7 @@ def get_obs_data(samplename):
 
 def main():
     print('MCMC RATE AND STATE FRICTION MODEL')
-    samplename = myglobals.samplename
+    samplename = cfig.samplename
 
     # observed data
     mutrue, times, vlps, x, file_name = get_obs_data(samplename)

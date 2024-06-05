@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: mcrasta
+Version: 0.1.0
+Summary: Markov chain Monte Carlo + rate & state friction modeler
+Home-page: https://github.com/pnnl/MCRASTA
+Author: Marissa Fichera
+Author-email: marissa.fichera@pnnl.gov
+License: BSD license
+Classifier: Development Status :: 
+Classifier: Intended Audience :: Developers
+Classifier: License :: unsure :: unsure
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3

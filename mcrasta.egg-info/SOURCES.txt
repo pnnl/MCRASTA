@@ -1,0 +1,6 @@
+setup.py
+mcrasta.egg-info/PKG-INFO
+mcrasta.egg-info/SOURCES.txt
+mcrasta.egg-info/dependency_links.txt
+mcrasta.egg-info/requires.txt
+mcrasta.egg-info/top_level.txt

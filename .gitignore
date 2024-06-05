@@ -12,3 +12,7 @@ customdist_test.py
 phdtest.py
 .idea
 testing.py
+
+data/
+mcmc_out/
+postprocess_out/

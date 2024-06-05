@@ -1,7 +1,6 @@
 import os
 import sys
 import numpy as np
-import pandas as pd
 import json
 
 
@@ -41,9 +40,9 @@ class Globals:
     def idata_location(self):
         if sys.platform == 'win32':
             # print(gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name))
-            return gpl.make_path('mcmc_out', 'linux_runs_all', gpl.samplename, gpl.sim_name)
+            return self.make_path('mcmc_out', 'linux_runs_all', self.samplename, self.sim_name)
         else:
-            return gpl.make_path('mcmc_out', gpl.samplename, gpl.sim_name)
+            return self.make_path('mcmc_out', self.samplename, self.sim_name)
 
     def get_musim_storage_folder(self):
         p = self.make_path('musim_out', self.samplename, self.sim_name)
@@ -92,22 +91,22 @@ class Globals:
         with open(jpath, 'r') as rfile:
             js = json.load(rfile)
             # print(js)
-            gpl.samplename = self.samplename
-            gpl.mintime = js.get('time_start')
-            gpl.maxtime = js.get('time_end')
-            gpl.mindisp = js.get('x_start')
-            gpl.maxdisp = js.get('x_end')
-            gpl.section_id = js.get('section_ID')
-            gpl.k = js.get('k')
-            gpl.lc = js.get('lc')
-            gpl.vel_windowlen = js.get('dvdt_window_len')
-            gpl.filter_windowlen = js.get('filter_window_len')
-            gpl.q = js.get('q')
-            gpl.ndr = js.get('n_draws')
-            gpl.nch = js.get('n_chains')
-            gpl.ntune = js.get('n_tune')
+            self.samplename = self.samplename
+            self.mintime = js.get('time_start')
+            self.maxtime = js.get('time_end')
+            self.mindisp = js.get('x_start')
+            self.maxdisp = js.get('x_end')
+            self.section_id = js.get('section_ID')
+            self.k = js.get('k')
+            self.lc = js.get('lc')
+            self.vel_windowlen = js.get('dvdt_window_len')
+            self.filter_windowlen = js.get('filter_window_len')
+            self.q = js.get('q')
+            self.ndr = js.get('n_draws')
+            self.nch = js.get('n_chains')
+            self.ntune = js.get('n_tune')
             vref = js.get('vref')
-            gpl.threshold = js.get('threshold')
+            self.threshold = js.get('threshold')
 
             priors_info = js.get('prior_mus_sigmas', 'priors info not available')
             mus = priors_info[0]

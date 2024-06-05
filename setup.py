@@ -1,7 +1,30 @@
 from setuptools import setup, find_packages
+import platform
 
-with open('requirements_windows.txt') as requirements_file:
-    requirements = requirements_file.read()
+if platform.system() == 'Win*':
+    requirements = ['pymc >= 5.5',
+                    'arviz >= 0.15.1',
+                    'pytensor >= 2.12.1',
+                    'h5py >= 3.10.0',
+                    'numpy >= 1.24.3',
+                    'matplotlib',
+                    'scipy >= 1.11.4',
+                    'seaborn >= 0.12.2',
+                    'pandas >= 2.0.2',
+                    ]
+elif platform.system() == 'linux-64':
+    requirements = ['arviz >= 0.16.0',
+                    'h5py >= 3.9.0'
+                    'matplotlib-base >= 3.7.2'
+                    'pandas >= 2.0.3'
+                    'pymc >= 5.6.1'
+                    'pytensor >= 2.12.3'
+                    'python >= 3.11.4'
+                    'scipy >= 1.11.1'
+                    'seaborn >= 0.12.2'
+                    ]
+else:
+    raise OSError('Unknown Operating System: {} {}'.format(platform.os.name, platform.system()))
 
 setup(
     name='mcrasta',
@@ -19,6 +42,6 @@ setup(
         'Intended Audience :: Developers',
         'License :: unsure :: unsure',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.10.11',
     ]
 )

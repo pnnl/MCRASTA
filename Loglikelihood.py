@@ -1,7 +1,7 @@
 import numpy as np
-from rsfmodel import staterelations, rsf, plot
+from rsfmodel import staterelations, rsf
 import pytensor.tensor as tt
-from globals import myglobals
+from config import cfig
 
 
 def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
@@ -23,11 +23,11 @@ def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
 
     state1 = staterelations.DieterichState()
     state1.b = b  # Empirical coefficient for the evolution effect
-    state1.Dc = Dc / myglobals.lc  # Critical slip distance non-dimensionalized
+    state1.Dc = Dc / cfig.lc  # Critical slip distance non-dimensionalized
     # all other parameters are already nondimensionalized, but the state parameter is nd'd in staterelations.py,
     # so we need to pass characteristic velocity (vmax) and length (lc) into the fwd model
     state1.vmax = vmax
-    state1.lc = myglobals.lc
+    state1.lc = cfig.lc
 
     model.state_relations = [state1]  # Which state relation we want to use
 
@@ -39,7 +39,7 @@ def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
     model.loadpoint_velocity = lp_velocity
 
     # Run the model!
-    model.solve(threshold=myglobals.threshold)
+    model.solve(threshold=cfig.threshold)
 
     mu_sim = model.results.friction
 

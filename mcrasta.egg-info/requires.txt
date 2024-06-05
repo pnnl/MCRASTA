@@ -1,0 +1,9 @@
+pymc>=5.5
+arviz>=0.15.1
+pytensor>=2.12.1
+h5py>=3.10.0
+numpy>=1.24.3
+matplotlib
+scipy>=1.11.4
+seaborn>=0.12.2
+pandas>=2.0.2

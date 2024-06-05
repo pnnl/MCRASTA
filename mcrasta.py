@@ -5,6 +5,8 @@ import pymc as pm
 import matplotlib.pyplot as plt
 import arviz as az
 import pandas as pd
+
+import config
 from rsfmodel import staterelations, rsf, plot
 import pytensor as pt
 import sys
@@ -14,10 +16,7 @@ from scipy.signal import savgol_filter
 from datetime import datetime
 import time
 import seaborn as sns
-from globals import myglobals
-
-
-p = myglobals.get_output_storage_folder()
+from config import cfig
 
 um_to_mm = 0.001
 
@@ -45,30 +44,20 @@ def preplot(df):
     t = df['time_s']
     x = df['vdcdt_um']
 
-    plt.plot(x * um_to_mm, df['mu'])
-    plt.title('mu')
-    plt.xlabel('displacement (mm)')
+    plt.plot(x * um_to_mm)
+    plt.title('x')
+    plt.ylabel('displacement (mm)')
+    plt.show()
 
     sys.exit()
-
-
-def check_file_exist(p, filename):
-    isExisting = os.path.exists(os.path.join(p, filename))
-    if isExisting is False:
-        print(f'file does not exist, returning file name --> {filename}')
-        return filename
-    elif isExisting is True:
-        print(f'file does exist, overwriting --> {filename}')
-        return filename
 
 
 # POST MODEL-RUN OPERATIONS AND PLOTTING FUNCTIONS
 def save_trace(idata):
     # saves trace for post-processing
-    out_name = f'{myglobals.sim_name}_idata'
-    p = myglobals.get_output_storage_folder()
-    name = check_file_exist(p, out_name)
-    idata.to_netcdf(os.path.join(p, f'{name}'))
+    out_name = f'{cfig.sim_name}_idata'
+    p = cfig.mcmc_out_dir
+    idata.to_netcdf(os.path.join(p, f'{out_name}'))
 
 
 def plot_trace(idata):
@@ -78,16 +67,15 @@ def plot_trace(idata):
 def save_stats(idata):
     summary = az.summary(idata, kind='stats')
     print(f'summary: {summary}')
-    summary.to_csv(os.path.join(p, 'idata.csv'))
+    summary.to_csv(os.path.join(cfig.mcmc_out_dir, 'idata.csv'))
 
     return summary
 
 
 def post_processing(idata, times, vlps, mutrue, x):
-    # save dataset in case needed later
+    # save dataset for later use
     df_data = pd.DataFrame(np.column_stack((times, x, vlps, mutrue)), columns=['times', 'x', 'vlps', 'mutrue'])
-    p = myglobals.get_output_storage_folder()
-    df_data.to_csv(os.path.join(p, 'section_data.csv'))
+    df_data.to_csv(os.path.join(cfig.mcmc_out_dir, 'section_data.csv'))
 
     # plot pymc posterior trace
     plot_trace(idata)
@@ -107,7 +95,7 @@ def save_figs(out_folder):
 
 
 def write_model_info(time_elapsed, vref, vsummary, file_name, times):
-    fname = os.path.join(p, 'out.txt')
+    fname = os.path.join(cfig.mcmc_out_dir, 'out.txt')
 
     samplerstrs = ['SAMPLER INFO', 'num draws', 'num chains', 'tune', 'prior mus and sigmas', 'runtime (s)']
     modelstrs = ['MODEL INFO', 'constants', 'k', 'vref', 'section min displacement', 'section max displacement',
@@ -115,43 +103,43 @@ def write_model_info(time_elapsed, vref, vsummary, file_name, times):
     summarystr = ['SAMPLE VARS SUMMARY']
     strlist = [samplerstrs, modelstrs, summarystr]
 
-    samplervals = ['', myglobals.ndr, myglobals.nch, myglobals.ntune, myglobals.get_prior_parameters(), time_elapsed]
-    modelvals = ['', '', myglobals.k, vref, myglobals.mindisp, myglobals.maxdisp, myglobals.lc, myglobals.vel_windowlen,
-                 myglobals.filter_windowlen, myglobals.q]
+    samplervals = ['', cfig.ndr, cfig.nch, cfig.ntune, cfig.get_prior_parameters(), time_elapsed]
+    modelvals = ['', '', cfig.k, vref, cfig.mindisp, cfig.maxdisp, cfig.lc, cfig.vel_windowlen,
+                 cfig.filter_windowlen, cfig.q]
     summaryvals = [vsummary]
     vallist = [samplervals, modelvals, summaryvals]
 
     with open(fname, mode='w') as f:
         f.write(f'SAMPLE: {file_name}\n')
-        f.write(f'section_ID: {myglobals.section_id}\n')
+        f.write(f'section_ID: {cfig.section_id}\n')
         f.write(f'from t = {times[0]} to t= {times[-1]} seconds\n')
-        f.write(f'from x = {myglobals.mindisp} to x = {myglobals.maxdisp} mm\n')
+        f.write(f'from x = {cfig.mindisp} to x = {cfig.maxdisp} mm\n')
         for strings, vals in zip(strlist, vallist):
             # f.writelines(f'{strings}: {vals}')
             for string, val in zip(strings, vals):
                 f.write(f'{string}: {val}\n')
 
     payload = {'sample': file_name,
-               'section_ID': myglobals.section_id,
-               'time_start': myglobals.mintime,
-               'time_end': myglobals.maxtime,
-               'x_start': myglobals.mindisp,
-               'x_end': myglobals.maxdisp,
-               'n_draws': myglobals.ndr,
-               'n_chains': myglobals.nch,
-               'n_tune': myglobals.ntune,
-               'prior_mus_sigmas': myglobals.get_prior_parameters(),
+               'section_ID': cfig.section_id,
+               'time_start': cfig.mintime,
+               'time_end': cfig.maxtime,
+               'x_start': cfig.mindisp,
+               'x_end': cfig.maxdisp,
+               'n_draws': cfig.ndr,
+               'n_chains': cfig.nch,
+               'n_tune': cfig.ntune,
+               'prior_mus_sigmas': cfig.get_prior_parameters(),
                'runtime_s': time_elapsed,
-               'k': myglobals.k,
+               'k': cfig.k,
                'vref': vref,
-               'lc': myglobals.lc,
-               'dvdt_window_len': myglobals.vel_windowlen,
-               'filter_window_len': myglobals.filter_windowlen,
-               'q': myglobals.q,
-               'threshold': myglobals.threshold
+               'lc': cfig.lc,
+               'dvdt_window_len': cfig.vel_windowlen,
+               'filter_window_len': cfig.filter_windowlen,
+               'q': cfig.q,
+               'threshold': cfig.threshold
                }
 
-    with open(os.path.join(p, 'out.json'), mode='w') as wfile:
+    with open(os.path.join(cfig.mcmc_out_dir, 'out.json'), mode='w') as wfile:
         json.dump(payload, wfile)
 
 
@@ -205,16 +193,20 @@ def calc_derivative(y, x, window_len=None):
 
 # imports observed data, sends it through series of processing steps
 def get_obs_data():
-    data_path = myglobals.make_path('data', 'FORGE_DataShare', f'{myglobals.samplename}',
-                                    f'{myglobals.samplename}_proc.hdf5')
-    print(f'getting data from: {data_path}')
-    f = h5py.File(data_path, 'r')
+    # data_path = cfig.make_path('data', 'FORGE_DataShare', f'{cfig.samplename}',
+    #                                 f'{cfig.samplename}_proc.hdf5')
+
+    # f = h5py.File(data_path, 'r')
+
+    data_path = os.path.join(cfig.input_data_dir, cfig.samplename, cfig.input_data_fname)
+    print(f'Pulling experimental data from: {data_path}')
+    # f = h5py.File(data_path, 'r')
 
     # read in data from hdf file, print column names
     df, names = read_hdf(data_path)
 
     # comment this in when deciding which displacement sections to use
-    # preplot(df, names)
+    # preplot(df)
 
     # first remove any mu < 0 data from experiment
     df = df[(df['mu'] > 0)]
@@ -230,10 +222,10 @@ def get_obs_data():
     # sections data
     sectioned_data, start_idx, end_idx = section_data(f_ds)
 
-    # need to check that time vals are monotonically increasing after being processed
+    # need to check that time and displacement values are monotonically increasing after being processed
     t = sectioned_data[:, 1]
     x = sectioned_data[:, 2]
-    print('checking that time series is monotonic after processing')
+    print('checking that time and displacement series are monotonic')
     print(f'times monotonic: {isMonotonic(t)}')
     print(f'x monotonic: {isMonotonic(x)}')
 
@@ -246,12 +238,12 @@ def get_obs_data():
     x = cleaned_data[:, 2]
 
     # calculate loading velocities = dx/dt
-    vlps = calc_derivative(x, t, window_len=myglobals.vel_windowlen)
+    vlps = calc_derivative(x, t, window_len=cfig.vel_windowlen)
 
-    myglobals.set_disp_bounds(x)
+    cfig.set_disp_bounds(x)
     plotx = x * um_to_mm
     # plot raw data section with filtered/downsampled for reference
-    df_raw = df[(df['vdcdt_um'] > myglobals.mindisp) & (df['vdcdt_um'] < myglobals.maxdisp)]
+    df_raw = df[(df['vdcdt_um'] > cfig.mindisp) & (df['vdcdt_um'] < cfig.maxdisp)]
     plt.figure(1)
     plt.plot(df_raw['vdcdt_um'] * um_to_mm, df_raw['mu'], '.', alpha=0.5, label='raw data')
     plt.plot(plotx, mutrue, '.', alpha=0.8, label='downsampled, filtered, sectioned data')
@@ -260,7 +252,7 @@ def get_obs_data():
     plt.title('Observed data section (def get_obs_data)')
     plt.ylim([np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
     plt.legend()
-    plt.show()
+    # plt.show()
 
     return mutrue, t, vlps, x
 
@@ -282,7 +274,7 @@ def remove_non_monotonic(times, x, data, axis=0):
         # print(f'non monotonic time indices = {non_monotonic_indices}')
 
     if not np.all(np.diff(x) >= 0):
-        print('displacement series can become non-monotonic after downsampling which is an issue for the sampler')
+        print('displacement series is non-monotonic')
         print('now removing non-monotonic x indices from (t, mu, x) dataset')
         print(f'input downsampled data shape = {data.shape}')
         nmi_x = np.where(np.diff(x) < 0)[0]
@@ -303,7 +295,6 @@ def remove_non_monotonic(times, x, data, axis=0):
 # reads in data
 def read_hdf(fullpath):
     filename = fullpath
-    print(f'reading file: {filename}')
     names = []
     df = pd.DataFrame()
     with h5py.File(filename, 'r') as f:
@@ -311,7 +302,6 @@ def read_hdf(fullpath):
         # these can be group or dataset names
         # get first object name/key; may or may NOT be a group
         a_group_key = list(f.keys())[0]
-
         # loop on names:
         for name in f.keys():
             # print(name)
@@ -332,13 +322,13 @@ def read_hdf(fullpath):
 
 def downsample_dataset(mu, t, x):
     # low pass filter
-    mu_f = savgol_filter(mu, window_length=myglobals.filter_windowlen, polyorder=3, mode='mirror')
+    mu_f = savgol_filter(mu, window_length=cfig.filter_windowlen, polyorder=3, mode='mirror')
 
     # stack time and mu arrays to sample together
     f_data = np.column_stack((mu_f, t, x))
 
     # downsamples to every qth sample after applying low-pass filter along columns
-    f_ds = sp.signal.decimate(f_data, myglobals.q, ftype='fir', axis=0)
+    f_ds = sp.signal.decimate(f_data, cfig.q, ftype='fir', axis=0)
 
     # FOR P5760 ONLY - no downsampling
     # f_ds = f_data
@@ -355,8 +345,8 @@ def section_data(data):
     # cut off first 100 points to avoid sectioning mistakes
     df = df.iloc[100:]
 
-    start_idx = np.argmax(df['t'] > myglobals.mintime)
-    end_idx = np.argmax(df['t'] > myglobals.maxtime)
+    start_idx = np.argmax(df['t'] > cfig.mintime)
+    end_idx = np.argmax(df['t'] > cfig.maxtime)
 
     df_section = df.iloc[start_idx:end_idx]
 
@@ -382,7 +372,7 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
     # Set model initial conditions
     model.mu0 = mu0  # Friction initial (at the reference velocity)
     model.a = a  # Empirical coefficient for the direct effect
-    model.k = myglobals.k  # Normalized System stiffness (friction/micron)
+    model.k = cfig.k  # Normalized System stiffness (friction/micron)
     model.v = vlps[0]  # Initial slider velocity, generally is vlp(t=0)
     model.vref = vref  # Reference velocity, generally vlp(t=0)
 
@@ -415,7 +405,7 @@ def generate_rsf_data(times, vlps, a, b, Dc, mu0):
 # MCMC MODEL SETUP FUNCTIONS
 # constants used in rsf model
 def get_constants(vlps):
-    k = myglobals.k
+    k = cfig.k
     vref = vlps[0]
 
     return k, vref
@@ -423,15 +413,27 @@ def get_constants(vlps):
 
 # MCMC priors
 def get_priors():
-    mus, sigmas = myglobals.get_prior_parameters()
-    labels = ['a', 'b', 'Dc', 'mu0']
-    s = pm.HalfNormal('s', sigma=0.01)
+    mus, sigmas, dist_types = cfig.get_prior_parameters()
+    labels = ['a', 'b', 'Dc', 'mu0', 's']
+    # s = pm.HalfNormal('s', sigma=0.01)
 
-    return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
+    priors = []
+
+    for l, m, sig, d in zip(labels, mus, sigmas, dist_types):
+        if d == 'LogNormal':
+            pr = pm.LogNormal(l, mu=m, sigma=sig)
+            priors.append(pr)
+        if d == 'HalfNormal':
+            pr = pm.HalfNormal(l, sigma=sig)
+            priors.append(pr)
+
+    return priors
+
+    # return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
 
 
 def check_priors(a, b, Dc, mu0, s, mus, sigmas):
-    vpriors = pm.draw([a, b, Dc, mu0, s], draws=myglobals.ndr)
+    vpriors = pm.draw([a, b, Dc, mu0, s], draws=cfig.ndr)
     names = ['a', 'b', 'Dc', 'mu0', 's']
 
     for i, name in enumerate(names):
@@ -451,7 +453,7 @@ def get_vmax_lc(vlps):
     # define characteristic length and velocity
     # characteristic length = max grain size in gouge = 125 micrometers for most
     # characteristic velocity = max loading velocity
-    lc = myglobals.lc
+    lc = cfig.lc
     vmax = np.max(vlps)
 
     return lc, vmax
@@ -463,13 +465,12 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
     lc, vmax = get_vmax_lc(vlps)
 
     # then remove dimensions
-    k0 = myglobals.k * myglobals.lc
+    k0 = cfig.k * cfig.lc
     vlps0 = (vlps / vmax)
     vref0 = vref / vmax
 
     t0 = times * vmax / lc
     t0 = t0 - t0[0]
-    # t0 = np.round(t0, 6)
 
     return k0, vlps0, vref0, t0
 
@@ -495,7 +496,7 @@ def main():
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters and non-dimensionalized constants
-        [a, b, Dc, mu0], s = get_priors()
+        a, b, Dc, mu0, s = get_priors()
         k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
@@ -508,10 +509,10 @@ def main():
         pm.Potential("likelihood", loglike(theta))
 
         # mcmc sampler parameters
-        tune = myglobals.ntune
-        draws = myglobals.ndr
-        chains = myglobals.nch
-        cores = myglobals.ncores
+        tune = cfig.ntune
+        draws = cfig.ndr
+        chains = cfig.nch
+        cores = cfig.ncores
 
         # initvals = {'a': 0.005, 'b': 0.005, 'Dc': 50, 'mu0': 0.41}
 
@@ -521,9 +522,6 @@ def main():
                           discard_tuned_samples=True)
         print(f'inference data = {idata}')
 
-        # create storage directory
-        myglobals.get_output_storage_folder()
-
         # save model parameter stats
         vsummary = save_stats(idata)
 
@@ -532,7 +530,7 @@ def main():
 
         # post-processing plots bare minimum results, save figs saves figures
         post_processing(idata, times, vlps, mutrue, x)
-        save_figs(p)
+        save_figs(cfig.mcmc_out_dir)
 
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
@@ -541,7 +539,7 @@ def main():
     write_model_info(time_elapsed=time_elapsed,
                      vref=vref,
                      vsummary=vsummary,
-                     file_name=f'{myglobals.samplename}_proc.hdf5',
+                     file_name=f'{cfig.samplename}_proc.hdf5',
                      times=times)
 
     # plt.show()
