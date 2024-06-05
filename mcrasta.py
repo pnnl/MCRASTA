@@ -193,12 +193,12 @@ def calc_derivative(y, x, window_len=None):
 
 # imports observed data, sends it through series of processing steps
 def get_obs_data():
-    # data_path = cfig.make_path('data', 'FORGE_DataShare', f'{cfig.samplename}',
-    #                                 f'{cfig.samplename}_proc.hdf5')
+    data_path = cfig.make_path('data', 'FORGE_DataShare', f'{cfig.samplename}',
+                                    f'{cfig.samplename}_proc.hdf5')
 
     # f = h5py.File(data_path, 'r')
 
-    data_path = os.path.join(cfig.input_data_dir, cfig.samplename, cfig.input_data_fname)
+    # data_path = os.path.join(cfig.input_data_dir, cfig.samplename, cfig.input_data_fname)
     print(f'Pulling experimental data from: {data_path}')
     # f = h5py.File(data_path, 'r')
 

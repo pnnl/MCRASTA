@@ -1,19 +1,19 @@
 
 
-samplename: 'p5894'
-section_id: '5894001'
-mintime: 21342.39
-maxtime: 21754.89
-k: 0.00153
+samplename: 'p5895'
+section_id: '5895001'
+mintime: 10282
+maxtime: 10667
+k: 0.0012896
 lc: 125
-vel_windowlen: 10
+vel_windowlen: 20
 filter_windowlen: 20
-q: 5
-ndr: 100
-nch: 2
-ntune: 2
+q: 10
+ndr: 200000
+nch: 4
+ntune: 2000
 ncores: 4
-threshold: 0.1
+threshold: 0.17
 
 a_prior:
   dist_type: 'LogNormal'
@@ -34,7 +34,7 @@ mu0_prior:
 s_prior:
   dist_type: 'HalfNormal'
   mu: None
-  sigma: 0.01
+  sigma: 0.05
 
 input_data_dir: 'C:\Users\fich146\PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare'
 input_data_fname: 'p5894_proc.hdf5' # must be .hdf5 or should edit get_obs_data() in mcrasta.py
