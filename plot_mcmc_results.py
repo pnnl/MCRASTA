@@ -160,7 +160,9 @@ def plot_priors_posteriors(modelvals):
     b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
     Dc = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
     mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
-    s = pm.HalfNormal.dist(sigma=sigmas[4])
+
+    # s = pm.HalfNormal.dist(sigma=sigmas[4])
+    s = pm.HalfNormal.dist(sigma=0.01)
 
     # take same number of draws as in mcrasta.py
     vpriors = pm.draw([a, b, Dc, mu0, s], draws=cplot.ndr * cplot.nch)
