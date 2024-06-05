@@ -31,10 +31,10 @@ mu0_prior:
   dist_type: 'LogNormal'
   mu: -1
   sigma: 0.3
-s_prior:
-  dist_type: 'HalfNormal'
-  mu: None
-  sigma: 0.05
+#s_prior:
+#  dist_type: 'HalfNormal'
+#  mu: None
+#  sigma: 0.05
 
 input_data_dir: 'C:\Users\fich146\PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare'
 input_data_fname: 'p5894_proc.hdf5' # must be .hdf5 or should edit get_obs_data() in mcrasta.py
@@ -44,7 +44,7 @@ header_names:
   t: 'time_s'   # exp. time header
   x: 'vdcdt_um' # exp. displacement header
 
-output_mcmc_dir: 'mcmc_out'
+output_mcmc_dirname: 'mcmc_out'
 
 
 
