@@ -167,7 +167,7 @@ def plot_results(x, mt, musims, params, mubest):
 
 
 def load_section_data():
-    section_data = pd.read_csv(os.path.join(cplot.idata_location(), 'section_data.csv'))
+    section_data = pd.read_csv(os.path.join(cplot.mcmc_out_dir, 'section_data.csv'))
     df = pd.DataFrame(section_data)
     times = df['times'].to_numpy()
     mutrue = df['mutrue'].to_numpy()
