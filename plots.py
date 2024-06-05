@@ -112,7 +112,7 @@ def find_best_fit(logps):
     plt.plot(mu0[sortedi], logps[sortedi], '.', alpha=0.1)
     plt.xlabel('sorted mu0')
     plt.ylabel('sorted logps')
-    plt.show()
+    # plt.show()
 
     inputs = abest, bbest, Dcbest, mu0best, sbest
     mu_best = generate_rsf_data(inputs)
@@ -148,7 +148,9 @@ def plot_results(x, mt, musims, params, mubest):
     abest, bbest, Dcbest, mu0best, sbest = params
     x = np.transpose(x)
 
-    plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.02)
+    n = plt.gcf().number
+    plt.figure(n+1)
+    plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.01)
     plt.plot(x * um_to_mm, mt.T, 'k.', label='observed')
     plt.plot(x * um_to_mm, mubest.T, color='lightseagreen', label=f'best fit\n'
                                            f'a={abest.round(4)}\n'
@@ -163,7 +165,7 @@ def plot_results(x, mt, musims, params, mubest):
     plt.ylim(np.mean(mt) - 0.07, np.mean(mt) + 0.07)
     plt.legend(bbox_to_anchor=(1.01, 1))
 
-    # plt.show()
+    plt.show()
 
 
 def load_section_data():
