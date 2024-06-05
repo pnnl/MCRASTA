@@ -98,7 +98,7 @@ class ConfigPlot:
             priors_info = js.get('prior_mus_sigmas', 'priors info not available')
             self.mus = priors_info[0]
             self.sigmas = priors_info[1]
-            self.dist_types = priors_info[2]
+            # self.dist_types = priors_info[2]
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
