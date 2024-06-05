@@ -210,7 +210,7 @@ def main():
 
     plot_results(x, mutrue, msims, bestparams, mubest)
     save_figs()
-    plt.close()
+    plt.close('all')
     print('END PLOTS.PY')
 
 

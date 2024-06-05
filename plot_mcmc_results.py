@@ -403,7 +403,7 @@ def main():
 
     # save all figures
     save_figs(cplot.postprocess_out_dir)
-    plt.close()
+    plt.close('all')
 
     print('END PLOT_MCMC_RESULTS.PY')
 
