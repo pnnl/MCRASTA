@@ -179,7 +179,7 @@ def load_section_data():
 
 def save_figs():
     # check if folder exists, make one if it doesn't
-    name = cplot.get_musim_storage_folder()
+    name = cplot.postprocess_out_dir
     print(f'find figures and .out file here: {name}')
     w = plt.get_fignums()
     print('w = ', w)
