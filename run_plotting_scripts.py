@@ -6,6 +6,7 @@ from plots import main as mainplot
 
 if __name__ == '__main__':
     pmr()
-    cls()
-    post_draws()
+    # cls()
+    # post_draws()
     mainplot()
+    print('END ALL PLOT SCRIPTS')

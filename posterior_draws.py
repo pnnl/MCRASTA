@@ -114,7 +114,10 @@ def draw_from_posteriors(ndraws=1000):
 
     return draws
 
+
 def main():
+    print('START POSTERIOR DRAWS.PY')
+
     t, mutrue, vlps, x = load_section_data()
     drawed_vars = draw_from_posteriors(ndraws=cplot.num_posterior_draws)
 
@@ -133,6 +136,8 @@ def main():
 
     print('end')
     print(f'saved npy file: {pathname}')
+
+    print('END POSTERIOR DRAWS.PY')
 
 
 if __name__ == '__main__':

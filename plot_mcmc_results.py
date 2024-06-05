@@ -61,7 +61,7 @@ def plot_trace(idata):
 
     kwargs = {'color': 'firebrick'}
     ax2 = az.plot_posterior(idata, var_names=['a', 'b', 'Dc', 'mu0', 's'], point_estimate='mode', round_to=3, **kwargs)
-    ax2[0][0].set_xlim(0, 0.08)
+    ax2[0][0].set_xlim(0, 0.02)
     ax2[0][1].set_xlim(0, 0.12)
     ax2[0][2].set_xlim(0, 180)
 
@@ -145,7 +145,7 @@ def save_figs(out_folder):
     print('w = ', w)
     for i in plt.get_fignums():
         print('i = ', i)
-        plt.figure(i).savefig(os.path.join(name, f'fig{i}.png'), dpi=300, bbox_inches='tight')
+        plt.figure(i).savefig(os.path.join(name, f'pmr_fig{i}.png'), dpi=300, bbox_inches='tight')
 
 
 def plot_priors_posteriors(modelvals):
@@ -340,6 +340,7 @@ def plot_observed_and_vlps(mutrue, vlps, xax):
 
 
 def main():
+    print('START PLOT_MCMC_RESULTS.PY')
     # load observed section data and mcmc inference data
     times, mutrue, vlps, x = load_section_data()
     idata = load_inference_data()
@@ -377,6 +378,10 @@ def main():
 
     # save all figures
     save_figs(cplot.postprocess_out_dir)
+    plt.close()
+
+    print('END PLOT_MCMC_RESULTS.PY')
+
 
 
 if __name__ == '__main__':

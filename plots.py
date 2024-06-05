@@ -9,6 +9,7 @@ from rsfmodel import rsf, staterelations
 
 um_to_mm = 0.001
 
+
 def get_constants(vlps):
     k = cplot.k
     vref = vlps[0]
@@ -97,7 +98,7 @@ def find_best_fit(logps):
     plt.xlabel('sorted Dc')
     plt.ylabel('sorted logps')
 
-    plt.figure(num=num+1)
+    plt.figure(num=num + 1)
     plt.plot(s[sortedi], logps[sortedi], '.', alpha=0.1)
     plt.xlabel('sorted sigma')
     plt.ylabel('sorted logps')
@@ -108,7 +109,7 @@ def find_best_fit(logps):
     plt.xlabel('sorted (a-b)')
     plt.ylabel('sorted logps')
 
-    plt.figure(num=num+3)
+    plt.figure(num=num + 3)
     plt.plot(mu0[sortedi], logps[sortedi], '.', alpha=0.1)
     plt.xlabel('sorted mu0')
     plt.ylabel('sorted logps')
@@ -149,15 +150,15 @@ def plot_results(x, mt, musims, params, mubest):
     x = np.transpose(x)
 
     n = plt.gcf().number
-    plt.figure(n+1)
+    plt.figure(n + 1)
     plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.01)
     plt.plot(x * um_to_mm, mt.T, 'k.', label='observed')
     plt.plot(x * um_to_mm, mubest.T, color='lightseagreen', label=f'best fit\n'
-                                           f'a={abest.round(4)}\n'
-                                           f'b={bbest.round(4)}\n'
-                                           f'$D_c$={Dcbest.round(3)}\n'
-                                           f'$\mu_0$={mu0best.round(3)}\n'
-                                           f'$\sigma$={sbest.round(3)}')
+                                                                  f'a={abest.round(4)}\n'
+                                                                  f'b={bbest.round(4)}\n'
+                                                                  f'$D_c$={Dcbest.round(3)}\n'
+                                                                  f'$\mu_0$={mu0best.round(3)}\n'
+                                                                  f'$\sigma$={sbest.round(3)}')
 
     plt.xlabel('Loadpoint displacement (mm)')
     plt.ylabel('$\mu$')
@@ -187,10 +188,12 @@ def save_figs():
     print('w = ', w)
     for i in plt.get_fignums():
         print('i = ', i)
-        plt.figure(i).savefig(os.path.join(name, f'newfig{i}.png'), dpi=300, bbox_inches='tight')
+        plt.figure(i).savefig(os.path.join(name, f'plots_fig{i}.png'), dpi=300, bbox_inches='tight')
 
 
 def main():
+    print('START PLOTS.PY')
+
     msims = get_npy_data(cplot.postprocess_out_dir, f'musim_rd_p{cplot.section_id}')
     logps = get_npy_data(cplot.postprocess_out_dir, f'logps_p{cplot.section_id}')
 
@@ -207,6 +210,8 @@ def main():
 
     plot_results(x, mutrue, msims, bestparams, mubest)
     save_figs()
+    plt.close()
+    print('END PLOTS.PY')
 
 
 if __name__ == '__main__':

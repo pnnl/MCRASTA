@@ -179,6 +179,7 @@ def get_time(name):
 
 
 def main():
+    print('START CALC_LOGPS_SIMS.PY')
     comptime_start = get_time('start')
     # parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
@@ -200,7 +201,7 @@ def main():
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
     print(f'time elapsed = {time_elapsed}')
-    print('END')
+    print('END CALC_LOGPS_SIMS.PY')
 
 
 if __name__ == '__main__':
