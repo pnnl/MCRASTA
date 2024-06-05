@@ -178,7 +178,7 @@ def get_time(name):
     return codetime
 
 
-if __name__ == '__main__':
+def main():
     comptime_start = get_time('start')
     # parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
@@ -201,3 +201,29 @@ if __name__ == '__main__':
     time_elapsed = comptime_end - comptime_start
     print(f'time elapsed = {time_elapsed}')
     print('END')
+
+
+if __name__ == '__main__':
+    main()
+    # comptime_start = get_time('start')
+    # # parent_dir = gpl.get_musim_storage_folder()
+    # idata, mutrue, vlps, times = get_dataset()
+    # # gpl.read_from_json(gpl.idata_location())
+    # # determine_threshold(vlps, times)
+    # # gpl.set_vch(vlps)
+    # # set_critical_times(vlps, times, threshold=gpl.threshold)
+    #
+    # a, b, Dc, mu0, s = get_model_values(idata)
+    #
+    # pathname = os.path.join(cplot.postprocess_out_dir, f'logps_p{cplot.section_id}')
+    #
+    # with Pool(processes=30, maxtasksperchild=1) as pool:
+    #     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0, s))
+    #
+    # op = np.array(outputs)
+    # np.save(pathname, op)
+    #
+    # comptime_end = get_time('end')
+    # time_elapsed = comptime_end - comptime_start
+    # print(f'time elapsed = {time_elapsed}')
+    # print('END')

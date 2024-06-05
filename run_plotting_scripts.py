@@ -1,13 +1,11 @@
-import subprocess
-from configplot import cplot
+from plot_mcmc_results import main as pmr
+from calc_logps_sims import main as cls
+from posterior_draws import main as post_draws
+from plots import main as mainplot
 
-subprocess.run('python plot_mcmc_results.py', shell=True)
-subprocess.run('python calc_logps_sims.py', shell=True)
-subprocess.run('python posterior_draws.py', shell=True)
-subprocess.run('python plots.py', shell=True)
 
-copy_folder1 = cplot.mcmc_out_dir
-copy_folder2 = cplot.postprocess_out_dir
-
-# subprocess.run(f'scp -r /home/PycharmProjects/mcrasta_xfiles/{copy_folder1}')
-# subprocess.run(f'scp -r /home/PycharmProjects/mcrasta_xfiles/{copy_folder2}')
+if __name__ == '__main__':
+    pmr()
+    cls()
+    post_draws()
+    mainplot()

@@ -114,8 +114,7 @@ def draw_from_posteriors(ndraws=1000):
 
     return draws
 
-
-if __name__ == '__main__':
+def main():
     t, mutrue, vlps, x = load_section_data()
     drawed_vars = draw_from_posteriors(ndraws=cplot.num_posterior_draws)
 
@@ -134,3 +133,25 @@ if __name__ == '__main__':
 
     print('end')
     print(f'saved npy file: {pathname}')
+
+
+if __name__ == '__main__':
+    main()
+    # t, mutrue, vlps, x = load_section_data()
+    # drawed_vars = draw_from_posteriors(ndraws=cplot.num_posterior_draws)
+    #
+    # ad = drawed_vars[:, 0]
+    # bd = drawed_vars[:, 1]
+    # Dcd = drawed_vars[:, 2]
+    # mu0d = drawed_vars[:, 3]
+    # sd = drawed_vars[:, 4]
+    #
+    # pathname = os.path.join(cplot.postprocess_out_dir, f'musim_rd_p{cplot.section_id}')
+    #
+    # with Pool(processes=20, maxtasksperchild=1) as pool:
+    #     outputs = pool.map(generate_rsf_data, zip(ad, bd, Dcd, mu0d, sd))
+    #     op = np.array(outputs)
+    #     np.save(pathname, op)
+    #
+    # print('end')
+    # print(f'saved npy file: {pathname}')
