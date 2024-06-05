@@ -4,33 +4,32 @@ import os
 
 
 class Config:
-    variable_names = ('a', 'b', 'Dc', 'mu0', 's')
+    variable_names = ('a', 'b', 'Dc', 'mu0')
 
     def __init__(self, path=None):
-        self.samplename = 'p5894'
-        self.mintime = 21342.39
-        self.maxtime = 21754.89
+        self.samplename = None
+        self.mintime = None
+        self.maxtime = None
         self.mindisp = None
         self.maxdisp = None
-        self.section_id = '5894001'
-        self.k = 0.00153
-        self.lc = 125
+        self.section_id = None
+        self.k = None
+        self.lc = None
         self.rootpath = os.path.join(os.path.expanduser('~'), 'PycharmProjects', 'mcmcrsf_xfiles')
-        self.vel_windowlen = 10
-        self.filter_windowlen = 20
-        self.q = 5
-        self.ndr = 100
-        self.nch = 2
-        self.ntune = 2
-        self.ncores = 4
-        self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
+        self.vel_windowlen = None
+        self.filter_windowlen = None
+        self.q = None
+        self.ndr = None
+        self.nch = None
+        self.ntune = None
+        self.ncores = None
+        self.sim_name = None
         self.mu_sim = None
-        self.threshold = 0.1
+        self.threshold = None
         self.input_data_dir = None
         self.input_data_fname = None
         self.output_mcmc_dir = None
-        self.output_postprocess_dir = None
-        self.mcmc_out_dir = None
+        self.mcmc_out_dirname = None
 
         if path is None:
             path = 'config.yaml'
@@ -47,7 +46,7 @@ class Config:
             attrs = ('samplename', 'section_id', 'mintime', 'maxtime',
                      'k', 'lc', 'vel_windowlen', 'filter_windowlen', 'q',
                      'ndr', 'nch', 'ntune', 'ncores', 'threshold',
-                     'input_data_dir', 'input_data_fname', 'output_mcmc_dir',
+                     'input_data_dir', 'input_data_fname', 'output_mcmc_dirname',
                      )
             for a in attrs:
                 if a not in cfg:
@@ -55,13 +54,14 @@ class Config:
                     print(cfg)
                     sys.exit()
                 setattr(self, a, cfg.get(a))
+            self.sim_name = f'out_{self.ndr}d{self.nch}ch_{self.section_id}'
 
             # load priors
             for p in self.variable_names:
                 p = f'{p}_prior'
                 setattr(self, p, Prior(cfg.get(p)))
 
-        self._create_directory(cfg['output_mcmc_dir'])
+            self._create_directory(cfg['output_mcmc_dirname'])
 
     def _create_directory(self, dname):
         p = self.make_path(dname, self.samplename, self.sim_name)

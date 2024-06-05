@@ -68,7 +68,6 @@ class Loglike(tt.Op):
             b,
             Dc,
             mu0,
-            s,
         ) = theta
 
         y_pred = mcmc_rsf_sim(theta, self.times, self.vlps, self.k, self.vref, self.vmax)
@@ -76,8 +75,9 @@ class Loglike(tt.Op):
             # print('infinity working')
             return -np.inf
 
+        sigma_exp = 0.01
         resids = (self.data - y_pred)
-        logp = (-1 / (2 * (s ** 2))) * (np.sum(resids ** 2))
+        logp = (-1 / (2 * (sigma_exp ** 2))) * (np.sum(resids ** 2))
 
         return logp
 
