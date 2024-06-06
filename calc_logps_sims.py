@@ -93,20 +93,20 @@ def get_posterior_data(modelvals, thin_data=False):
     b = modelvals.b.values[0::nrstep]
     Dc = modelvals.Dc.values[0::nrstep]
     mu0 = modelvals.mu0.values[0::nrstep]
-    # s = modelvals.s.values[0::nrstep]
+    s = modelvals.s.values[0::nrstep]
 
-    return a, b, Dc, mu0
+    return a, b, Dc, mu0, s
 
 
 def get_model_values(idata):
     modelvals = az.extract(idata.posterior, combined=True)
-    a, b, Dc, mu0 = get_posterior_data(modelvals)
+    a, b, Dc, mu0, s = get_posterior_data(modelvals)
 
-    return a, b, Dc, mu0
+    return a, b, Dc, mu0, s
 
 
 def generate_rsf_data(inputs):
-    a, b, Dc, mu0  = inputs
+    a, b, Dc, mu0, s = inputs
 
     # dimensional variables output from mcrasta.py
     times, mutrue, vlps, x = load_section_data()
@@ -145,7 +145,6 @@ def generate_rsf_data(inputs):
     rsq = resids ** 2
     # srsq = np.nansum(rsq)
     # logp = np.abs(- 1 / 2 * srsq)
-    s = 0.1
     logp = (-1 / (2 * (s ** 2))) * (np.sum(rsq))
 
     return logp
@@ -179,8 +178,7 @@ def get_time(name):
     return codetime
 
 
-def main():
-    print('START CALC_LOGPS_SIMS.PY')
+if __name__ == '__main__':
     comptime_start = get_time('start')
     # parent_dir = gpl.get_musim_storage_folder()
     idata, mutrue, vlps, times = get_dataset()
@@ -189,12 +187,12 @@ def main():
     # gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
 
-    a, b, Dc, mu0 = get_model_values(idata)
+    a, b, Dc, mu0, s = get_model_values(idata)
 
     pathname = os.path.join(cplot.postprocess_out_dir, f'logps_p{cplot.section_id}')
 
     with Pool(processes=30, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
+        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0, s))
 
     op = np.array(outputs)
     np.save(pathname, op)
@@ -202,30 +200,4 @@ def main():
     comptime_end = get_time('end')
     time_elapsed = comptime_end - comptime_start
     print(f'time elapsed = {time_elapsed}')
-    print('END CALC_LOGPS_SIMS.PY')
-
-
-if __name__ == '__main__':
-    main()
-    # comptime_start = get_time('start')
-    # # parent_dir = gpl.get_musim_storage_folder()
-    # idata, mutrue, vlps, times = get_dataset()
-    # # gpl.read_from_json(gpl.idata_location())
-    # # determine_threshold(vlps, times)
-    # # gpl.set_vch(vlps)
-    # # set_critical_times(vlps, times, threshold=gpl.threshold)
-    #
-    # a, b, Dc, mu0, s = get_model_values(idata)
-    #
-    # pathname = os.path.join(cplot.postprocess_out_dir, f'logps_p{cplot.section_id}')
-    #
-    # with Pool(processes=30, maxtasksperchild=1) as pool:
-    #     outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0, s))
-    #
-    # op = np.array(outputs)
-    # np.save(pathname, op)
-    #
-    # comptime_end = get_time('end')
-    # time_elapsed = comptime_end - comptime_start
-    # print(f'time elapsed = {time_elapsed}')
-    # print('END')
+    print('END')

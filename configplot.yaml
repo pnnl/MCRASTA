@@ -5,7 +5,7 @@ section_id: '5895001'
 ndr: 200000
 nch: 4
 nrstep: 1
-num_posterior_draws: 20000
+num_posterior_draws: 4000
 output_postprocess_dir: 'postprocess_out'
 
 ab_pairlim: [-0.02, 0.02]

@@ -37,7 +37,7 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 def generate_rsf_data(inputs):
     # cplot.read_from_json(cplot.idata_location())
     # print(f'self.threshold = {cplot.threshold}')
-    a, b, Dc, mu0 = inputs
+    a, b, Dc, mu0, s = inputs
 
     # dimensional variables output from mcrasta.py
     times, mutrue, vlps, x = load_section_data()
@@ -81,7 +81,7 @@ def generate_rsf_data(inputs):
 
 
 def find_best_fit(logps):
-    a, b, Dc, mu0 = get_model_values()
+    a, b, Dc, mu0, s = get_model_values()
 
     sortedi = np.argsort(np.abs(logps))
 
@@ -89,7 +89,7 @@ def find_best_fit(logps):
     bbest = b[sortedi[0]]
     Dcbest = Dc[sortedi[0]]
     mu0best = mu0[sortedi[0]]
-    # sbest = s[sortedi[0]]
+    sbest = s[sortedi[0]]
     logpbest = logps[sortedi[0]]
 
     num = 100
@@ -98,10 +98,10 @@ def find_best_fit(logps):
     plt.xlabel('sorted Dc')
     plt.ylabel('sorted logps')
 
-    # plt.figure(num=num + 1)
-    # plt.plot(s[sortedi], logps[sortedi], '.', alpha=0.1)
-    # plt.xlabel('sorted sigma')
-    # plt.ylabel('sorted logps')
+    plt.figure(num=num + 1)
+    plt.plot(s[sortedi], logps[sortedi], '.', alpha=0.1)
+    plt.xlabel('sorted sigma')
+    plt.ylabel('sorted logps')
 
     aminb = a[sortedi] - b[sortedi]
     plt.figure(num=num + 2)
@@ -115,10 +115,10 @@ def find_best_fit(logps):
     plt.ylabel('sorted logps')
     # plt.show()
 
-    inputs = abest, bbest, Dcbest, mu0best
+    inputs = abest, bbest, Dcbest, mu0best, sbest
     mu_best = generate_rsf_data(inputs)
 
-    return [abest, bbest, Dcbest, mu0best], logpbest, mu_best
+    return [abest, bbest, Dcbest, mu0best, sbest], logpbest, mu_best
 
 
 def get_model_values():
@@ -134,9 +134,9 @@ def get_model_values():
     b = modelvals.b.values
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
-    # s = modelvals.s.values
+    s = modelvals.s.values
 
-    return a, b, Dc, mu0
+    return a, b, Dc, mu0, s
 
 
 def get_npy_data(p, f):
@@ -146,19 +146,19 @@ def get_npy_data(p, f):
 
 
 def plot_results(x, mt, musims, params, mubest):
-    abest, bbest, Dcbest, mu0best = params
+    abest, bbest, Dcbest, mu0best, sbest = params
     x = np.transpose(x)
 
     n = plt.gcf().number
     plt.figure(n + 1)
-    plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.01)
+    plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.005)
     plt.plot(x * um_to_mm, mt.T, 'k.', label='observed')
     plt.plot(x * um_to_mm, mubest.T, color='lightseagreen', label=f'best fit\n'
                                                                   f'a={abest.round(4)}\n'
                                                                   f'b={bbest.round(4)}\n'
                                                                   f'$D_c$={Dcbest.round(3)}\n'
                                                                   f'$\mu_0$={mu0best.round(3)}\n'
-                                                                )
+                                                                  f'$\sigma$={sbest.round(3)}')
 
     plt.xlabel('Loadpoint displacement (mm)')
     plt.ylabel('$\mu$')
@@ -166,7 +166,7 @@ def plot_results(x, mt, musims, params, mubest):
     plt.ylim(np.mean(mt) - 0.07, np.mean(mt) + 0.07)
     plt.legend(bbox_to_anchor=(1.01, 1))
 
-    # plt.show()
+    plt.show()
 
 
 def load_section_data():
