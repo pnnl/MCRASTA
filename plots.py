@@ -151,7 +151,7 @@ def plot_results(x, mt, musims, params, mubest):
 
     n = plt.gcf().number
     plt.figure(n + 1)
-    plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.01)
+    plt.plot(x * um_to_mm, musims.T, color='firebrick', alpha=0.005)
     plt.plot(x * um_to_mm, mt.T, 'k.', label='observed')
     plt.plot(x * um_to_mm, mubest.T, color='lightseagreen', label=f'best fit\n'
                                                                   f'a={abest.round(4)}\n'
@@ -166,7 +166,7 @@ def plot_results(x, mt, musims, params, mubest):
     plt.ylim(np.mean(mt) - 0.07, np.mean(mt) + 0.07)
     plt.legend(bbox_to_anchor=(1.01, 1))
 
-    plt.show()
+    # plt.show()
 
 
 def load_section_data():

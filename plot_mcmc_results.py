@@ -368,6 +368,7 @@ def main():
     print('START PLOT_MCMC_RESULTS.PY')
     # load observed section data and mcmc inference data
     times, mutrue, vlps, x = load_section_data()
+
     idata = load_inference_data()
 
     # ess = az.ess(idata)
