@@ -75,7 +75,7 @@ class Loglike(tt.Op):
             # print('infinity working')
             return -np.inf
 
-        sigma_exp = 0.1
+        sigma_exp = 1
         resids = (self.data - y_pred)
         logp = (-1 / (2 * (sigma_exp ** 2))) * (np.sum(resids ** 2))
 
