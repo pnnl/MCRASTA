@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import platform
 
-if platform.system() == 'Win*':
+if platform.system() == 'Windows':
     requirements = ['pymc >= 5.5',
                     'arviz >= 0.15.1',
                     'pytensor >= 2.12.1',
@@ -38,10 +38,7 @@ setup(
     install_requires=requirements,
 
     classifiers=[
-        'Development Status :: ',
         'Intended Audience :: Developers',
-        'License :: unsure :: unsure',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.10.11',
     ]
 )

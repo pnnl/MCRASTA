@@ -62,7 +62,7 @@ def preplot(df, colnames):
     plt.plot(t, df['mu'])
     plt.xlabel('time (s)')
     plt.ylabel('mu')
-    # plt.show()
+    plt.show()
     #
     # plt.show()
 
@@ -216,7 +216,7 @@ def get_obs_data(samplename):
     df, names = read_hdf(fullpath)
 
     # comment this in when deciding which displacement sections to use
-    # preplot(df, names)
+    preplot(df, names)
 
     # first remove any mu < 0 data from experiment
     df = df[(df['mu'] > 0)]

@@ -6,8 +6,14 @@ Home-page: https://github.com/pnnl/MCRASTA
 Author: Marissa Fichera
 Author-email: marissa.fichera@pnnl.gov
 License: BSD license
-Classifier: Development Status :: 
 Classifier: Intended Audience :: Developers
-Classifier: License :: unsure :: unsure
 Classifier: Natural Language :: English
-Classifier: Programming Language :: Python :: 3
+Requires-Dist: pymc>=5.5
+Requires-Dist: arviz>=0.15.1
+Requires-Dist: pytensor>=2.12.1
+Requires-Dist: h5py>=3.10.0
+Requires-Dist: numpy>=1.24.3
+Requires-Dist: matplotlib
+Requires-Dist: scipy>=1.11.4
+Requires-Dist: seaborn>=0.12.2
+Requires-Dist: pandas>=2.0.2
