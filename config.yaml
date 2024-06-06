@@ -9,9 +9,9 @@ lc: 125
 vel_windowlen: 20
 filter_windowlen: 20
 q: 10
-ndr: 100
-nch: 2
-ntune: 2
+ndr: 200000
+nch: 4
+ntune: 2000
 ncores: 4
 threshold: 0.17
 
