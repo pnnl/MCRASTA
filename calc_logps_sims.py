@@ -194,7 +194,7 @@ def main():
     pathname = os.path.join(cplot.postprocess_out_dir, f'logps_p{cplot.section_id}')
 
     with Pool(processes=30, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0, s))
+        outputs = pool.map(generate_rsf_data, zip(a, b, Dc, mu0))
 
     op = np.array(outputs)
     np.save(pathname, op)
