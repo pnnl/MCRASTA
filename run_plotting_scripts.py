@@ -5,7 +5,7 @@ from plots import main as mainplot
 
 
 if __name__ == '__main__':
-    pmr()
+    # pmr()
     cls()
     post_draws()
     mainplot()
