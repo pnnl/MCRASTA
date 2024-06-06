@@ -145,7 +145,7 @@ def generate_rsf_data(inputs):
     rsq = resids ** 2
     # srsq = np.nansum(rsq)
     # logp = np.abs(- 1 / 2 * srsq)
-    s = 0.01
+    s = 0.1
     logp = (-1 / (2 * (s ** 2))) * (np.sum(rsq))
 
     return logp
