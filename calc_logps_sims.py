@@ -93,7 +93,7 @@ def get_posterior_data(modelvals, thin_data=False):
     b = modelvals.b.values[0::nrstep]
     Dc = modelvals.Dc.values[0::nrstep]
     mu0 = modelvals.mu0.values[0::nrstep]
-    s = modelvals.s.values[0::nrstep]
+    # s = modelvals.s.values[0::nrstep]
 
     return a, b, Dc, mu0
 
