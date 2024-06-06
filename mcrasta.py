@@ -413,36 +413,41 @@ def get_constants(vlps):
 
 # MCMC priors
 def get_priors():
-    mus, sigmas, dist_types = cfig.get_prior_parameters()
+    mus, sigmas, alphas, betas, dist_types = cfig.get_prior_parameters()
     labels = ['a', 'b', 'Dc', 'mu0', 's']
     # s = pm.HalfNormal('s', sigma=0.01)
 
     priors = []
 
-    for l, m, sig, d in zip(labels, mus, sigmas, dist_types):
+    for l, m, sig, alpha, beta, d in zip(labels, mus, sigmas, alphas, betas, dist_types):
         if d == 'LogNormal':
             pr = pm.LogNormal(l, mu=m, sigma=sig)
             priors.append(pr)
         if d == 'HalfNormal':
             pr = pm.HalfNormal(l, sigma=sig)
             priors.append(pr)
+        if d == 'Weibull':
+            pr = pm.Weibull(l, alpha=alpha, beta=beta)
+            priors.append(pr)
 
+    check_priors(priors)
     return priors
 
     # return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
 
 
-def check_priors(a, b, Dc, mu0, s, mus, sigmas):
+def check_priors(priors):
+    a, b, Dc, mu0, s = priors
     vpriors = pm.draw([a, b, Dc, mu0, s], draws=cfig.ndr)
     names = ['a', 'b', 'Dc', 'mu0', 's']
 
     for i, name in enumerate(names):
-        print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
+        # print(f'{name} input mu, sigma = {mus[i]}, {sigmas[i]}')
         print(f'{name} prior min,max = {np.min(vpriors[i])}, {np.max(vpriors[i])}')
         print(f'{name} prior mode = {(sp.stats.mode(vpriors[i])).mode}')
-        plt.figure(1000)
-        sns.kdeplot(vpriors[i], label=f'{name}', common_norm=False, bw_method=0.1)
-        plt.xlim(-0.1, 100)
+        plt.figure(1000+i)
+        sns.histplot(vpriors[i], label=f'{name}', common_norm=False)
+        # plt.xlim(-0.1, 100)
         plt.title('prior distributions')
         plt.legend()
     plt.show()

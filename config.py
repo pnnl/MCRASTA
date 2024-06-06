@@ -83,15 +83,19 @@ class Config:
         # prior parameters for a, b, Dc, mu0, s (in that order)
         mus = []
         sigmas = []
+        alphas = []
+        betas = []
         dist_types = []
 
         for a in self.variable_names:
             prior = getattr(self, f'{a}_prior')
             mus.append(prior.mu)
             sigmas.append(prior.sigma)
+            alphas.append(prior.alpha)
+            betas.append(prior.beta)
             dist_types.append(prior.dist_type)
 
-        return mus, sigmas, dist_types
+        return mus, sigmas, alphas, betas, dist_types
 
     def make_path(self, *args):
         return os.path.join(self.rootpath, *args)
@@ -104,6 +108,8 @@ class Prior:
             self.dist_type = obj['dist_type']
             self.mu = obj['mu']
             self.sigma = obj['sigma']
+            self.alpha = obj['alpha']
+            self.beta = obj['beta']
         except KeyError as e:
             print('Invalid prior.')
             print(e)
