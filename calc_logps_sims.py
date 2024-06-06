@@ -189,7 +189,7 @@ def main():
     # gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
 
-    a, b, Dc, mu0  = get_model_values(idata)
+    a, b, Dc, mu0 = get_model_values(idata)
 
     pathname = os.path.join(cplot.postprocess_out_dir, f'logps_p{cplot.section_id}')
 
