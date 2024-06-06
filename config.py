@@ -4,7 +4,7 @@ import os
 
 
 class Config:
-    variable_names = ('a', 'b', 'Dc', 'mu0')
+    variable_names = ('a', 'b', 'Dc', 'mu0', 's')
 
     def __init__(self, path=None):
         self.samplename = None
