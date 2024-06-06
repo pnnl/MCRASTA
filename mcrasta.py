@@ -430,7 +430,7 @@ def get_priors():
             pr = pm.Weibull(l, alpha=alpha, beta=beta)
             priors.append(pr)
 
-    check_priors(priors)
+    # check_priors(priors)
     return priors
 
     # return [pm.LogNormal(l, mu=m, sigma=s) for l, m, s in zip(labels, mus, sigmas)], s
