@@ -414,7 +414,7 @@ def get_constants(vlps):
 # MCMC priors
 def get_priors():
     mus, sigmas, dist_types = cfig.get_prior_parameters()
-    labels = ['a', 'b', 'Dc', 'mu0']
+    labels = ['a', 'b', 'Dc', 'mu0', 's']
     # s = pm.HalfNormal('s', sigma=0.01)
 
     priors = []
@@ -423,9 +423,9 @@ def get_priors():
         if d == 'LogNormal':
             pr = pm.LogNormal(l, mu=m, sigma=sig)
             priors.append(pr)
-        # if d == 'HalfNormal':
-        #     pr = pm.HalfNormal(l, sigma=sig)
-        #     priors.append(pr)
+        if d == 'HalfNormal':
+            pr = pm.HalfNormal(l, sigma=sig)
+            priors.append(pr)
 
     return priors
 
@@ -496,14 +496,14 @@ def main():
     # use PyMC to sampler from log-likelihood
     with pm.Model() as mcmcmodel:
         # priors on stochastic parameters and non-dimensionalized constants
-        a, b, Dc, mu0 = get_priors()
+        a, b, Dc, mu0, s = get_priors()
         k0, vlps0, vref0, t0 = nondimensionalize_parameters(vlps, vref, k, times, vmax)
 
         # create loglikelihood Op (wrapper for numerical solution to work with pymc)
         loglike = Loglike(t0, vlps0, k0, vref0, mutrue, vmax)
 
         # convert parameters to be estimated to tensor vector
-        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0])
+        theta = pt.tensor.as_tensor_variable([a, b, Dc, mu0, s])
 
         # use a Potential for likelihood function
         pm.Potential("likelihood", loglike(theta))

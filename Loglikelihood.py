@@ -6,7 +6,7 @@ from config import cfig
 
 def mcmc_rsf_sim(theta, t0, v0, k0, vref0, vmax):
     # unpack parameters
-    a, b, Dc, mu0 = theta
+    a, b, Dc, mu0, s = theta
 
     # initialize rsf model
     model = rsf.Model()
@@ -68,6 +68,7 @@ class Loglike(tt.Op):
             b,
             Dc,
             mu0,
+            s,
         ) = theta
 
         y_pred = mcmc_rsf_sim(theta, self.times, self.vlps, self.k, self.vref, self.vmax)
@@ -75,9 +76,8 @@ class Loglike(tt.Op):
             # print('infinity working')
             return -np.inf
 
-        sigma_exp = 1
         resids = (self.data - y_pred)
-        logp = (-1 / (2 * (sigma_exp ** 2))) * (np.sum(resids ** 2))
+        logp = (-1 / (2 * (s ** 2))) * (np.sum(resids ** 2))
 
         return logp
 
