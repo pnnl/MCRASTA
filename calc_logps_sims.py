@@ -95,18 +95,18 @@ def get_posterior_data(modelvals, thin_data=False):
     mu0 = modelvals.mu0.values[0::nrstep]
     s = modelvals.s.values[0::nrstep]
 
-    return a, b, Dc, mu0, s
+    return a, b, Dc, mu0
 
 
 def get_model_values(idata):
     modelvals = az.extract(idata.posterior, combined=True)
-    a, b, Dc, mu0, s = get_posterior_data(modelvals)
+    a, b, Dc, mu0 = get_posterior_data(modelvals)
 
-    return a, b, Dc, mu0, s
+    return a, b, Dc, mu0
 
 
 def generate_rsf_data(inputs):
-    a, b, Dc, mu0, s = inputs
+    a, b, Dc, mu0  = inputs
 
     # dimensional variables output from mcrasta.py
     times, mutrue, vlps, x = load_section_data()
@@ -145,6 +145,7 @@ def generate_rsf_data(inputs):
     rsq = resids ** 2
     # srsq = np.nansum(rsq)
     # logp = np.abs(- 1 / 2 * srsq)
+    s = 0.01
     logp = (-1 / (2 * (s ** 2))) * (np.sum(rsq))
 
     return logp
@@ -188,7 +189,7 @@ def main():
     # gpl.set_vch(vlps)
     # set_critical_times(vlps, times, threshold=gpl.threshold)
 
-    a, b, Dc, mu0, s = get_model_values(idata)
+    a, b, Dc, mu0  = get_model_values(idata)
 
     pathname = os.path.join(cplot.postprocess_out_dir, f'logps_p{cplot.section_id}')
 

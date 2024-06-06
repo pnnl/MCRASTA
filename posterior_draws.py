@@ -48,7 +48,7 @@ def nondimensionalize_parameters(vlps, vref, k, times, vmax):
 
 
 def generate_rsf_data(inputs):
-    a, b, Dc, mu0, s = inputs
+    a, b, Dc, mu0 = inputs
 
     # dimensional variables output from mcrasta.py
     times, mutrue, vlps, x = load_section_data()
@@ -98,17 +98,17 @@ def get_model_values():
     b = modelvals.b.values
     Dc = modelvals.Dc.values
     mu0 = modelvals.mu0.values
-    s = modelvals.s.values
+    # s = modelvals.s.values
 
-    return a, b, Dc, mu0, s
+    return a, b, Dc, mu0
 
 
 def draw_from_posteriors(ndraws=1000):
     # draw values from the 89% credible interval for each parameter
     # then generate rsf data for draws
-    a, b, Dc, mu0, s = get_model_values()
+    a, b, Dc, mu0 = get_model_values()
 
-    modelvals = np.column_stack((a, b, Dc, mu0, s))
+    modelvals = np.column_stack((a, b, Dc, mu0))
 
     draws = modelvals[np.random.choice(modelvals.shape[0], ndraws, replace=False), :]
 
@@ -125,12 +125,12 @@ def main():
     bd = drawed_vars[:, 1]
     Dcd = drawed_vars[:, 2]
     mu0d = drawed_vars[:, 3]
-    sd = drawed_vars[:, 4]
+    # sd = drawed_vars[:, 4]
 
     pathname = os.path.join(cplot.postprocess_out_dir, f'musim_rd_p{cplot.section_id}')
 
     with Pool(processes=20, maxtasksperchild=1) as pool:
-        outputs = pool.map(generate_rsf_data, zip(ad, bd, Dcd, mu0d, sd))
+        outputs = pool.map(generate_rsf_data, zip(ad, bd, Dcd, mu0d))
         op = np.array(outputs)
         np.save(pathname, op)
 
