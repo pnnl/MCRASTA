@@ -33,7 +33,7 @@ ncores: 4
 
 # acceleration threshold to flag critical times for integration in ODE solver,
 # should be determined in advance using rsfdataviewer.py
-threshold: 0.15
+threshold: 0.13
 
 # prior distribution parameters for PyMC
 # mu and sigma are used for LogNormal and HalfNormal distributions
