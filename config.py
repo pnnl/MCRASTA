@@ -27,7 +27,6 @@ class Config:
         self.mu_sim = None
         self.threshold = None
         self.input_data_dir = None
-        self.input_data_fname = None
         self.output_mcmc_dir = None
         self.mcmc_out_dirname = None
 
@@ -46,7 +45,7 @@ class Config:
             attrs = ('samplename', 'section_id', 'mintime', 'maxtime',
                      'k', 'lc', 'vel_windowlen', 'filter_windowlen', 'q',
                      'ndr', 'nch', 'ntune', 'ncores', 'threshold',
-                     'input_data_dir', 'input_data_fname', 'output_mcmc_dirname',
+                     'input_data_dir', 'output_mcmc_dirname',
                      )
             for a in attrs:
                 if a not in cfg:

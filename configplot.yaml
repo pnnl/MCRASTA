@@ -1,30 +1,46 @@
+# This config file is used by:
+# run_plotting_scripts.py
+# plot_mcmc_results.py
+# calc_logps_sims.py
+# posterior_draws.py
+# plots.py
 
+# it is separate from config.yaml and config.py because there are
+# times when you'd like to analyze results from a model run while
+# a different model is running
 
+# identifiers to locate mcmc results
 samplename: 'p5895'
 section_id: '5895001'
 ndr: 200000
 nch: 4
+
+# nrstep should be 1 unless you want to plot thinned mcmc data, which plots every nrstep sample.
 nrstep: 1
+
+# number of random draws to take from posterior distributions to solve the forward model
 num_posterior_draws: 4000
+
+# output directory name
 output_postprocess_dir: 'postprocess_out'
 
+# axis limits for plots
 ab_pairlim: [-0.02, 0.02]
 
-# trace plot axis limits
 alims:
   pr_po: [0, 0.05]
-  post: [0, 0.02]
+  post: [0, 0.03]
 blims:
   pr_po: [0, 0.05]
-  post: [0, 0.02]
+  post: [0, 0.03]
 Dclims:
-  pr_po: [0, 200]
-  post: [0, 200]
+  pr_po: [-10, 200]
+  post: [-10, 200]
 mu0lims:
   pr_po: [0, 1]
-  post: [0.530, 0.555]
+  post: [0.52, 0.56]
 slims:
-  pr_po: [0, 0.3]
-  post: [0.04, 0.28]
+  pr_po: [0, 1]
+  post: [0, 1]
 
 

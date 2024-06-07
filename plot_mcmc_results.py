@@ -8,12 +8,10 @@ import seaborn as sns
 import arviz.labels as azl
 from configplot import cplot
 
-home = os.path.expanduser('~')
-
 um_to_mm = 0.001
 Dclabel = r'$D_c$ ($\mu$m)'
 mu0label = r'$\mu_0$'
-fontsize = 12
+sigmalabel = r'$\sigma$'
 
 
 def write_model_info(modes, hdis):
@@ -372,7 +370,7 @@ def plot_observed_and_vlps(mutrue, vlps, xax):
     axs[0].set(ylabel=r'$\mu$', ylim=[np.min(mutrue) - 0.01, np.max(mutrue) + 0.01])
 
     axs[1].plot(xax * um_to_mm, vlps, '.', color='darkred', markersize=1)
-    axs[1].set(ylabel=r'Velocity (m/s)')
+    axs[1].set(ylabel=r'Velocity ($\mu$m/s)')
     plt.xlabel(r'Loadpoint Displacement (mm)')
 
     pos = axs[0].get_position()

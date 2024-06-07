@@ -47,13 +47,6 @@ s_prior:
   beta: 0.2
 
 input_data_dir: 'C:\Users\fich146\PycharmProjects\mcmcrsf_xfiles\data\FORGE_DataShare'
-input_data_fname: 'p5894_proc.hdf5' # must be .hdf5 or should edit get_obs_data() in mcrasta.py
-
-header_names:
-  mu: 'mu'      # experimental friction data header
-  t: 'time_s'   # exp. time header
-  x: 'vdcdt_um' # exp. displacement header
-
 output_mcmc_dirname: 'mcmc_out'
 
 
