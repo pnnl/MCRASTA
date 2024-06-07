@@ -1,0 +1,34 @@
+Here is a breakdown of the general headers for a datafile from PSU:
+The most important for friction modeling will be the following:
+time_s, effns_mpa, mu, vdcdt_um, vobdcdt_um, hdcdt_um, hobdcdt_um, sstrain
+
+time_s, the time during the experiment in seconds
+recnum, the record number of collected data
+sampfreq_hz, the sampling frequency used during the experiment
+sync, the sync pulse used to align mechanical and acoustic data
+
+hstress_mpa, the horizontal (normal) stress in MPa
+hdcdt_um, the horizontal (normal) displacement in microns
+hobdcdt_um, the on-board (direct) horizontal (normal) displacement in microns
+hdtdt_um_dt, the horizontal (normal) displacement in mricons detrended for shear thinning
+hobdtdt_um_dt, the on-board (direct) horizontal (normal) displacement in mricons detrended for shear thinning
+
+vstress_mpa, the vertical (shear) stress in MPa
+vdcdt_um, the vertical (shear) displacement in microns
+vobdcdt_um, the on-board (direct) horizontal (vertical) displacement in microns
+slipvel_ums, the slip velocity calculated using a simple moving window (rslope Leeman etal 2016)
+
+laythick_um, the layer thickness for a single fault in microns
+laythick_um_dt, the layer thickness detrended for a single fault in microns
+sstrain, the shear strain for a single fault
+effns_mpa, the effective normal stress in MPa (normal stress - pore pressure)
+mu, the friction calculated for the material (shear stress / effective normal stress)
+
+pcload_mpa, the confining pressure in MPa
+pcdisp_um, the confining pressure intensifiers displacement in microns
+ppaload_mpa, the pore pressure intensifiers called A in MPa
+ppadisp_um, the pore pressure intensifiers called A displacement in microns
+ppadisp_um_dt, the pore pressure intensifiers called A displacement detrended in microns
+ppbload_mpa, the pore pressure intensifiers called B in MPa
+ppbdisp_um, the pore pressure intensifiers called B displacement in microns
+ppbdisp_um_dt, the pore pressure intensifiers called B displacement detrended in microns
