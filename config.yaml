@@ -1,20 +1,46 @@
+# This config file is used by:
+# config.py
+# mcrasta.py
+# Loglikelihood.py
 
-
+# identifiers for experimental data
 samplename: 'p5866'
 section_id: '5866001'
+
+# the section of experimental data defined by start and end times
 mintime: 11900.58
 maxtime: 11988.5
+
+# spring constant of test machine
 k: 0.0005
+
+# characteristic length in microns (e.g. minimum grain size)
 lc: 125
+
+# window length for Savitsky-Golay filter used when calculating load point velocity (mcrasta.calc_derivative)
 vel_windowlen: 20
+
+# filter_windowlen is the window length for Savitsky-Golay filter used to filter/downsample dataset
+# q is the downsample rate (takes every q-th sample) (mcrasta.downsample_dataset)
 filter_windowlen: 20
 q: 4
+
+# pymc sampler parameters, ndr = number of draws, nch = number of chains, ntune = number of tuning draws, ncores = number of cores to use
 ndr: 200000
 nch: 4
 ntune: 2000
 ncores: 4
+
+# acceleration threshold to flag critical times for integration in ODE solver,
+# should be determined in advance using rsfdataviewer.py
 threshold: 0.15
 
+# prior distribution parameters for PyMC
+# mu and sigma are used for LogNormal and HalfNormal distributions
+# alpha and beta are used for Weibull distributions
+# can add other distributions in mcrasta.get_priors, add any additional parameters needed to config.Prior
+# new distribution parameters (e.g. mu, sigma, etc.) must be added to all priors even if not used
+# can specify None if parameter is not needed for distribution
 a_prior:
   dist_type: 'LogNormal'
   mu: -5

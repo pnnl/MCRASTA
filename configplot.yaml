@@ -1,4 +1,5 @@
 # This config file is used by:
+# configplot.py
 # run_plotting_scripts.py
 # plot_mcmc_results.py
 # calc_logps_sims.py
