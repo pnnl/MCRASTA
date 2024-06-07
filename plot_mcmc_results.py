@@ -167,14 +167,35 @@ def plot_priors_posteriors(modelvals):
     # define priors same as in mcrasta.py - get this info from json file
     mus = cplot.mus
     sigmas = cplot.sigmas
+    alphas = cplot.alphas
+    betas = cplot.betas
+    dist_types = cplot.dist_types
+
     xlims = cplot.get_plot_lims(figtype='pr_po')
 
-    a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
-    b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
-    Dc = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
-    mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
-    s = pm.HalfNormal.dist(sigma=sigmas[4])
+    labels = cplot.variable_names
+
+    priors = []
+
+    for l, m, sig, alpha, beta, d in zip(labels, mus, sigmas, alphas, betas, dist_types):
+        if d == 'LogNormal':
+            pr = pm.LogNormal.dist(mu=m, sigma=sig)
+            priors.append(pr)
+        if d == 'HalfNormal':
+            pr = pm.HalfNormal.dist(sigma=sig)
+            priors.append(pr)
+        if d == 'Weibull':
+            pr = pm.Weibull.dist(alpha=alpha, beta=beta)
+            priors.append(pr)
+
+    # a = pm.LogNormal.dist(mu=mus[0], sigma=sigmas[0])
+    # b = pm.LogNormal.dist(mu=mus[1], sigma=sigmas[1])
+    # Dc = pm.LogNormal.dist(mu=mus[2], sigma=sigmas[2])
+    # mu0 = pm.LogNormal.dist(mu=mus[3], sigma=sigmas[3])
+    # s = pm.HalfNormal.dist(sigma=sigmas[4])
     # s = pm.HalfNormal.dist(sigma=0.1)
+
+    a, b, Dc, mu0, s = priors
 
     # take same number of draws as in mcrasta.py
     vpriors = pm.draw([a, b, Dc, mu0, s], draws=cplot.ndr * cplot.nch)

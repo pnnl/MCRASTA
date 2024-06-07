@@ -29,6 +29,8 @@ class ConfigPlot:
         self.threshold = None
         self.mus = None
         self.sigmas = None
+        self.alphas = None
+        self.betas = None
         self.dist_types = None
         self.nrstep = None
         self.sim_name = None
@@ -96,7 +98,6 @@ class ConfigPlot:
             if figtype == 'post':
                 return postlims
 
-
         return prpolims, postlims
 
     def set_vars(self):
@@ -124,6 +125,9 @@ class ConfigPlot:
             priors_info = js.get('prior_mus_sigmas', 'priors info not available')
             self.mus = priors_info[0]
             self.sigmas = priors_info[1]
+            self.alphas = priors_info[2]
+            self.betas = priors_info[3]
+            self.dist_types = priors_info[4]
             # self.dist_types = priors_info[2]
 
     def make_path(self, *args):
