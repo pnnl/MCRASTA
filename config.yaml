@@ -1,19 +1,19 @@
 
 
 samplename: 'p5895'
-section_id: '5895001'
-mintime: 10282
-maxtime: 10667
+section_id: '5895002'
+mintime: 12717
+maxtime: 13184
 k: 0.0012896
 lc: 125
-vel_windowlen: 20
+vel_windowlen: 5
 filter_windowlen: 20
 q: 10
 ndr: 200000
 nch: 4
 ntune: 2000
 ncores: 4
-threshold: 0.17
+threshold: 0.05
 
 a_prior:
   dist_type: 'LogNormal'
