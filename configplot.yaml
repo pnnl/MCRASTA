@@ -11,8 +11,8 @@
 # a different model is running
 
 # identifiers to locate mcmc results
-samplename: 'p5895'
-section_id: '5895001'
+samplename: 'p5866'
+section_id: '5866001'
 ndr: 200000
 nch: 4
 
